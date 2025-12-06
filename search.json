@@ -19,5 +19,60 @@
       "intro",
       "<span class='chapter-number'>2</span>  <span class='chapter-title'>(main) intro/readme.qmd</span>"
     ]
+  },
+  {
+    "objectID": "chapters__/chapter1/index.html",
+    "href": "chapters__/chapter1/index.html",
+    "title": "(ch1) index.qmd",
+    "section": "",
+    "text": "this is the index 123",
+    "crumbs": [
+      "(ch1) introduction",
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>(ch1) index.qmd</span>"
+    ]
+  },
+  {
+    "objectID": "chapters__/chapter1/section1_sub.html",
+    "href": "chapters__/chapter1/section1_sub.html",
+    "title": "(ch1) sec1 - sub",
+    "section": "",
+    "text": "this is section 456",
+    "crumbs": [
+      "(ch1) introduction",
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>(ch1) sec1 - sub</span>"
+    ]
+  },
+  {
+    "objectID": "chapters__/chapter1/section2.html",
+    "href": "chapters__/chapter1/section2.html",
+    "title": "(ch1) sec2",
+    "section": "",
+    "text": "this is section 432",
+    "crumbs": [
+      "(ch1) introduction",
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>(ch1) sec2</span>"
+    ]
+  },
+  {
+    "objectID": "chapters__/chapter1/section2_sub.html",
+    "href": "chapters__/chapter1/section2_sub.html",
+    "title": "(ch1) sec2 - sub",
+    "section": "",
+    "text": "this is section 678",
+    "crumbs": [
+      "(ch1) introduction",
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>(ch1) sec2 - sub</span>"
+    ]
+  },
+  {
+    "objectID": "chapters__/chapter1/section3.html",
+    "href": "chapters__/chapter1/section3.html",
+    "title": "(ch1) sec3",
+    "section": "",
+    "text": "this is section 4533",
+    "crumbs": [
+      "(ch1) introduction",
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>(ch1) sec3</span>"
+    ]
   }
 ]
