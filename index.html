@@ -363,6 +363,47 @@ ul.task-list li input[type="checkbox"] {
 </li>
       </ul>
   </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">(ch1) introduction</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./chapters__/chapter13/index.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">(ch1) index.qmd</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./chapters__/chapter13/section1.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">(ch1) sec1</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./chapters__/chapter13/section1_sub.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">(ch1) sec1 - sub</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./chapters__/chapter13/section2.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">(ch1) sec2</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./chapters__/chapter13/section2_sub.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">(ch1) sec2 - sub</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./chapters__/chapter13/data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">(ch1) data.ipynb</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
     </ul>
     </div>
 </nav>
@@ -413,7 +454,7 @@ ul.task-list li input[type="checkbox"] {
 <li>setup github pages https://quarto.org/docs/publishing/github-pages.html</li>
 </ol>
 <p>Really just workflow / repo hygiene:</p>
-<p>Keep branches.txt on main as the list of chapter branches only</p>
+<p>Keep branches.yaml on main as the list of chapter branches only</p>
 <p>Don’t put main or chapters in there.</p>
 <p>Only put user chapter branches you want included in the book:</p>
 <p>chapter1 chapter2 lng-europe shipping-atlantic</p>
@@ -424,7 +465,7 @@ ul.task-list li input[type="checkbox"] {
 <p>When a new chapter is created:</p>
 <p>Author does:</p>
 <p>git switch chapters git switch -c my-new-chapter # edit docs/, commit, push git push -u origin my-new-chapter</p>
-<p>You add my-new-chapter to branches.txt on main.</p>
+<p>You add my-new-chapter to branches.yaml on main.</p>
 <p>Now uv run book-full-build on main will see it, build it, and mount its docs under a new part: in the big book.</p>
 <p>git checkout –orphan gh-pages git status git rm -rf –dry-run . git rm -rf . docs echo “quarto-gh-pages-builder” &gt; index.html git add . git commit -am “initial gh-page” git push</p>
 
