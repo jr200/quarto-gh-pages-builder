@@ -67,7 +67,18 @@
     "href": "index.html",
     "title": "Quarto Graft",
     "section": "",
-    "text": "Compose a single Quarto site from branch-scoped worktrees.\n\nQuarto Graft lets contributors build their chapter or section in an isolated git worktree while the trunk assembles everything into one site. This folder is the starter documentation you can ship with any graft-enabled project: keep it lightweight, opinionated, and ready to brand.\n\n\n\nA ready-to-publish Quarto site scaffold (navbar, sidebar, favicon, footer).\nClear placeholders for auto-generated graft content.\nDocs pages to explain the workflow, commands, and contributor expectations.\n\n\n\n\n\nDeclare branch grafts in grafts.yaml.\nEach graft is exported via a git worktree under .grafts/&lt;name&gt;.\nuv run trunk-build renders graft content to docs/grafts__/... and updates navigation automatically.\n\n\nThis starter stays lean on purpose – drop in your own branding, visuals, and content while keeping the structure intact.",
+    "text": "Compose a single Quarto site from branch-scoped worktrees.\nQuarto Graft lets contributors build chapters, sections, or full sub-sites in isolated git branches and worktrees while the trunk assembles everything into one Quarto website. Think multi-author books, research collectives, internal docs, or any workflow where content evolves independently but publishes centrally.\n\n\n\nTraditional collaboration forces everyone into main, producing merge conflicts, shared heavy deps, and a single project shape. Quarto Graft flips that:\n\nEach contributor owns one branch = one self-contained chapter/section with its own language, env, and runtime.\nThe trunk never executes contributor code; it only ingests rendered artifacts, keeping main fast and stable.\nBroken branches don’t block the site: last-good fallbacks keep content online with visible warnings.\n\n\n\n\n\n\nReady-to-publish Quarto scaffold (navbar, sidebar, favicon, footer, search, GitHub links).\nBranch-grafting build system using git worktrees + uv and auto navigation updates.\nClean contributor workflow: no cross-branch conflicts or shared dependency coupling; full local preview per branch.\nFailure handling: last-good fallbacks and visible broken-branch stubs.\n\n\n\n\n\n\nDeclare grafts\n\n# grafts.yaml\nbranches:\n  - { name: python-template, branch: graft/python-template }\n  - { name: markdown-template, branch: graft/markdown-template }\n\nEach graft lives in its own branch\n\ngit switch graft/python-template\ngit switch -c graft/markdown-template\n\nContributors work in isolation\n\n\nTheir branch carries its own docs/, _quarto.yaml, Makefile, uv env.\nLocal preview:\n\nmake preview\n\nTrunk assembles everything\n\nuv run trunk-build\nThis exports each graft via a worktree under .grafts/&lt;name&gt;, copies rendered content into docs/grafts__/&lt;name&gt;/, and refreshes navigation automatically.\n\nMain site publishes\n\nquarto render docs --no-execute\n\n\n\n\ngit clone &lt;repo&gt;\nuv sync\nuv run trunk-build\nquarto render docs --no-execute\nquarto preview docs\nYou’ll see all grafted chapters in one site.\n\n\n\n\n\n\n\nWithout Graft\nWith Graft\n\n\n\n\nMerge conflicts\nNo cross-branch conflicts\n\n\nShared Python/R deps\nIndependent per-branch envs\n\n\nBroken builds block everyone\nFallback to last-good\n\n\nPR noise for content\nOne clean PR per chapter\n\n\nSlow monorepo rendering\nTrunk never executes heavy code\n\n\n\n\n\n\n\n\nMulti-author books and research publications\nQuant/science teams and education platforms\nInternal documentation portals\n\nNot ideal for single-author blogs, live-edit-in-main workflows, or projects without basic git discipline.\n\n\n\n\nmain/\n├── docs/                 # main website\n│   ├── index.qmd\n│   ├── appendix/\n│   └── grafts__/         # auto-generated graft content\n├── grafts.yaml\n├── .grafts/              # local worktrees\n├── src/quarto_graft/     # tooling\nEach graft branch carries its own:\ndocs/\n_quarto.yaml\nMakefile\npyproject.toml\n\n\n\n\n\n\n\nTouch only your graft branch.\nDo not merge into template branches.\nTypical loop:\n\ngit switch -c my-chapter\nmake preview\ngit push\n\n\n\n\nOwn main and any template branches.\nControl grafts.yaml, site branding, and publishing.\nRun trunk builds and publishing pipelines.\n\n\n\n\n\n\nQuarto Graft is released under the MIT License. You are free to use, modify, and redistribute it with attribution.\n\n\n\n\n\nParallel CI graft builds\nPer-chapter build status badges\nOptional content signing/verification\nPer-branch access control\nGraft registry for large collectives",
+    "crumbs": [
+      "Overview",
+      "Quarto Graft"
+    ]
+  },
+  {
+    "objectID": "index.html#why-quarto-graft-exists",
+    "href": "index.html#why-quarto-graft-exists",
+    "title": "Quarto Graft",
+    "section": "",
+    "text": "Traditional collaboration forces everyone into main, producing merge conflicts, shared heavy deps, and a single project shape. Quarto Graft flips that:\n\nEach contributor owns one branch = one self-contained chapter/section with its own language, env, and runtime.\nThe trunk never executes contributor code; it only ingests rendered artifacts, keeping main fast and stable.\nBroken branches don’t block the site: last-good fallbacks keep content online with visible warnings.",
     "crumbs": [
       "Overview",
       "Quarto Graft"
@@ -78,7 +89,7 @@
     "href": "index.html#what-you-get",
     "title": "Quarto Graft",
     "section": "",
-    "text": "A ready-to-publish Quarto site scaffold (navbar, sidebar, favicon, footer).\nClear placeholders for auto-generated graft content.\nDocs pages to explain the workflow, commands, and contributor expectations.",
+    "text": "Ready-to-publish Quarto scaffold (navbar, sidebar, favicon, footer, search, GitHub links).\nBranch-grafting build system using git worktrees + uv and auto navigation updates.\nClean contributor workflow: no cross-branch conflicts or shared dependency coupling; full local preview per branch.\nFailure handling: last-good fallbacks and visible broken-branch stubs.",
     "crumbs": [
       "Overview",
       "Quarto Graft"
@@ -89,7 +100,84 @@
     "href": "index.html#how-grafting-works",
     "title": "Quarto Graft",
     "section": "",
-    "text": "Declare branch grafts in grafts.yaml.\nEach graft is exported via a git worktree under .grafts/&lt;name&gt;.\nuv run trunk-build renders graft content to docs/grafts__/... and updates navigation automatically.\n\n\nThis starter stays lean on purpose – drop in your own branding, visuals, and content while keeping the structure intact.",
+    "text": "Declare grafts\n\n# grafts.yaml\nbranches:\n  - { name: python-template, branch: graft/python-template }\n  - { name: markdown-template, branch: graft/markdown-template }\n\nEach graft lives in its own branch\n\ngit switch graft/python-template\ngit switch -c graft/markdown-template\n\nContributors work in isolation\n\n\nTheir branch carries its own docs/, _quarto.yaml, Makefile, uv env.\nLocal preview:\n\nmake preview\n\nTrunk assembles everything\n\nuv run trunk-build\nThis exports each graft via a worktree under .grafts/&lt;name&gt;, copies rendered content into docs/grafts__/&lt;name&gt;/, and refreshes navigation automatically.\n\nMain site publishes\n\nquarto render docs --no-execute",
+    "crumbs": [
+      "Overview",
+      "Quarto Graft"
+    ]
+  },
+  {
+    "objectID": "index.html#second-quick-start-maintainer",
+    "href": "index.html#second-quick-start-maintainer",
+    "title": "Quarto Graft",
+    "section": "",
+    "text": "git clone &lt;repo&gt;\nuv sync\nuv run trunk-build\nquarto render docs --no-execute\nquarto preview docs\nYou’ll see all grafted chapters in one site.",
+    "crumbs": [
+      "Overview",
+      "Quarto Graft"
+    ]
+  },
+  {
+    "objectID": "index.html#what-this-solves",
+    "href": "index.html#what-this-solves",
+    "title": "Quarto Graft",
+    "section": "",
+    "text": "Without Graft\nWith Graft\n\n\n\n\nMerge conflicts\nNo cross-branch conflicts\n\n\nShared Python/R deps\nIndependent per-branch envs\n\n\nBroken builds block everyone\nFallback to last-good\n\n\nPR noise for content\nOne clean PR per chapter\n\n\nSlow monorepo rendering\nTrunk never executes heavy code",
+    "crumbs": [
+      "Overview",
+      "Quarto Graft"
+    ]
+  },
+  {
+    "objectID": "index.html#who-this-is-for",
+    "href": "index.html#who-this-is-for",
+    "title": "Quarto Graft",
+    "section": "",
+    "text": "Multi-author books and research publications\nQuant/science teams and education platforms\nInternal documentation portals\n\nNot ideal for single-author blogs, live-edit-in-main workflows, or projects without basic git discipline.",
+    "crumbs": [
+      "Overview",
+      "Quarto Graft"
+    ]
+  },
+  {
+    "objectID": "index.html#project-structure-mental-model",
+    "href": "index.html#project-structure-mental-model",
+    "title": "Quarto Graft",
+    "section": "",
+    "text": "main/\n├── docs/                 # main website\n│   ├── index.qmd\n│   ├── appendix/\n│   └── grafts__/         # auto-generated graft content\n├── grafts.yaml\n├── .grafts/              # local worktrees\n├── src/quarto_graft/     # tooling\nEach graft branch carries its own:\ndocs/\n_quarto.yaml\nMakefile\npyproject.toml",
+    "crumbs": [
+      "Overview",
+      "Quarto Graft"
+    ]
+  },
+  {
+    "objectID": "index.html#contributing",
+    "href": "index.html#contributing",
+    "title": "Quarto Graft",
+    "section": "",
+    "text": "Touch only your graft branch.\nDo not merge into template branches.\nTypical loop:\n\ngit switch -c my-chapter\nmake preview\ngit push\n\n\n\n\nOwn main and any template branches.\nControl grafts.yaml, site branding, and publishing.\nRun trunk builds and publishing pipelines.",
+    "crumbs": [
+      "Overview",
+      "Quarto Graft"
+    ]
+  },
+  {
+    "objectID": "index.html#license",
+    "href": "index.html#license",
+    "title": "Quarto Graft",
+    "section": "",
+    "text": "Quarto Graft is released under the MIT License. You are free to use, modify, and redistribute it with attribution.",
+    "crumbs": [
+      "Overview",
+      "Quarto Graft"
+    ]
+  },
+  {
+    "objectID": "index.html#roadmap-aspirational",
+    "href": "index.html#roadmap-aspirational",
+    "title": "Quarto Graft",
+    "section": "",
+    "text": "Parallel CI graft builds\nPer-chapter build status badges\nOptional content signing/verification\nPer-branch access control\nGraft registry for large collectives",
     "crumbs": [
       "Overview",
       "Quarto Graft"
