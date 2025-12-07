@@ -265,7 +265,7 @@ ul.task-list li input[type="checkbox"] {
 <span class="menu-text">Overview</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./getting-started.html"> 
+    <a class="nav-link" href="./getting-started.qmd"> 
 <span class="menu-text">Getting Started</span></a>
   </li>  
   <li class="nav-item">
@@ -334,12 +334,6 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="./setup-graft.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Setup (graft)</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./getting-started.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Getting Started</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -427,7 +421,6 @@ ul.task-list li input[type="checkbox"] {
   <ul class="collapse">
   <li><a href="#why-quarto-graft-exists" id="toc-why-quarto-graft-exists" class="nav-link" data-scroll-target="#why-quarto-graft-exists">Why Quarto Graft exists</a></li>
   <li><a href="#what-you-get" id="toc-what-you-get" class="nav-link" data-scroll-target="#what-you-get">What you get</a></li>
-  <li><a href="#what-this-solves" id="toc-what-this-solves" class="nav-link" data-scroll-target="#what-this-solves">What this solves</a></li>
   <li><a href="#who-this-is-for" id="toc-who-this-is-for" class="nav-link" data-scroll-target="#who-this-is-for">Who this is for</a></li>
   <li><a href="#at-a-glance" id="toc-at-a-glance" class="nav-link" data-scroll-target="#at-a-glance">At a glance</a></li>
   <li><a href="#license" id="toc-license" class="nav-link" data-scroll-target="#license">License</a></li>
@@ -445,10 +438,10 @@ ul.task-list li input[type="checkbox"] {
 <section id="quarto-graft" class="level1">
 <h1>quarto-graft</h1>
 <p><strong>Compose a single Quarto site from branch-scoped worktrees.</strong></p>
-<p>Quarto Graft lets contributors build chapters, sections, or full sub-sites in isolated git branches while the trunk assembles everything into one Quarto website. Use this page as your launchpad; hop to tutorials, guides, or concepts via the sidebar.</p>
+<p>Quarto Graft lets contributors build chapters, sections, or full sub-sites in isolated git branches while the trunk assembles everything into one Quarto website.</p>
 <section id="why-quarto-graft-exists" class="level2">
 <h2 class="anchored" data-anchor-id="why-quarto-graft-exists">Why Quarto Graft exists</h2>
-<p>Traditional collaboration forces everyone into <code>main</code>, leading to merge conflicts, shared heavy dependencies, and a single project shape. Quarto Graft flips that model:</p>
+<p>Traditional versioned collaboration forces everyone into <code>main</code>, leading to merge conflicts, shared heavy dependencies, and a single project shape. Quarto Graft flips that model:</p>
 <ul>
 <li>Each contributor owns <strong>one branch = one self-contained chapter/section</strong> with its own language, environment, and runtime.</li>
 <li>The trunk <strong>never executes contributor code</strong>; it only ingests rendered artifacts, keeping <code>main</code> fast and stable.</li>
@@ -464,48 +457,14 @@ ul.task-list li input[type="checkbox"] {
 <li>Failure handling: last-good fallbacks and visible broken-branch stubs.</li>
 </ul>
 </section>
-<section id="what-this-solves" class="level2">
-<h2 class="anchored" data-anchor-id="what-this-solves">What this solves</h2>
-<table class="caption-top table">
-<thead>
-<tr class="header">
-<th>Without Graft</th>
-<th>With Graft</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>Merge conflicts</td>
-<td>No cross-branch conflicts</td>
-</tr>
-<tr class="even">
-<td>Shared Python/R deps</td>
-<td>Independent per-branch envs</td>
-</tr>
-<tr class="odd">
-<td>Broken builds block everyone</td>
-<td>Fallback to last-good</td>
-</tr>
-<tr class="even">
-<td>PR noise for content</td>
-<td>One clean PR per chapter</td>
-</tr>
-<tr class="odd">
-<td>Slow monorepo rendering</td>
-<td>Trunk never executes heavy code</td>
-</tr>
-</tbody>
-</table>
-</section>
 <section id="who-this-is-for" class="level2">
 <h2 class="anchored" data-anchor-id="who-this-is-for">Who this is for</h2>
 <ul>
 <li>Multi-author books and research publications</li>
 <li>Quant/science teams and education platforms</li>
 <li>Internal documentation portals</li>
-<li>Threaded versioned controlled note-taking</li>
+<li>…anybody who wants to track and version threads in isolation</li>
 </ul>
-<hr>
 </section>
 <section id="at-a-glance" class="level2">
 <h2 class="anchored" data-anchor-id="at-a-glance">At a glance</h2>
@@ -514,7 +473,6 @@ ul.task-list li input[type="checkbox"] {
 <li>Grafts export via git worktrees into <code>docs/grafts__/...</code> and update navigation automatically.</li>
 <li>Broken grafts fall back to last-good exports with visible warnings, so the site keeps shipping.</li>
 </ul>
-<hr>
 </section>
 <section id="license" class="level2">
 <h2 class="anchored" data-anchor-id="license">License</h2>
