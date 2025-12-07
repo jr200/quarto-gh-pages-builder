@@ -4,11 +4,236 @@
     "href": "operations.html",
     "title": "Commands",
     "section": "",
-    "text": "Each graft branch carries its own:\ndocs/\n_quarto.yaml\nMakefile\npyproject.toml\nREADME.md\n.gitignore\n\nCommands\nProject scripts (via uv run) you can advertise to contributors and maintainers.\n\n\n\n\n\n\n\n\nCommand\nPurpose\nWhen to use\n\n\n\n\nuv run trunk-build\nBuild every graft listed in grafts.yaml and refresh navigation.\nRegular builds in CI or before publishing.\n\n\nuv run trunk-lock\nRegenerate grafts.lock after successful builds.\nAfter trunk-build to persist the manifest.\n\n\nuv run graft-new &lt;name&gt;\nCreate a new graft branch from the template.\nOnboard a new section/chapter owner.\n\n\nuv run graft-get &lt;name&gt;\nEnsure a worktree exists locally for a graft branch.\nWhen resuming work on an existing graft.\n\n\nuv run graft-build --branch &lt;name&gt;\nBuild a single graft branch.\nLocal iteration on one section.\n\n\nuv run graft-cleanup-orphans\nRemove .grafts/* directories no longer registered as worktrees.\nRepo hygiene if worktrees drift.\n\n\n\n\nAdd your own helper scripts here, or link to CI workflows that run these commands.",
+    "text": "Commands\nProject scripts (via uv run) you can advertise to contributors and maintainers.\n\n\n\n\n\n\n\n\nCommand\nPurpose\nWhen to use\n\n\n\n\nuv run trunk-build\nBuild every graft listed in grafts.yaml and refresh navigation.\nRegular builds in CI or before publishing.\n\n\nuv run trunk-lock\nRegenerate grafts.lock after successful builds.\nAfter trunk-build to persist the manifest.\n\n\nuv run graft-new &lt;name&gt;\nCreate a new graft branch from the template.\nOnboard a new section/chapter owner.\n\n\nuv run graft-get &lt;name&gt;\nEnsure a worktree exists locally for a graft branch.\nWhen resuming work on an existing graft.\n\n\nuv run graft-build --branch &lt;name&gt;\nBuild a single graft branch.\nLocal iteration on one section.\n\n\nuv run graft-cleanup-orphans\nRemove .grafts/* directories no longer registered as worktrees.\nRepo hygiene if worktrees drift.\n\n\n\n\nAdd your own helper scripts here, or link to CI workflows that run these commands.",
     "crumbs": [
       "Overview",
       "Getting Started",
       "Commands"
+    ]
+  },
+  {
+    "objectID": "grafts__/markdown-template/index.html",
+    "href": "grafts__/markdown-template/index.html",
+    "title": "Overview",
+    "section": "",
+    "text": "Welcome to the markdown-template graft. This is a lightweight Markdown starter for teams that just need prose and simple code fences.\n\n\n\nReplace this page with your own content.\nAdd more .qmd or .md files under docs/ and link them via the sidebar.\nRun make render (or quarto render docs) to build _site/.\n\nHappy writing!",
+    "crumbs": [
+      "Overview",
+      "Grafts from branches",
+      "markdown-template",
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "grafts__/markdown-template/index.html#what-to-do-next",
+    "href": "grafts__/markdown-template/index.html#what-to-do-next",
+    "title": "Overview",
+    "section": "",
+    "text": "Replace this page with your own content.\nAdd more .qmd or .md files under docs/ and link them via the sidebar.\nRun make render (or quarto render docs) to build _site/.\n\nHappy writing!",
+    "crumbs": [
+      "Overview",
+      "Grafts from branches",
+      "markdown-template",
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "grafts__/python-template/notebook.html",
+    "href": "grafts__/python-template/notebook.html",
+    "title": "Notebook Example",
+    "section": "",
+    "text": "Quick check that the graft package imports and runs.\n\nfrom python_template import greet, show_dataframe\n\ngreet(\"branch builder\")\n\n'Hello, branch builder! Welcome to python-template.'\n\n\n\nshow_dataframe()\n\n\nshape: (3, 1)\n\n\n\ncolumn_0\n\n\ni64\n\n\n\n\n1\n\n\n2\n\n\n3",
+    "crumbs": [
+      "Overview",
+      "Grafts from branches",
+      "python-template",
+      "Notebook Example"
+    ]
+  },
+  {
+    "objectID": "setup-trunk.html",
+    "href": "setup-trunk.html",
+    "title": "Setup (trunk)",
+    "section": "",
+    "text": "Clone this repo, you will see:\nmain/\n├── docs/                 # main website\n│   ├── index.qmd\n│   ├── appendix/\n│   └── grafts__/         # auto-generated graft content\n├── grafts.yaml\n├── .grafts/              # local worktrees\n├── src/quarto_graft/     # tooling\n\n\ngit clone &lt;repo&gt;\nuv sync\nuv run trunk-build\nquarto render docs --no-execute\nquarto preview docs\nYou’ll see the assembled site (including all grafts) in one site.\n\n\n\nApply these changes to your github repo settings.\n\nEnsure a gh-pages branch exists.\nEnsure the following are set.\n\nSettings -&gt; Actions -&gt; General\n\nActions permissions -&gt; Allow all actions and reusable workflows\nWorkflow Permissions Read and write permissions\n\nSettings -&gt; Pages -&gt; Build and deployment\n\nSource -&gt; Deploy from a branch\nBranch -&gt; gh-pages\n\n\nPoint Pages at docs/_site.\nRender locally or in CI, then push _site to gh-pages.\n\n\n\n\nThis site has github actions configured to work out-of-the-box.\n\nMake a test commit and push from the main branch.\nCheck the ‘Actions’ page for build logs.\nAfter some time, your site will be published.\n\n\n\n\n\nWorktrees keep uncommitted work isolated from main.\nNavigation updates happen automatically after each build.\nCleaning graft worktrees is safe-guarded; make clean-grafts will refuse to delete dirty worktrees.",
+    "crumbs": [
+      "Overview",
+      "Getting Started",
+      "Setup (trunk)"
+    ]
+  },
+  {
+    "objectID": "setup-trunk.html#first-preview",
+    "href": "setup-trunk.html#first-preview",
+    "title": "Setup (trunk)",
+    "section": "",
+    "text": "git clone &lt;repo&gt;\nuv sync\nuv run trunk-build\nquarto render docs --no-execute\nquarto preview docs\nYou’ll see the assembled site (including all grafts) in one site.",
+    "crumbs": [
+      "Overview",
+      "Getting Started",
+      "Setup (trunk)"
+    ]
+  },
+  {
+    "objectID": "setup-trunk.html#github-settings",
+    "href": "setup-trunk.html#github-settings",
+    "title": "Setup (trunk)",
+    "section": "",
+    "text": "Apply these changes to your github repo settings.\n\nEnsure a gh-pages branch exists.\nEnsure the following are set.\n\nSettings -&gt; Actions -&gt; General\n\nActions permissions -&gt; Allow all actions and reusable workflows\nWorkflow Permissions Read and write permissions\n\nSettings -&gt; Pages -&gt; Build and deployment\n\nSource -&gt; Deploy from a branch\nBranch -&gt; gh-pages\n\n\nPoint Pages at docs/_site.\nRender locally or in CI, then push _site to gh-pages.",
+    "crumbs": [
+      "Overview",
+      "Getting Started",
+      "Setup (trunk)"
+    ]
+  },
+  {
+    "objectID": "setup-trunk.html#first-publish-to-github-pages",
+    "href": "setup-trunk.html#first-publish-to-github-pages",
+    "title": "Setup (trunk)",
+    "section": "",
+    "text": "This site has github actions configured to work out-of-the-box.\n\nMake a test commit and push from the main branch.\nCheck the ‘Actions’ page for build logs.\nAfter some time, your site will be published.",
+    "crumbs": [
+      "Overview",
+      "Getting Started",
+      "Setup (trunk)"
+    ]
+  },
+  {
+    "objectID": "setup-trunk.html#guardrails",
+    "href": "setup-trunk.html#guardrails",
+    "title": "Setup (trunk)",
+    "section": "",
+    "text": "Worktrees keep uncommitted work isolated from main.\nNavigation updates happen automatically after each build.\nCleaning graft worktrees is safe-guarded; make clean-grafts will refuse to delete dirty worktrees.",
+    "crumbs": [
+      "Overview",
+      "Getting Started",
+      "Setup (trunk)"
+    ]
+  },
+  {
+    "objectID": "setup-graft.html",
+    "href": "setup-graft.html",
+    "title": "Setup (graft)",
+    "section": "",
+    "text": "This step can be done by the contributor, or the trunk maintainer.\nClone the repo and create a new graft.\ngit clone ...\nuv run graft-new  --template python my-first-graft\nThis will create a and push a git branch graft/my-first-graft, also updating the grafts.yaml configuration file. The grafts.lock manifest can be updated by running:\nuv run trunk-build\nYou can preview the new graft in the hierarchy using.\nuv run quarto preview docs\nEach graft template carries its own:\nmy-first-graft/\n├── docs/\n│   ├── index.qmd\n│   ├── _quarto.yaml\n├── .gitignore\n├── Makefile\n├── README.md\n\n\n\nThe branch is an entirely isolated quartodoc project and knows nothing about the trunk.\nThe only contract is the following command must succeed using the python dependencies of the trunk.\nuv run quarto render docs\nSave and push changes to the remote.\ngit commit -am \"added new graft called 'my-first-graft'\"\ngit push\nNote: the main trunk does not execute any scripts. This means outputs in notebooks need to be committed to the branch if they should be shown on the main website.",
+    "crumbs": [
+      "Overview",
+      "Getting Started",
+      "Setup (graft)"
+    ]
+  },
+  {
+    "objectID": "setup-graft.html#create-a-new-graft",
+    "href": "setup-graft.html#create-a-new-graft",
+    "title": "Setup (graft)",
+    "section": "",
+    "text": "This step can be done by the contributor, or the trunk maintainer.\nClone the repo and create a new graft.\ngit clone ...\nuv run graft-new  --template python my-first-graft\nThis will create a and push a git branch graft/my-first-graft, also updating the grafts.yaml configuration file. The grafts.lock manifest can be updated by running:\nuv run trunk-build\nYou can preview the new graft in the hierarchy using.\nuv run quarto preview docs\nEach graft template carries its own:\nmy-first-graft/\n├── docs/\n│   ├── index.qmd\n│   ├── _quarto.yaml\n├── .gitignore\n├── Makefile\n├── README.md",
+    "crumbs": [
+      "Overview",
+      "Getting Started",
+      "Setup (graft)"
+    ]
+  },
+  {
+    "objectID": "setup-graft.html#add-content-to-the-graft",
+    "href": "setup-graft.html#add-content-to-the-graft",
+    "title": "Setup (graft)",
+    "section": "",
+    "text": "The branch is an entirely isolated quartodoc project and knows nothing about the trunk.\nThe only contract is the following command must succeed using the python dependencies of the trunk.\nuv run quarto render docs\nSave and push changes to the remote.\ngit commit -am \"added new graft called 'my-first-graft'\"\ngit push\nNote: the main trunk does not execute any scripts. This means outputs in notebooks need to be committed to the branch if they should be shown on the main website.",
+    "crumbs": [
+      "Overview",
+      "Getting Started",
+      "Setup (graft)"
+    ]
+  },
+  {
+    "objectID": "contributing.html",
+    "href": "contributing.html",
+    "title": "Contributing",
+    "section": "",
+    "text": "A template is a ready-to-use graft skeleton (project structure, language/tooling, Quarto settings, navigation, dependency strategy). New graft branches start from whatever template lives on the protected template branch.\n\n\n\nRuns immediately with make preview.\nIncludes the basics:\n\ndocs/\n_quarto.yaml\nMakefile\npyproject.toml (or equivalent for the stack)\n\nClearly shows:\n\nthe primary language/toolchain,\nhow outputs are rendered,\nhow notebooks or scripts are handled.\n\n\n\n\n\n\nPython + Jupyter + Polars\nR + Quarto + ggplot\nJavaScript + Observable + WASM\nBook-style chapters vs website-style sections\nResearch reproducibility templates\nInternal documentation templates\n\n\n\n\n\nOpen a PR to main with your proposed template changes.\nMaintainers review for structure, safety, and ergonomics.\nOnce accepted, maintainers promote it into the protected template branch.\nContributors automatically inherit the updated template when they create new grafts.\n\n\nImportant: No one opens PRs directly into the protected template branch; it remains maintainer-controlled.",
+    "crumbs": [
+      "Overview",
+      "Getting Started",
+      "Contributing"
+    ]
+  },
+  {
+    "objectID": "contributing.html#templates",
+    "href": "contributing.html#templates",
+    "title": "Contributing",
+    "section": "",
+    "text": "A template is a ready-to-use graft skeleton (project structure, language/tooling, Quarto settings, navigation, dependency strategy). New graft branches start from whatever template lives on the protected template branch.\n\n\n\nRuns immediately with make preview.\nIncludes the basics:\n\ndocs/\n_quarto.yaml\nMakefile\npyproject.toml (or equivalent for the stack)\n\nClearly shows:\n\nthe primary language/toolchain,\nhow outputs are rendered,\nhow notebooks or scripts are handled.\n\n\n\n\n\n\nPython + Jupyter + Polars\nR + Quarto + ggplot\nJavaScript + Observable + WASM\nBook-style chapters vs website-style sections\nResearch reproducibility templates\nInternal documentation templates\n\n\n\n\n\nOpen a PR to main with your proposed template changes.\nMaintainers review for structure, safety, and ergonomics.\nOnce accepted, maintainers promote it into the protected template branch.\nContributors automatically inherit the updated template when they create new grafts.\n\n\nImportant: No one opens PRs directly into the protected template branch; it remains maintainer-controlled.",
+    "crumbs": [
+      "Overview",
+      "Getting Started",
+      "Contributing"
+    ]
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "quarto-graft",
+    "section": "",
+    "text": "Compose a single Quarto site from branch-scoped worktrees.\nQuarto Graft lets contributors build chapters, sections, or full sub-sites in isolated git branches while the trunk assembles everything into one Quarto website.\n\n\nTraditional versioned collaboration forces everyone into main, leading to merge conflicts, shared heavy dependencies, and a single project shape. Quarto Graft flips that model:\n\nEach contributor owns one branch = one self-contained chapter/section with its own language, environment, and runtime.\nThe trunk never executes contributor code; it only ingests rendered artifacts, keeping main fast and stable.\nBroken branches don’t block the site: last-good fallbacks keep content online with visible warnings.\n\n\n\n\n\nReady-to-publish Quarto scaffold (navbar, sidebar, favicon, footer, search, GitHub links).\nBranch-grafting build system using git worktrees + uv and automatic navigation updates.\nClean contributor workflow: no cross-branch conflicts or shared dependency coupling; full local preview per branch.\nFailure handling: last-good fallbacks and visible broken-branch stubs.\n\n\n\n\n\nMulti-author books and research publications\nQuant/science teams and education platforms\nInternal documentation portals\n…anybody who wants to track and version threads in isolation\n\n\n\n\nQuarto Graft is released under the MIT License. You are free to use, modify, and redistribute it with attribution.",
+    "crumbs": [
+      "Overview",
+      "quarto-graft"
+    ]
+  },
+  {
+    "objectID": "index.html#why-quarto-graft-exists",
+    "href": "index.html#why-quarto-graft-exists",
+    "title": "quarto-graft",
+    "section": "",
+    "text": "Traditional versioned collaboration forces everyone into main, leading to merge conflicts, shared heavy dependencies, and a single project shape. Quarto Graft flips that model:\n\nEach contributor owns one branch = one self-contained chapter/section with its own language, environment, and runtime.\nThe trunk never executes contributor code; it only ingests rendered artifacts, keeping main fast and stable.\nBroken branches don’t block the site: last-good fallbacks keep content online with visible warnings.",
+    "crumbs": [
+      "Overview",
+      "quarto-graft"
+    ]
+  },
+  {
+    "objectID": "index.html#what-you-get",
+    "href": "index.html#what-you-get",
+    "title": "quarto-graft",
+    "section": "",
+    "text": "Ready-to-publish Quarto scaffold (navbar, sidebar, favicon, footer, search, GitHub links).\nBranch-grafting build system using git worktrees + uv and automatic navigation updates.\nClean contributor workflow: no cross-branch conflicts or shared dependency coupling; full local preview per branch.\nFailure handling: last-good fallbacks and visible broken-branch stubs.",
+    "crumbs": [
+      "Overview",
+      "quarto-graft"
+    ]
+  },
+  {
+    "objectID": "index.html#who-this-is-for",
+    "href": "index.html#who-this-is-for",
+    "title": "quarto-graft",
+    "section": "",
+    "text": "Multi-author books and research publications\nQuant/science teams and education platforms\nInternal documentation portals\n…anybody who wants to track and version threads in isolation",
+    "crumbs": [
+      "Overview",
+      "quarto-graft"
+    ]
+  },
+  {
+    "objectID": "index.html#license",
+    "href": "index.html#license",
+    "title": "quarto-graft",
+    "section": "",
+    "text": "Quarto Graft is released under the MIT License. You are free to use, modify, and redistribute it with attribution.",
+    "crumbs": [
+      "Overview",
+      "quarto-graft"
+    ]
+  },
+  {
+    "objectID": "appendix/glossary.html",
+    "href": "appendix/glossary.html",
+    "title": "Glossary",
+    "section": "",
+    "text": "Glossary\n\nGraft: A git branch containing Quarto content that will be mounted into the trunk site.\nTrunk: The main branch that controls grafts.yaml, runs builds, and publishes.\nWorktree: A checked-out view of a branch living under .grafts/&lt;name&gt;, keeping contributor work isolated.\nExport: The rendered output from a graft branch under docs/grafts__/.",
+    "crumbs": [
+      "Overview",
+      "Glossary"
     ]
   },
   {
@@ -64,271 +289,25 @@
     ]
   },
   {
-    "objectID": "workflow.html",
-    "href": "workflow.html",
-    "title": "Workflow",
+    "objectID": "playbook.html",
+    "href": "playbook.html",
+    "title": "Playbook",
     "section": "",
-    "text": "Quarto Graft keeps contributors in small, safe branches while the trunk curates a single site.\nUse this page to explain your team’s review rules, branch protection, or CI steps.\n\n\n\n\n\nWork only in their graft branch.\nNever merge back – their content is pulled in by the trunk.\nTypical loop:\ngit checkout my-graft-branch\nmake preview\ngit push\n\n\n\n\n\nOwns the main branch.\nControl grafts.yaml, site branding, run builds and publish.\nRun trunk builds, publishing pipelines, and branch cleanup (graft-destroy / graft-cleanup-orphans).\n\n\n\n\n\nPropose and evolve the starter skeletons used for new grafts.\nSubmit changes via PRs to main; maintainers promote accepted templates into the templates/ folder.\n\n\n\n\n\n\nCreate a graft branch (or use uv run graft-new &lt;name&gt;).\nDevelop docs inside the branch in a git worktree under .grafts/&lt;name&gt;.\nExport with uv run graft-build --branch &lt;name&gt; or let uv run trunk-build do it for all branches.\nAssemble: the trunk writes outputs to docs/grafts__/&lt;name&gt;/... and refreshes the sidebar placeholder.\nPublish from docs/_site.\n\n\n\n\n\nWorktrees keep uncommitted work isolated from main.\nNavigation updates happen automatically after each build.\nCleaning graft worktrees is safe-guarded; make clean-grafts will refuse to delete dirty worktrees.",
+    "text": "Quarto Graft keeps contributors in small, safe branches while the trunk curates a single site.\nThis page explains the hats a quarto-graft wears during the development of the website.\n\n\n\n\n\nWork only in their graft branch.\nNever merge back – their content is pulled in by the trunk.\nTypical loop:\n\ngit checkout my-graft-branch\n…working on the content…\nmake preview\ngit commit and git push\n\n\n\n\n\n\nOwns the main trunk.\nControls the inventory grafts.yaml and grafts.lock.\nMaintains docs/_quart.yaml and site branding.\nRun trunk builds, publishing pipelines.\nOwns graft lifecycle: graft-new, graft-destroy, graft-cleanup-orphans\n\n\n\n\n\nPropose and evolve the starter skeletons used for new grafts.\nSubmit changes via PRs to main; maintainers promote accepted templates into the templates/ folder.",
     "crumbs": [
       "Overview",
-      "Workflow"
+      "Playbook"
     ]
   },
   {
-    "objectID": "workflow.html#roles",
-    "href": "workflow.html#roles",
-    "title": "Workflow",
+    "objectID": "playbook.html#roles",
+    "href": "playbook.html#roles",
+    "title": "Playbook",
     "section": "",
-    "text": "Work only in their graft branch.\nNever merge back – their content is pulled in by the trunk.\nTypical loop:\ngit checkout my-graft-branch\nmake preview\ngit push\n\n\n\n\n\nOwns the main branch.\nControl grafts.yaml, site branding, run builds and publish.\nRun trunk builds, publishing pipelines, and branch cleanup (graft-destroy / graft-cleanup-orphans).\n\n\n\n\n\nPropose and evolve the starter skeletons used for new grafts.\nSubmit changes via PRs to main; maintainers promote accepted templates into the templates/ folder.",
+    "text": "Work only in their graft branch.\nNever merge back – their content is pulled in by the trunk.\nTypical loop:\n\ngit checkout my-graft-branch\n…working on the content…\nmake preview\ngit commit and git push\n\n\n\n\n\n\nOwns the main trunk.\nControls the inventory grafts.yaml and grafts.lock.\nMaintains docs/_quart.yaml and site branding.\nRun trunk builds, publishing pipelines.\nOwns graft lifecycle: graft-new, graft-destroy, graft-cleanup-orphans\n\n\n\n\n\nPropose and evolve the starter skeletons used for new grafts.\nSubmit changes via PRs to main; maintainers promote accepted templates into the templates/ folder.",
     "crumbs": [
       "Overview",
-      "Workflow"
-    ]
-  },
-  {
-    "objectID": "workflow.html#lifecycle",
-    "href": "workflow.html#lifecycle",
-    "title": "Workflow",
-    "section": "",
-    "text": "Create a graft branch (or use uv run graft-new &lt;name&gt;).\nDevelop docs inside the branch in a git worktree under .grafts/&lt;name&gt;.\nExport with uv run graft-build --branch &lt;name&gt; or let uv run trunk-build do it for all branches.\nAssemble: the trunk writes outputs to docs/grafts__/&lt;name&gt;/... and refreshes the sidebar placeholder.\nPublish from docs/_site.",
-    "crumbs": [
-      "Overview",
-      "Workflow"
-    ]
-  },
-  {
-    "objectID": "workflow.html#guardrails",
-    "href": "workflow.html#guardrails",
-    "title": "Workflow",
-    "section": "",
-    "text": "Worktrees keep uncommitted work isolated from main.\nNavigation updates happen automatically after each build.\nCleaning graft worktrees is safe-guarded; make clean-grafts will refuse to delete dirty worktrees.",
-    "crumbs": [
-      "Overview",
-      "Workflow"
-    ]
-  },
-  {
-    "objectID": "setup-trunk.html",
-    "href": "setup-trunk.html",
-    "title": "Setup (trunk)",
-    "section": "",
-    "text": "Clone this repo, you will see:\nmain/\n├── docs/                 # main website\n│   ├── index.qmd\n│   ├── appendix/\n│   └── grafts__/         # auto-generated graft content\n├── grafts.yaml\n├── .grafts/              # local worktrees\n├── src/quarto_graft/     # tooling\n\n\ngit clone &lt;repo&gt;\nuv sync\nuv run trunk-build\nquarto render docs --no-execute\nquarto preview docs\nYou’ll see the assembled site (including all grafts) in one site.\n\n\n\nApply these changes to your github repo settings.\n\nEnsure a gh-pages branch exists.\nEnsure the following are set.\n\nSettings -&gt; Actions -&gt; General\n\nActions permissions -&gt; Allow all actions and reusable workflows\nWorkflow Permissions Read and write permissions\n\nSettings -&gt; Pages -&gt; Build and deployment\n\nSource -&gt; Deploy from a branch\nBranch -&gt; gh-pages\n\n\nPoint Pages at docs/_site.\nRender locally or in CI, then push _site to gh-pages.\n\n\n\n\nThis site has github actions configured to work out-of-the-box.\n\nMake a test commit and push from the main branch.\nCheck the ‘Actions’ page for build logs.\nAfter some time, your site will be published.",
-    "crumbs": [
-      "Overview",
-      "Getting Started",
-      "Setup (trunk)"
-    ]
-  },
-  {
-    "objectID": "setup-trunk.html#first-preview",
-    "href": "setup-trunk.html#first-preview",
-    "title": "Setup (trunk)",
-    "section": "",
-    "text": "git clone &lt;repo&gt;\nuv sync\nuv run trunk-build\nquarto render docs --no-execute\nquarto preview docs\nYou’ll see the assembled site (including all grafts) in one site.",
-    "crumbs": [
-      "Overview",
-      "Getting Started",
-      "Setup (trunk)"
-    ]
-  },
-  {
-    "objectID": "setup-trunk.html#github-settings",
-    "href": "setup-trunk.html#github-settings",
-    "title": "Setup (trunk)",
-    "section": "",
-    "text": "Apply these changes to your github repo settings.\n\nEnsure a gh-pages branch exists.\nEnsure the following are set.\n\nSettings -&gt; Actions -&gt; General\n\nActions permissions -&gt; Allow all actions and reusable workflows\nWorkflow Permissions Read and write permissions\n\nSettings -&gt; Pages -&gt; Build and deployment\n\nSource -&gt; Deploy from a branch\nBranch -&gt; gh-pages\n\n\nPoint Pages at docs/_site.\nRender locally or in CI, then push _site to gh-pages.",
-    "crumbs": [
-      "Overview",
-      "Getting Started",
-      "Setup (trunk)"
-    ]
-  },
-  {
-    "objectID": "setup-trunk.html#first-publish-to-github-pages",
-    "href": "setup-trunk.html#first-publish-to-github-pages",
-    "title": "Setup (trunk)",
-    "section": "",
-    "text": "This site has github actions configured to work out-of-the-box.\n\nMake a test commit and push from the main branch.\nCheck the ‘Actions’ page for build logs.\nAfter some time, your site will be published.",
-    "crumbs": [
-      "Overview",
-      "Getting Started",
-      "Setup (trunk)"
-    ]
-  },
-  {
-    "objectID": "setup-graft.html",
-    "href": "setup-graft.html",
-    "title": "Setup (graft)",
-    "section": "",
-    "text": "This step can be done by the contributor, or the trunk maintainer.\nClone the repo\ngit clone ...\nuv run graft-new  --template python my-first-graft\nThis will create a and push a git branch graft/my-first-branch. The branch will also be added to the grafts.yaml configuration file.\nUpdate the grafts.lock manifest and add the chapter to the trunk.\nuv run trunk-build\ngit commit -am \"added new graft 'my-first-branch'\"\nYou can preview the new graft in the hierarchy using.\nuv run quarto preview docs\n\n\n\nThe branch is an entirely isolated quartodoc project and knows nothing about the trunk.\nThe only contract is the following command must succeed using the python dependencies of the trunk.\nuv run quarto render docs",
-    "crumbs": [
-      "Overview",
-      "Getting Started",
-      "Setup (graft)"
-    ]
-  },
-  {
-    "objectID": "setup-graft.html#create-a-new-graft",
-    "href": "setup-graft.html#create-a-new-graft",
-    "title": "Setup (graft)",
-    "section": "",
-    "text": "This step can be done by the contributor, or the trunk maintainer.\nClone the repo\ngit clone ...\nuv run graft-new  --template python my-first-graft\nThis will create a and push a git branch graft/my-first-branch. The branch will also be added to the grafts.yaml configuration file.\nUpdate the grafts.lock manifest and add the chapter to the trunk.\nuv run trunk-build\ngit commit -am \"added new graft 'my-first-branch'\"\nYou can preview the new graft in the hierarchy using.\nuv run quarto preview docs",
-    "crumbs": [
-      "Overview",
-      "Getting Started",
-      "Setup (graft)"
-    ]
-  },
-  {
-    "objectID": "setup-graft.html#add-content-to-the-graft",
-    "href": "setup-graft.html#add-content-to-the-graft",
-    "title": "Setup (graft)",
-    "section": "",
-    "text": "The branch is an entirely isolated quartodoc project and knows nothing about the trunk.\nThe only contract is the following command must succeed using the python dependencies of the trunk.\nuv run quarto render docs",
-    "crumbs": [
-      "Overview",
-      "Getting Started",
-      "Setup (graft)"
-    ]
-  },
-  {
-    "objectID": "contributing.html",
-    "href": "contributing.html",
-    "title": "Contributing",
-    "section": "",
-    "text": "A template is a ready-to-use graft skeleton (project structure, language/tooling, Quarto settings, navigation, dependency strategy). New graft branches start from whatever template lives on the protected template branch.\n\n\n\nRuns immediately with make preview.\nIncludes the basics:\n\ndocs/\n_quarto.yaml\nMakefile\npyproject.toml (or equivalent for the stack)\n\nClearly shows:\n\nthe primary language/toolchain,\nhow outputs are rendered,\nhow notebooks or scripts are handled.\n\n\n\n\n\n\nPython + Jupyter + Polars\nR + Quarto + ggplot\nJavaScript + Observable + WASM\nBook-style chapters vs website-style sections\nResearch reproducibility templates\nInternal documentation templates\n\n\n\n\n\nOpen a PR to main with your proposed template changes.\nMaintainers review for structure, safety, and ergonomics.\nOnce accepted, maintainers promote it into the protected template branch.\nContributors automatically inherit the updated template when they create new grafts.\n\n\nImportant: No one opens PRs directly into the protected template branch; it remains maintainer-controlled.",
-    "crumbs": [
-      "Overview",
-      "Getting Started",
-      "Contributing"
-    ]
-  },
-  {
-    "objectID": "contributing.html#templates",
-    "href": "contributing.html#templates",
-    "title": "Contributing",
-    "section": "",
-    "text": "A template is a ready-to-use graft skeleton (project structure, language/tooling, Quarto settings, navigation, dependency strategy). New graft branches start from whatever template lives on the protected template branch.\n\n\n\nRuns immediately with make preview.\nIncludes the basics:\n\ndocs/\n_quarto.yaml\nMakefile\npyproject.toml (or equivalent for the stack)\n\nClearly shows:\n\nthe primary language/toolchain,\nhow outputs are rendered,\nhow notebooks or scripts are handled.\n\n\n\n\n\n\nPython + Jupyter + Polars\nR + Quarto + ggplot\nJavaScript + Observable + WASM\nBook-style chapters vs website-style sections\nResearch reproducibility templates\nInternal documentation templates\n\n\n\n\n\nOpen a PR to main with your proposed template changes.\nMaintainers review for structure, safety, and ergonomics.\nOnce accepted, maintainers promote it into the protected template branch.\nContributors automatically inherit the updated template when they create new grafts.\n\n\nImportant: No one opens PRs directly into the protected template branch; it remains maintainer-controlled.",
-    "crumbs": [
-      "Overview",
-      "Getting Started",
-      "Contributing"
-    ]
-  },
-  {
-    "objectID": "index.html",
-    "href": "index.html",
-    "title": "quarto-graft",
-    "section": "",
-    "text": "Compose a single Quarto site from branch-scoped worktrees.\nQuarto Graft lets contributors build chapters, sections, or full sub-sites in isolated git branches while the trunk assembles everything into one Quarto website.\n\n\nTraditional versioned collaboration forces everyone into main, leading to merge conflicts, shared heavy dependencies, and a single project shape. Quarto Graft flips that model:\n\nEach contributor owns one branch = one self-contained chapter/section with its own language, environment, and runtime.\nThe trunk never executes contributor code; it only ingests rendered artifacts, keeping main fast and stable.\nBroken branches don’t block the site: last-good fallbacks keep content online with visible warnings.\n\n\n\n\n\nReady-to-publish Quarto scaffold (navbar, sidebar, favicon, footer, search, GitHub links).\nBranch-grafting build system using git worktrees + uv and automatic navigation updates.\nClean contributor workflow: no cross-branch conflicts or shared dependency coupling; full local preview per branch.\nFailure handling: last-good fallbacks and visible broken-branch stubs.\n\n\n\n\n\nMulti-author books and research publications\nQuant/science teams and education platforms\nInternal documentation portals\n…anybody who wants to track and version threads in isolation\n\n\n\n\n\nBranches stay independent (their own envs, runtimes, docs); trunk never executes contributor code.\nGrafts export via git worktrees into docs/grafts__/... and update navigation automatically.\nBroken grafts fall back to last-good exports with visible warnings, so the site keeps shipping.\n\n\n\n\nQuarto Graft is released under the MIT License. You are free to use, modify, and redistribute it with attribution.",
-    "crumbs": [
-      "Overview",
-      "quarto-graft"
-    ]
-  },
-  {
-    "objectID": "index.html#why-quarto-graft-exists",
-    "href": "index.html#why-quarto-graft-exists",
-    "title": "quarto-graft",
-    "section": "",
-    "text": "Traditional versioned collaboration forces everyone into main, leading to merge conflicts, shared heavy dependencies, and a single project shape. Quarto Graft flips that model:\n\nEach contributor owns one branch = one self-contained chapter/section with its own language, environment, and runtime.\nThe trunk never executes contributor code; it only ingests rendered artifacts, keeping main fast and stable.\nBroken branches don’t block the site: last-good fallbacks keep content online with visible warnings.",
-    "crumbs": [
-      "Overview",
-      "quarto-graft"
-    ]
-  },
-  {
-    "objectID": "index.html#what-you-get",
-    "href": "index.html#what-you-get",
-    "title": "quarto-graft",
-    "section": "",
-    "text": "Ready-to-publish Quarto scaffold (navbar, sidebar, favicon, footer, search, GitHub links).\nBranch-grafting build system using git worktrees + uv and automatic navigation updates.\nClean contributor workflow: no cross-branch conflicts or shared dependency coupling; full local preview per branch.\nFailure handling: last-good fallbacks and visible broken-branch stubs.",
-    "crumbs": [
-      "Overview",
-      "quarto-graft"
-    ]
-  },
-  {
-    "objectID": "index.html#who-this-is-for",
-    "href": "index.html#who-this-is-for",
-    "title": "quarto-graft",
-    "section": "",
-    "text": "Multi-author books and research publications\nQuant/science teams and education platforms\nInternal documentation portals\n…anybody who wants to track and version threads in isolation",
-    "crumbs": [
-      "Overview",
-      "quarto-graft"
-    ]
-  },
-  {
-    "objectID": "index.html#at-a-glance",
-    "href": "index.html#at-a-glance",
-    "title": "quarto-graft",
-    "section": "",
-    "text": "Branches stay independent (their own envs, runtimes, docs); trunk never executes contributor code.\nGrafts export via git worktrees into docs/grafts__/... and update navigation automatically.\nBroken grafts fall back to last-good exports with visible warnings, so the site keeps shipping.",
-    "crumbs": [
-      "Overview",
-      "quarto-graft"
-    ]
-  },
-  {
-    "objectID": "index.html#license",
-    "href": "index.html#license",
-    "title": "quarto-graft",
-    "section": "",
-    "text": "Quarto Graft is released under the MIT License. You are free to use, modify, and redistribute it with attribution.",
-    "crumbs": [
-      "Overview",
-      "quarto-graft"
-    ]
-  },
-  {
-    "objectID": "appendix/glossary.html",
-    "href": "appendix/glossary.html",
-    "title": "Glossary",
-    "section": "",
-    "text": "Glossary\n\nGraft: A git branch containing Quarto content that will be mounted into the trunk site.\nTrunk: The main branch that controls grafts.yaml, runs builds, and publishes.\nWorktree: A checked-out view of a branch living under .grafts/&lt;name&gt;, keeping contributor work isolated.\nExport: The rendered output from a graft branch under docs/grafts__/.",
-    "crumbs": [
-      "Overview",
-      "Glossary"
-    ]
-  },
-  {
-    "objectID": "grafts__/python-template/notebook.html",
-    "href": "grafts__/python-template/notebook.html",
-    "title": "Notebook Example",
-    "section": "",
-    "text": "Quick check that the graft package imports and runs.\n\nfrom python_template import greet, show_dataframe\n\ngreet(\"branch builder\")\n\n'Hello, branch builder! Welcome to python-template.'\n\n\n\nshow_dataframe()\n\n\nshape: (3, 1)\n\n\n\ncolumn_0\n\n\ni64\n\n\n\n\n1\n\n\n2\n\n\n3",
-    "crumbs": [
-      "Overview",
-      "Grafts from branches",
-      "python-template",
-      "Notebook Example"
-    ]
-  },
-  {
-    "objectID": "grafts__/markdown-template/index.html",
-    "href": "grafts__/markdown-template/index.html",
-    "title": "Overview",
-    "section": "",
-    "text": "Welcome to the markdown-template graft. This is a lightweight Markdown starter for teams that just need prose and simple code fences.\n\n\n\nReplace this page with your own content.\nAdd more .qmd or .md files under docs/ and link them via the sidebar.\nRun make render (or quarto render docs) to build _site/.\n\nHappy writing!",
-    "crumbs": [
-      "Overview",
-      "Grafts from branches",
-      "markdown-template",
-      "Overview"
-    ]
-  },
-  {
-    "objectID": "grafts__/markdown-template/index.html#what-to-do-next",
-    "href": "grafts__/markdown-template/index.html#what-to-do-next",
-    "title": "Overview",
-    "section": "",
-    "text": "Replace this page with your own content.\nAdd more .qmd or .md files under docs/ and link them via the sidebar.\nRun make render (or quarto render docs) to build _site/.\n\nHappy writing!",
-    "crumbs": [
-      "Overview",
-      "Grafts from branches",
-      "markdown-template",
-      "Overview"
+      "Playbook"
     ]
   }
 ]

@@ -20,6 +20,41 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -311,8 +346,8 @@ ul.task-list li input[type="checkbox"] {
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./workflow.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Workflow</span></a>
+  <a href="./playbook.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Playbook</span></a>
   </div>
 </li>
         <li class="sidebar-item sidebar-item-section">
@@ -437,21 +472,31 @@ ul.task-list li input[type="checkbox"] {
 <section id="create-a-new-graft" class="level2">
 <h2 class="anchored" data-anchor-id="create-a-new-graft">Create a new graft</h2>
 <p>This step can be done by the contributor, or the trunk maintainer.</p>
-<p>Clone the repo</p>
-<pre><code>git clone ...
-uv run graft-new  --template python my-first-graft</code></pre>
-<p>This will create a and push a git branch <code>graft/my-first-branch</code>. The branch will also be added to the <code>grafts.yaml</code> configuration file.</p>
-<p>Update the <code>grafts.lock</code> manifest and add the chapter to the trunk.</p>
-<pre><code>uv run trunk-build
-git commit -am "added new graft 'my-first-branch'"</code></pre>
+<p>Clone the repo and create a new graft.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone ...</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">uv</span> run graft-new  <span class="at">--template</span> python my-first-graft</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This will create a and push a git branch <code>graft/my-first-graft</code>, also updating the <code>grafts.yaml</code> configuration file. The <code>grafts.lock</code> manifest can be updated by running:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">uv</span> run trunk-build</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>You can preview the new graft in the hierarchy using.</p>
-<pre><code>uv run quarto preview docs</code></pre>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">uv</span> run quarto preview docs</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Each <strong>graft template</strong> carries its own:</p>
+<pre><code>my-first-graft/
+├── docs/
+│   ├── index.qmd
+│   ├── _quarto.yaml
+├── .gitignore
+├── Makefile
+├── README.md</code></pre>
 </section>
 <section id="add-content-to-the-graft" class="level2">
 <h2 class="anchored" data-anchor-id="add-content-to-the-graft">Add content to the graft</h2>
 <p>The branch is an entirely isolated quartodoc project and knows nothing about the trunk.</p>
 <p>The only contract is the following command must succeed using the python dependencies of the trunk.</p>
-<pre><code>uv run quarto render docs</code></pre>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">uv</span> run quarto render docs</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Save and push changes to the remote.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-am</span> <span class="st">"added new graft called 'my-first-graft'"</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> push</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Note: the main trunk does not execute any scripts. This means outputs in notebooks need to be committed to the branch if they should be shown on the main website.</p>
 
 
 </section>

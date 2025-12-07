@@ -346,8 +346,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./workflow.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Workflow</span></a>
+  <a href="./playbook.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Playbook</span></a>
   </div>
 </li>
         <li class="sidebar-item sidebar-item-section">
@@ -457,6 +457,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#first-preview" id="toc-first-preview" class="nav-link" data-scroll-target="#first-preview">First preview</a></li>
   <li><a href="#github-settings" id="toc-github-settings" class="nav-link" data-scroll-target="#github-settings">Github settings</a></li>
   <li><a href="#first-publish-to-github-pages" id="toc-first-publish-to-github-pages" class="nav-link" data-scroll-target="#first-publish-to-github-pages">First publish to Github Pages</a></li>
+  <li><a href="#guardrails" id="toc-guardrails" class="nav-link" data-scroll-target="#guardrails">Guardrails</a></li>
   </ul></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/jr200/quarto-graft/blob/main/setup-trunk.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/jr200/quarto-graft/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
@@ -517,6 +518,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>Make a test commit and push from the main branch.</li>
 <li>Check the ‘Actions’ page for build logs.</li>
 <li>After some time, your site will be published.</li>
+</ul>
+</section>
+<section id="guardrails" class="level2">
+<h2 class="anchored" data-anchor-id="guardrails">Guardrails</h2>
+<ul>
+<li>Worktrees keep uncommitted work isolated from main.</li>
+<li>Navigation updates happen automatically after each build.</li>
+<li>Cleaning graft worktrees is safe-guarded; <code>make clean-grafts</code> will refuse to delete dirty worktrees.</li>
 </ul>
 
 
