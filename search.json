@@ -42,7 +42,7 @@
     "href": "grafts__/python-template/notebook.html",
     "title": "python-template notebook",
     "section": "",
-    "text": "Quick check that the graft package imports and runs.\n\nfrom python_template import greet, show_dataframe\n\ngreet(\"branch builder\")\n\n\nshow_dataframe()",
+    "text": "Quick check that the graft package imports and runs.\n\nfrom python_template import greet, show_dataframe\n\ngreet(\"branch builder\")\n\n'Hello, branch builder! Welcome to python-template.'\n\n\n\nshow_dataframe()\n\n\nshape: (3, 1)\n\n\n\ncolumn_0\n\n\ni64\n\n\n\n\n1\n\n\n2\n\n\n3",
     "crumbs": [
       "Overview",
       "Grafts from branches",
