@@ -16,7 +16,7 @@
     "href": "grafts__/markdown-template/index.html",
     "title": "markdown-template",
     "section": "",
-    "text": "Welcome to the markdown-template graft. This is a lightweight Markdown starter for teams that just need prose and simple code fences.\n\n\n\nReplace this page with your own content.\nAdd more .qmd or .md files under docs/ and link them via the sidebar.\nRun make render (or quarto render docs) to build _site/.\n\nHappy writing!",
+    "text": "Warning\n\n\n\nThis branch graft/markdown-template failed to build at its latest known HEAD (branch missing or unreachable).\nYou are seeing content from the last known good commit 2221bef.",
     "crumbs": [
       "Overview",
       "Grafts from branches",
@@ -28,8 +28,8 @@
     "objectID": "grafts__/markdown-template/index.html#what-to-do-next",
     "href": "grafts__/markdown-template/index.html#what-to-do-next",
     "title": "markdown-template",
-    "section": "",
-    "text": "Replace this page with your own content.\nAdd more .qmd or .md files under docs/ and link them via the sidebar.\nRun make render (or quarto render docs) to build _site/.\n\nHappy writing!",
+    "section": "What to do next",
+    "text": "What to do next\n\nReplace this page with your own content.\nAdd more .qmd or .md files under docs/ and link them via the sidebar.\nRun make render (or quarto render docs) to build _site/.\n\nHappy writing!",
     "crumbs": [
       "Overview",
       "Grafts from branches",
