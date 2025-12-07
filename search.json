@@ -1,96 +1,26 @@
 [
   {
-    "objectID": "intro/readme.html",
-    "href": "intro/readme.html",
-    "title": "(main) intro/readme.qmd",
+    "objectID": "operations.html",
+    "href": "operations.html",
+    "title": "Commands",
     "section": "",
-    "text": "(main) intro/readme.qmd\nThis project collates .qmds built from git branches into a book.",
+    "text": "Commands\nProject scripts (via uv run) you can advertise to contributors and maintainers.\n\n\n\n\n\n\n\n\nCommand\nPurpose\nWhen to use\n\n\n\n\nuv run trunk-build\nBuild every graft listed in grafts.yaml and refresh navigation.\nRegular builds in CI or before publishing.\n\n\nuv run trunk-lock\nRegenerate grafts.lock after successful builds.\nAfter trunk-build to persist the manifest.\n\n\nuv run graft-new &lt;name&gt;\nCreate a new graft branch from the template.\nOnboard a new section/chapter owner.\n\n\nuv run graft-get &lt;name&gt;\nEnsure a worktree exists locally for a graft branch.\nWhen resuming work on an existing graft.\n\n\nuv run graft-build --branch &lt;name&gt;\nBuild a single graft branch.\nLocal iteration on one section.\n\n\nuv run graft-cleanup-orphans\nRemove .grafts/* directories no longer registered as worktrees.\nRepo hygiene if worktrees drift.\n\n\n\n\nAdd your own helper scripts here, or link to CI workflows that run these commands.",
     "crumbs": [
-      "Source",
-      "intro",
-      "(main) intro/readme.qmd"
+      "Overview",
+      "Operations",
+      "Commands"
     ]
   },
   {
-    "objectID": "grafts__/chapter1/section1.html",
-    "href": "grafts__/chapter1/section1.html",
-    "title": "(ch1) sec1",
+    "objectID": "grafts__/chapter1/data.html",
+    "href": "grafts__/chapter1/data.html",
+    "title": "(ch1) data.ipynb",
     "section": "",
-    "text": "(ch1) sec1",
+    "text": "This page has only text and data\n\nfrom chapter_lib.lib import say_hello, calculate_dataframe\n\n\nsay_hello()\n\n'Hello from chapter-lib!'\n\n\n\ncalculate_dataframe()\n\n\nshape: (3, 1)\n\n\n\ncolumn_0\n\n\ni64\n\n\n\n\n1\n\n\n2\n\n\n3",
     "crumbs": [
-      "Source",
+      "Overview",
       "(ch1) introduction",
-      "(ch1) sec1"
-    ]
-  },
-  {
-    "objectID": "grafts__/chapter1/section2.html",
-    "href": "grafts__/chapter1/section2.html",
-    "title": "(ch1) sec2",
-    "section": "",
-    "text": "(ch1) sec2\nthis is section 432",
-    "crumbs": [
-      "Source",
-      "(ch1) introduction",
-      "(ch1) sec2"
-    ]
-  },
-  {
-    "objectID": "grafts__/chapter1/index.html",
-    "href": "grafts__/chapter1/index.html",
-    "title": "(ch1) index.qmd",
-    "section": "",
-    "text": "(ch1) index.qmd\nthis is the index 123",
-    "crumbs": [
-      "Source",
-      "(ch1) introduction",
-      "(ch1) index.qmd"
-    ]
-  },
-  {
-    "objectID": "index.html",
-    "href": "index.html",
-    "title": "(main) index.qmd",
-    "section": "",
-    "text": "setup instructions\n\nsetup github pages https://quarto.org/docs/publishing/github-pages.html\n\nReally just workflow / repo hygiene:\nKeep grafts.yaml on main as the list of chapter branches only\nDon’t put main or chapters in there.\nOnly put user chapter branches you want included in the book:\nchapter1 chapter2 lng-europe shipping-atlantic\nEnforce “no merges into chapters” via GitHub settings / policy\nMark chapters as a protected branch.\nOnly allow maintainer pushes; don’t accept PRs into chapters from user branches.\nCulturally: “You never open a PR back to chapters; you PR into main only if we ever want to promote something to infra/template.”\nWhen a new chapter is created:\nAuthor does:\ngit switch chapters git switch -c my-new-chapter # edit docs/, commit, push git push -u origin my-new-chapter\nYou add my-new-chapter to grafts.yaml on main.\nNow uv run trunk-build on main will see it, build it, and mount its docs under a new part: in the big book.\ngit checkout –orphan gh-pages git status git rm -rf –dry-run . git rm -rf . docs echo “quarto-graft” &gt; index.html git add . git commit -am “initial gh-page” git push\n\n\nuv venv\nuv sync",
-    "crumbs": [
-      "Source",
-      "(main) index.qmd"
-    ]
-  },
-  {
-    "objectID": "index.html#vscode",
-    "href": "index.html#vscode",
-    "title": "(main) index.qmd",
-    "section": "",
-    "text": "uv venv\nuv sync",
-    "crumbs": [
-      "Source",
-      "(main) index.qmd"
-    ]
-  },
-  {
-    "objectID": "appendix/glossary.html",
-    "href": "appendix/glossary.html",
-    "title": "(main) glossary.qmd",
-    "section": "",
-    "text": "(main) glossary.qmd\nSome words …",
-    "crumbs": [
-      "Source",
-      "appendix",
-      "(main) glossary.qmd"
-    ]
-  },
-  {
-    "objectID": "grafts__/chapter1/section1_sub.html",
-    "href": "grafts__/chapter1/section1_sub.html",
-    "title": "(ch1) sec1 - sub",
-    "section": "",
-    "text": "(ch1) sec1 - sub\nthis is section 456",
-    "crumbs": [
-      "Source",
-      "(ch1) introduction",
-      "(ch1) sec1 - sub"
+      "(ch1) data.ipynb"
     ]
   },
   {
@@ -100,21 +30,210 @@
     "section": "",
     "text": "(ch1) sec2 - sub\nthis is section 678",
     "crumbs": [
-      "Source",
+      "Overview",
       "(ch1) introduction",
       "(ch1) sec2 - sub"
     ]
   },
   {
-    "objectID": "grafts__/chapter1/data.html",
-    "href": "grafts__/chapter1/data.html",
-    "title": "(ch1) data.ipynb",
+    "objectID": "grafts__/chapter1/section1_sub.html",
+    "href": "grafts__/chapter1/section1_sub.html",
+    "title": "(ch1) sec1 - sub",
     "section": "",
-    "text": "This page has only text and data\n\n\nCode\nfrom chapter_lib.lib import say_hello, calculate_dataframe\n\n\n\n\nCode\nsay_hello()\n\n\n'Hello from chapter-lib!'\n\n\n\n\nCode\ncalculate_dataframe()\n\n\n\nshape: (3, 1)\n\n\n\ncolumn_0\n\n\ni64\n\n\n\n\n1\n\n\n2\n\n\n3",
+    "text": "(ch1) sec1 - sub\nthis is section 456",
     "crumbs": [
-      "Source",
+      "Overview",
       "(ch1) introduction",
-      "(ch1) data.ipynb"
+      "(ch1) sec1 - sub"
+    ]
+  },
+  {
+    "objectID": "workflow.html",
+    "href": "workflow.html",
+    "title": "Workflow overview",
+    "section": "",
+    "text": "Quarto Graft keeps contributors in small, safe branches while the trunk curates a single site.\n\n\n\nTrunk maintainers own grafts.yaml, run builds, and publish.\nContributors work only in their graft branch and never merge back; their content is pulled in by the trunk.\n\n\n\n\n\nCreate a graft branch (or use uv run graft-new &lt;name&gt;).\nDevelop docs inside the branch in a git worktree under .grafts/&lt;name&gt;.\nExport with uv run graft-build --branch &lt;name&gt; or let uv run trunk-build do it for all branches.\nAssemble: the trunk writes outputs to docs/grafts__/&lt;name&gt;/... and refreshes the sidebar placeholder.\nPublish from docs/_site.\n\n\n\n\n\nWorktrees keep uncommitted work isolated from main.\nNavigation updates happen automatically after each build.\nCleaning graft worktrees is safe-guarded; make clean-grafts will refuse to delete dirty worktrees.\n\nUse this page to explain your team’s review rules, branch protection, or CI steps.",
+    "crumbs": [
+      "Overview",
+      "Start here",
+      "Workflow overview"
+    ]
+  },
+  {
+    "objectID": "workflow.html#roles",
+    "href": "workflow.html#roles",
+    "title": "Workflow overview",
+    "section": "",
+    "text": "Trunk maintainers own grafts.yaml, run builds, and publish.\nContributors work only in their graft branch and never merge back; their content is pulled in by the trunk.",
+    "crumbs": [
+      "Overview",
+      "Start here",
+      "Workflow overview"
+    ]
+  },
+  {
+    "objectID": "workflow.html#lifecycle",
+    "href": "workflow.html#lifecycle",
+    "title": "Workflow overview",
+    "section": "",
+    "text": "Create a graft branch (or use uv run graft-new &lt;name&gt;).\nDevelop docs inside the branch in a git worktree under .grafts/&lt;name&gt;.\nExport with uv run graft-build --branch &lt;name&gt; or let uv run trunk-build do it for all branches.\nAssemble: the trunk writes outputs to docs/grafts__/&lt;name&gt;/... and refreshes the sidebar placeholder.\nPublish from docs/_site.",
+    "crumbs": [
+      "Overview",
+      "Start here",
+      "Workflow overview"
+    ]
+  },
+  {
+    "objectID": "workflow.html#guardrails",
+    "href": "workflow.html#guardrails",
+    "title": "Workflow overview",
+    "section": "",
+    "text": "Worktrees keep uncommitted work isolated from main.\nNavigation updates happen automatically after each build.\nCleaning graft worktrees is safe-guarded; make clean-grafts will refuse to delete dirty worktrees.\n\nUse this page to explain your team’s review rules, branch protection, or CI steps.",
+    "crumbs": [
+      "Overview",
+      "Start here",
+      "Workflow overview"
+    ]
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Quarto Graft",
+    "section": "",
+    "text": "Compose a single Quarto site from branch-scoped worktrees.\n\nQuarto Graft lets contributors build their chapter or section in an isolated git worktree while the trunk assembles everything into one site. This folder is the starter documentation you can ship with any graft-enabled project: keep it lightweight, opinionated, and ready to brand.\n\n\n\nA ready-to-publish Quarto site scaffold (navbar, sidebar, favicon, footer).\nClear placeholders for auto-generated graft content.\nDocs pages to explain the workflow, commands, and contributor expectations.\n\n\n\n\n\nDeclare branch grafts in grafts.yaml.\nEach graft is exported via a git worktree under .grafts/&lt;name&gt;.\nuv run trunk-build renders graft content to docs/grafts__/... and updates navigation automatically.\n\n\nThis starter stays lean on purpose – drop in your own branding, visuals, and content while keeping the structure intact.",
+    "crumbs": [
+      "Overview",
+      "Quarto Graft"
+    ]
+  },
+  {
+    "objectID": "index.html#what-you-get",
+    "href": "index.html#what-you-get",
+    "title": "Quarto Graft",
+    "section": "",
+    "text": "A ready-to-publish Quarto site scaffold (navbar, sidebar, favicon, footer).\nClear placeholders for auto-generated graft content.\nDocs pages to explain the workflow, commands, and contributor expectations.",
+    "crumbs": [
+      "Overview",
+      "Quarto Graft"
+    ]
+  },
+  {
+    "objectID": "index.html#how-grafting-works",
+    "href": "index.html#how-grafting-works",
+    "title": "Quarto Graft",
+    "section": "",
+    "text": "Declare branch grafts in grafts.yaml.\nEach graft is exported via a git worktree under .grafts/&lt;name&gt;.\nuv run trunk-build renders graft content to docs/grafts__/... and updates navigation automatically.\n\n\nThis starter stays lean on purpose – drop in your own branding, visuals, and content while keeping the structure intact.",
+    "crumbs": [
+      "Overview",
+      "Quarto Graft"
+    ]
+  },
+  {
+    "objectID": "appendix/glossary.html",
+    "href": "appendix/glossary.html",
+    "title": "Glossary",
+    "section": "",
+    "text": "Glossary\n\nGraft: A git branch containing Quarto content that will be mounted into the trunk site.\nTrunk: The main branch that controls grafts.yaml, runs builds, and publishes.\nWorktree: A checked-out view of a branch living under .grafts/&lt;name&gt;, keeping contributor work isolated.\nExport: The rendered output from a graft branch under docs/grafts__/.",
+    "crumbs": [
+      "Overview",
+      "Appendix",
+      "Glossary"
+    ]
+  },
+  {
+    "objectID": "grafts__/chapter1/index.html",
+    "href": "grafts__/chapter1/index.html",
+    "title": "(ch1) index.qmd",
+    "section": "",
+    "text": "(ch1) index.qmd\nthis is the index 123",
+    "crumbs": [
+      "Overview",
+      "(ch1) introduction",
+      "(ch1) index.qmd"
+    ]
+  },
+  {
+    "objectID": "grafts__/chapter1/section2.html",
+    "href": "grafts__/chapter1/section2.html",
+    "title": "(ch1) sec2",
+    "section": "",
+    "text": "(ch1) sec2\nthis is section 432",
+    "crumbs": [
+      "Overview",
+      "(ch1) introduction",
+      "(ch1) sec2"
+    ]
+  },
+  {
+    "objectID": "grafts__/chapter1/section1.html",
+    "href": "grafts__/chapter1/section1.html",
+    "title": "(ch1) sec1",
+    "section": "",
+    "text": "(ch1) sec1",
+    "crumbs": [
+      "Overview",
+      "(ch1) introduction",
+      "(ch1) sec1"
+    ]
+  },
+  {
+    "objectID": "getting-started.html",
+    "href": "getting-started.html",
+    "title": "Getting started",
+    "section": "",
+    "text": "Set up the scaffold locally, render it once, and you’re ready to graft branch docs.\n\n\n\nGit with worktree support.\nQuarto CLI installed.\nPython 3.10+ with uv (used for the project scripts).\n\n\n\n\nuv venv\nuv sync\n\n# Build everything listed in grafts.yaml\nuv run trunk-build\n\n# Render the site without executing code cells\nuv run quarto render docs --no-execute\n\n\n\n\nCreate a gh-pages branch (or the host you prefer).\nPoint your Pages settings at docs/_site.\nRender locally or in CI, then push the contents of _site to gh-pages.\n\n\n\n\n\nAdd real project copy and visuals to these starter pages.\nAdd ‘grafts’ to grafts.yaml, run uv run trunk-build, and watch them appear under Grafts from branches in the sidebar.\nWire CI to run trunk-build and quarto render on main pushes.",
+    "crumbs": [
+      "Overview",
+      "Start here",
+      "Getting started"
+    ]
+  },
+  {
+    "objectID": "getting-started.html#requirements",
+    "href": "getting-started.html#requirements",
+    "title": "Getting started",
+    "section": "",
+    "text": "Git with worktree support.\nQuarto CLI installed.\nPython 3.10+ with uv (used for the project scripts).",
+    "crumbs": [
+      "Overview",
+      "Start here",
+      "Getting started"
+    ]
+  },
+  {
+    "objectID": "getting-started.html#quick-setup",
+    "href": "getting-started.html#quick-setup",
+    "title": "Getting started",
+    "section": "",
+    "text": "uv venv\nuv sync\n\n# Build everything listed in grafts.yaml\nuv run trunk-build\n\n# Render the site without executing code cells\nuv run quarto render docs --no-execute",
+    "crumbs": [
+      "Overview",
+      "Start here",
+      "Getting started"
+    ]
+  },
+  {
+    "objectID": "getting-started.html#publish-to-github-pages",
+    "href": "getting-started.html#publish-to-github-pages",
+    "title": "Getting started",
+    "section": "",
+    "text": "Create a gh-pages branch (or the host you prefer).\nPoint your Pages settings at docs/_site.\nRender locally or in CI, then push the contents of _site to gh-pages.",
+    "crumbs": [
+      "Overview",
+      "Start here",
+      "Getting started"
+    ]
+  },
+  {
+    "objectID": "getting-started.html#next-steps",
+    "href": "getting-started.html#next-steps",
+    "title": "Getting started",
+    "section": "",
+    "text": "Add real project copy and visuals to these starter pages.\nAdd ‘grafts’ to grafts.yaml, run uv run trunk-build, and watch them appear under Grafts from branches in the sidebar.\nWire CI to run trunk-build and quarto render on main pushes.",
+    "crumbs": [
+      "Overview",
+      "Start here",
+      "Getting started"
     ]
   }
 ]

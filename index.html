@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>quarto-graft</title>
+<title>Quarto Graft</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -30,6 +30,7 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
+<link href="./favicon.svg" rel="icon" type="image/svg+xml">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
 <script src="site_libs/quarto-html/axe/axe-check.js" type="module"></script>
@@ -42,9 +43,9 @@ ul.task-list li input[type="checkbox"] {
 <link href="site_libs/quarto-html/quarto-syntax-highlighting-d640c705e8c17715bca3574aa719063f.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-705a3c737c2f7ea4c1da6bb2ba71e5be.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="site_libs/bootstrap/bootstrap-dark-591c83d95d8870ddef2a43e2626936c9.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="site_libs/bootstrap/bootstrap-705a3c737c2f7ea4c1da6bb2ba71e5be.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-3d137b9cca662f737c1c89c8073b1392.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-dark-fdb2b6b26bbc38bb8d6226994399233f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="site_libs/bootstrap/bootstrap-3d137b9cca662f737c1c89c8073b1392.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -57,7 +58,7 @@ ul.task-list li input[type="checkbox"] {
     "/",
     "s"
   ],
-  "show-item-context": true,
+  "show-item-context": false,
   "language": {
     "search-no-results-text": "No results",
     "search-matching-documents-text": "matching documents",
@@ -66,7 +67,7 @@ ul.task-list li input[type="checkbox"] {
     "search-more-match-text": "more match in this document",
     "search-more-matches-text": "more matches in this document",
     "search-clear-button-title": "Clear",
-    "search-text-placeholder": "Search",
+    "search-text-placeholder": "",
     "search-detached-cancel-button-title": "Cancel",
     "search-submit-button-title": "Submit",
     "search-label": "Search"
@@ -245,8 +246,12 @@ ul.task-list li input[type="checkbox"] {
     <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
+    <a href="./index.html" class="navbar-brand navbar-brand-logo">
+    <img src="./favicon.svg" alt="" class="navbar-logo light-content">
+    <img src="./favicon.svg" alt="" class="navbar-logo dark-content">
+    </a>
     <a class="navbar-brand" href="./index.html">
-    <span class="navbar-title">quarto-graft</span>
+    <span class="navbar-title">Quarto Graft</span>
     </a>
   </div>
             <div id="quarto-search" class="" title="Search"></div>
@@ -254,10 +259,25 @@ ul.task-list li input[type="checkbox"] {
   <span class="navbar-toggler-icon"></span>
 </button>
           <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link active" href="./index.html" aria-current="page"> 
+<span class="menu-text">Overview</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./getting-started.html"> 
+<span class="menu-text">Getting Started</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./operations.html"> 
+<span class="menu-text">Commands</span></a>
+  </li>  
+</ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item">
-    <a class="nav-link" href="https://github.com/jr200/quarto-gh-pages-builder"> 
-<span class="menu-text">Source</span></a>
+    <a class="nav-link" href="https://github.com/jr200/quarto-graft"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text">GitHub</span></a>
   </li>  
 </ul>
           </div> <!-- /navcollapse -->
@@ -271,7 +291,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./index.html">(main) index.qmd</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./index.html">Quarto Graft</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -286,13 +306,13 @@ ul.task-list li input[type="checkbox"] {
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./index.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">(main) index.qmd</span></a>
+ <span class="menu-text">Quarto Graft</span></a>
   </div>
 </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
- <span class="menu-text">intro</span></a>
+ <span class="menu-text">Start here</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -300,8 +320,14 @@ ul.task-list li input[type="checkbox"] {
       <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./intro/readme.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">(main) intro/readme.qmd</span></a>
+  <a href="./getting-started.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Getting started</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./workflow.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Workflow overview</span></a>
   </div>
 </li>
       </ul>
@@ -309,12 +335,33 @@ ul.task-list li input[type="checkbox"] {
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
- <span class="menu-text">(ch1) introduction</span></a>
+ <span class="menu-text">Operations</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
       <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./operations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Commands</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <span class="sidebar-item-text sidebar-link text-start">
+ <span class="menu-text">Grafts from branches</span></span>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">(ch1) introduction</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./grafts__/chapter1/index.html" class="sidebar-item-text sidebar-link">
@@ -367,17 +414,17 @@ ul.task-list li input[type="checkbox"] {
   </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
- <span class="menu-text">appendix</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendix</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
-      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./appendix/glossary.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">(main) glossary.qmd</span></a>
+ <span class="menu-text">Glossary</span></a>
   </div>
 </li>
       </ul>
@@ -392,12 +439,13 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#main-index.qmd" id="toc-main-index.qmd" class="nav-link active" data-scroll-target="#main-index.qmd">(main) index.qmd</a>
+  <li><a href="#quarto-graft" id="toc-quarto-graft" class="nav-link active" data-scroll-target="#quarto-graft">Quarto Graft</a>
   <ul class="collapse">
-  <li><a href="#vscode" id="toc-vscode" class="nav-link" data-scroll-target="#vscode">vscode</a></li>
+  <li><a href="#what-you-get" id="toc-what-you-get" class="nav-link" data-scroll-target="#what-you-get">What you get</a></li>
+  <li><a href="#how-grafting-works" id="toc-how-grafting-works" class="nav-link" data-scroll-target="#how-grafting-works">How grafting works</a></li>
   </ul></li>
   </ul>
-</nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/jr200/quarto-graft/blob/main/index.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/jr200/quarto-graft/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"></header>
@@ -406,31 +454,30 @@ ul.task-list li input[type="checkbox"] {
 
 
 
-<section id="main-index.qmd" class="level1">
-<h1>(main) index.qmd</h1>
-<p>setup instructions</p>
+<section id="quarto-graft" class="level1">
+<h1>Quarto Graft</h1>
+<blockquote class="blockquote">
+<p>Compose a single Quarto site from branch-scoped worktrees.</p>
+</blockquote>
+<p>Quarto Graft lets contributors build their chapter or section in an isolated git worktree while the trunk assembles everything into one site. This folder is the starter documentation you can ship with any graft-enabled project: keep it lightweight, opinionated, and ready to brand.</p>
+<section id="what-you-get" class="level2">
+<h2 class="anchored" data-anchor-id="what-you-get">What you get</h2>
+<ul>
+<li>A ready-to-publish Quarto site scaffold (navbar, sidebar, favicon, footer).</li>
+<li>Clear placeholders for auto-generated graft content.</li>
+<li>Docs pages to explain the workflow, commands, and contributor expectations.</li>
+</ul>
+</section>
+<section id="how-grafting-works" class="level2">
+<h2 class="anchored" data-anchor-id="how-grafting-works">How grafting works</h2>
 <ol type="1">
-<li>setup github pages https://quarto.org/docs/publishing/github-pages.html</li>
+<li>Declare branch grafts in <code>grafts.yaml</code>.</li>
+<li>Each graft is exported via a git worktree under <code>.grafts/&lt;name&gt;</code>.</li>
+<li><code>uv run trunk-build</code> renders graft content to <code>docs/grafts__/...</code> and updates navigation automatically.</li>
 </ol>
-<p>Really just workflow / repo hygiene:</p>
-<p>Keep grafts.yaml on main as the list of chapter branches only</p>
-<p>Don’t put main or chapters in there.</p>
-<p>Only put user chapter branches you want included in the book:</p>
-<p>chapter1 chapter2 lng-europe shipping-atlantic</p>
-<p>Enforce “no merges into chapters” via GitHub settings / policy</p>
-<p>Mark chapters as a protected branch.</p>
-<p>Only allow maintainer pushes; don’t accept PRs into chapters from user branches.</p>
-<p>Culturally: “You never open a PR back to chapters; you PR into main only if we ever want to promote something to infra/template.”</p>
-<p>When a new chapter is created:</p>
-<p>Author does:</p>
-<p>git switch chapters git switch -c my-new-chapter # edit docs/, commit, push git push -u origin my-new-chapter</p>
-<p>You add my-new-chapter to grafts.yaml on main.</p>
-<p>Now uv run trunk-build on main will see it, build it, and mount its docs under a new part: in the big book.</p>
-<p>git checkout –orphan gh-pages git status git rm -rf –dry-run . git rm -rf . docs echo “quarto-graft” &gt; index.html git add . git commit -am “initial gh-page” git push</p>
-<section id="vscode" class="level2">
-<h2 class="anchored" data-anchor-id="vscode">vscode</h2>
-<pre><code>uv venv
-uv sync</code></pre>
+<blockquote class="blockquote">
+<p>This starter stays lean on purpose – drop in your own branding, visuals, and content while keeping the structure intact.</p>
+</blockquote>
 
 
 </section>
@@ -537,6 +584,11 @@ uv sync</code></pre>
           if (link.dataset.originalHref !== undefined) {
             link.href = link.dataset.originalHref;
           }
+            // target, if specified
+            link.setAttribute("target", "_blank");
+            if (link.getAttribute("rel") === null) {
+              link.setAttribute("rel", "noopener");
+            }
         }
       }
     function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
@@ -855,4 +907,4 @@ uv sync</code></pre>
 
 
 
-</body></html>
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/jr200/quarto-graft/blob/main/index.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/jr200/quarto-graft/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
