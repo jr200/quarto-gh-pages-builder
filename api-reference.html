@@ -457,7 +457,7 @@ ul.task-list li input[type="checkbox"] {
 <td>After trunk-build to persist the manifest.</td>
 </tr>
 <tr class="odd">
-<td><code>uv run graft-new &lt;name&gt;</code></td>
+<td><code>uv run graft-new --template &lt;template&gt; &lt;name&gt;</code></td>
 <td>Create a new graft branch from the template.</td>
 <td>Onboard a new section/chapter owner.</td>
 </tr>
@@ -470,6 +470,16 @@ ul.task-list li input[type="checkbox"] {
 <td><code>uv run graft-build --branch &lt;name&gt;</code></td>
 <td>Build a single graft branch.</td>
 <td>Local iteration on one section.</td>
+</tr>
+<tr class="even">
+<td><code>uv run graft-list</code></td>
+<td>Show graft branches that can safely be destroyed.</td>
+<td>Before removing stale grafts.</td>
+</tr>
+<tr class="odd">
+<td><code>uv run graft-destroy &lt;branch&gt;</code></td>
+<td>Remove a graft branch locally/remotely and clean config.</td>
+<td>When retiring a graft.</td>
 </tr>
 <tr class="even">
 <td><code>uv run graft-cleanup-orphans</code></td>

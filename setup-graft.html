@@ -457,6 +457,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul class="collapse">
   <li><a href="#create-a-new-graft" id="toc-create-a-new-graft" class="nav-link" data-scroll-target="#create-a-new-graft">Create a new graft</a></li>
   <li><a href="#add-content-to-the-graft" id="toc-add-content-to-the-graft" class="nav-link" data-scroll-target="#add-content-to-the-graft">Add content to the graft</a></li>
+  <li><a href="#retire-a-graft" id="toc-retire-a-graft" class="nav-link" data-scroll-target="#retire-a-graft">Retire a graft</a></li>
   </ul></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/jr200/quarto-graft/blob/main/setup-graft.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/jr200/quarto-graft/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
@@ -475,7 +476,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>This step can be done by the contributor, or the trunk maintainer.</p>
 <p>Clone the repo and create a new graft.</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone ...</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">uv</span> run graft-new  <span class="at">--template</span> python my-first-graft</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">uv</span> run graft-new  <span class="at">--template</span> py-jupyter my-first-graft</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>This will create a and push a git branch <code>graft/my-first-graft</code>, also updating the <code>grafts.yaml</code> configuration file. The <code>grafts.lock</code> manifest can be updated by running:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">uv</span> run trunk-build</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>You can preview the new graft in the hierarchy using.</p>
@@ -498,6 +499,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-am</span> <span class="st">"added new graft called 'my-first-graft'"</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> push</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Note: the main trunk does not execute any scripts. This means outputs in notebooks need to be committed to the branch if they should be shown on the main website.</p>
+</section>
+<section id="retire-a-graft" class="level2">
+<h2 class="anchored" data-anchor-id="retire-a-graft">Retire a graft</h2>
+<p>To see what can be safely removed, run:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">uv</span> run graft-list</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Then destroy a specific graft branch (local, remote, and config entries) with:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">uv</span> run graft-destroy graft/my-first-graft</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 
 
 </section>
