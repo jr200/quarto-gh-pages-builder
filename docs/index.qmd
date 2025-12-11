@@ -1,10 +1,3 @@
----
-title: marimo tutorials
-format: html
-filters:
-  - marimo
----
-
 # quarto-graft
 
 > Compose a single Quarto site from branch-scoped worktrees.

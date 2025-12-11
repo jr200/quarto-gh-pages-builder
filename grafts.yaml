@@ -1,1 +1,5 @@
-branches: []
+branches:
+- name: jupyter-demo
+  branch: graft/jupyter-demo
+- name: markdown-demo
+  branch: graft/markdown-demo

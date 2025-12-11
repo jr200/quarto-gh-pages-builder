@@ -26,4 +26,4 @@ format:
     toc: true
 
 execute:
-  freeze: auto
+  enabled: false

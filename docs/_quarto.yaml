@@ -5,7 +5,7 @@ project:
   - favicon.svg
 
 filters:
-# - site-build.lua
+- site-build.lua
 - marimo-team/marimo
 
 
@@ -36,20 +36,29 @@ website:
     contents:
     - section: index.qmd
       contents:
-      # - playbook.qmd
+      - playbook.qmd
 
-      # - section: Getting Started
-      #   contents:
-      #   - setup-trunk.qmd
-      #   - setup-graft.qmd
+      - section: Getting Started
+        contents:
+        - setup-trunk.qmd
+        - setup-graft.qmd
 
-      # - api-reference.qmd
+      - api-reference.qmd
 
       - section: Grafts from branches
         contents:
         - _AUTOGEN_GRAFTS: '...hidden-node...'
-      # - contributing.qmd
-      # - appendix/glossary.qmd
+        - section: jupyter-demo
+          contents:
+          - grafts__/jupyter-demo/index.qmd
+          - grafts__/jupyter-demo/notebook.ipynb
+          _autogen_branch: graft/jupyter-demo
+        - section: markdown-demo
+          contents:
+          - grafts__/markdown-demo/index.qmd
+          _autogen_branch: graft/markdown-demo
+      - contributing.qmd
+      - appendix/glossary.qmd
 
 format:
   html:
@@ -62,8 +71,8 @@ format:
       margin-width: 260px
     toc: true
     code-copy: true
-    code-overflow: wrap
-    code-tools: true
+    # code-overflow: wrap
+    # code-tools: true
     code-fold: true
     code-summary: "Show the code"
 
@@ -78,5 +87,5 @@ highlight-style: a11y
 execute:
   enabled: false
 
-# metadata:
-#   site_build: "pending"
+metadata:
+  site_build: "pending"

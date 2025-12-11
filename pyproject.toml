@@ -4,7 +4,6 @@ version = "0.1.0"
 description = "Quarto GitHub Pages branch graft tool"
 readme = "README.md"
 requires-python = ">=3.11"
-license = "MIT"
 dependencies = [
   "quarto>=0.1.0",
   "quarto-cli>=1.8.26",
@@ -32,3 +31,4 @@ build-backend = "uv_build"
 
 [tool.ruff]
 per-file-ignores = { "templates/py/pyproject.toml" = ["ALL"], "templates/py-jupyter/pyproject.toml" = ["ALL"], "templates/py-marimo/pyproject.toml" = ["ALL"] }
+
