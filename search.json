@@ -24,146 +24,29 @@
     ]
   },
   {
-    "objectID": "appendix/glossary.html",
-    "href": "appendix/glossary.html",
+    "objectID": "grafts__/jupyter-demo/notebook.html",
+    "href": "grafts__/jupyter-demo/notebook.html",
+    "title": "Jupyter Notebook Example",
+    "section": "",
+    "text": "Quick check that the graft package imports and runs.\n\n\nShow the code\nfrom jupyter_demo import greet, show_dataframe\n\ngreet(\"branch builder\")\n\n\n\n\nShow the code\nshow_dataframe()",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Grafts from branches",
+      "jupyter-demo",
+      "Jupyter Notebook Example"
+    ]
+  },
+  {
+    "objectID": "api-reference.html",
+    "href": "api-reference.html",
     "title": "",
     "section": "",
-    "text": "Code\n\n\n\n\n\n\nGlossary\n\nGraft: A git branch containing Quarto content that will be mounted into the trunk site.\nTrunk: The main branch that controls grafts.yaml, runs builds, and publishes.\nWorktree: A checked-out view of a branch living under .grafts/&lt;name&gt;, keeping contributor work isolated.\nExport: The rendered output from a graft branch under docs/grafts__/.",
+    "text": "Code\n\n\n\n\n\n\nAPI Reference\nProject scripts (via uv run) you can advertise to contributors and maintainers.\n\n\n\n\n\n\n\n\nCommand\nPurpose\nWhen to use\n\n\n\n\nuv run trunk-build\nBuild every graft listed in grafts.yaml and refresh navigation.\nRegular builds in CI or before publishing.\n\n\nuv run trunk-lock\nRegenerate grafts.lock after successful builds.\nAfter trunk-build to persist the manifest.\n\n\nuv run graft-new --template &lt;template&gt; &lt;name&gt;\nCreate a new graft branch from the template.\nOnboard a new section/chapter owner.\n\n\nuv run graft-get &lt;name&gt;\nEnsure a worktree exists locally for a graft branch.\nWhen resuming work on an existing graft.\n\n\nuv run graft-build --branch &lt;name&gt;\nBuild a single graft branch.\nLocal iteration on one section.\n\n\nuv run graft-list\nShow graft branches that can safely be destroyed.\nBefore removing stale grafts.\n\n\nuv run graft-destroy &lt;branch&gt;\nRemove a graft branch locally/remotely and clean config.\nWhen retiring a graft.\n\n\nuv run graft-cleanup-orphans\nRemove .grafts/* directories no longer registered as worktrees.\nRepo hygiene if worktrees drift.\n\n\n\n\nAdd your own helper scripts here, or link to CI workflows that run these commands.",
     "crumbs": [
       "Overview",
       "quarto-graft",
-      "Glossary"
-    ]
-  },
-  {
-    "objectID": "index.html",
-    "href": "index.html",
-    "title": "",
-    "section": "",
-    "text": "Code",
-    "crumbs": [
-      "Overview",
-      "quarto-graft"
-    ]
-  },
-  {
-    "objectID": "index.html#why-quarto-graft-exists",
-    "href": "index.html#why-quarto-graft-exists",
-    "title": "",
-    "section": "Why Quarto Graft exists",
-    "text": "Why Quarto Graft exists\nTraditional versioned collaboration forces everyone into main, leading to merge conflicts, shared heavy dependencies, and a single project shape. Quarto Graft flips that model:\n\nEach contributor owns one branch = one self-contained chapter/section with its own language, environment, and runtime.\nThe trunk never executes contributor code; it only ingests rendered artifacts, keeping main fast and stable.\nBroken branches don’t block the site: last-good fallbacks keep content online with visible warnings.",
-    "crumbs": [
-      "Overview",
-      "quarto-graft"
-    ]
-  },
-  {
-    "objectID": "index.html#what-you-get",
-    "href": "index.html#what-you-get",
-    "title": "",
-    "section": "What you get",
-    "text": "What you get\n\nReady-to-publish Quarto scaffold (navbar, sidebar, favicon, footer, search, GitHub links).\nBranch-grafting build system using git worktrees + uv and automatic navigation updates.\nClean contributor workflow: no cross-branch conflicts or shared dependency coupling; full local preview per branch.\nFailure handling: last-good fallbacks and visible broken-branch stubs.",
-    "crumbs": [
-      "Overview",
-      "quarto-graft"
-    ]
-  },
-  {
-    "objectID": "index.html#who-this-is-for",
-    "href": "index.html#who-this-is-for",
-    "title": "",
-    "section": "Who this is for",
-    "text": "Who this is for\n\nMulti-author books and research publications\nQuant/science teams and education platforms\nInternal documentation portals\n…anybody who wants to track and version threads in isolation",
-    "crumbs": [
-      "Overview",
-      "quarto-graft"
-    ]
-  },
-  {
-    "objectID": "index.html#license",
-    "href": "index.html#license",
-    "title": "",
-    "section": "License",
-    "text": "License\nquarto-graft is released under the MIT License. You are free to use, modify, and redistribute it with attribution.",
-    "crumbs": [
-      "Overview",
-      "quarto-graft"
-    ]
-  },
-  {
-    "objectID": "contributing.html",
-    "href": "contributing.html",
-    "title": "",
-    "section": "",
-    "text": "Code",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Contributing"
-    ]
-  },
-  {
-    "objectID": "contributing.html#templates",
-    "href": "contributing.html#templates",
-    "title": "",
-    "section": "Templates",
-    "text": "Templates\nA template is a ready-to-use graft skeleton (project structure, language/tooling, Quarto settings, navigation, dependency strategy). New graft branches start from whatever template lives on the protected template branch.\n\nWhat makes a good template\n\nRuns immediately with make preview.\nIncludes the basics:\n\ndocs/\n_quarto.yaml\nMakefile\npyproject.toml (or equivalent for the stack)\n\nClearly shows:\n\nthe primary language/toolchain,\nhow outputs are rendered,\nhow notebooks or scripts are handled.\n\n\n\n\nTemplates we’d like to see\n\nPython + Jupyter + Polars\nR + Quarto + ggplot\nJavaScript + Observable + WASM\nBook-style chapters vs website-style sections\nResearch reproducibility templates\nInternal documentation templates\n\n\n\nHow template contributions work\n\nOpen a PR to main with your proposed template changes.\nMaintainers review for structure, safety, and ergonomics.\nOnce accepted, maintainers promote it into the protected template branch.\nContributors automatically inherit the updated template when they create new grafts.\n\n\nImportant: No one opens PRs directly into the protected template branch; it remains maintainer-controlled.",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Contributing"
-    ]
-  },
-  {
-    "objectID": "setup-graft.html",
-    "href": "setup-graft.html",
-    "title": "",
-    "section": "",
-    "text": "Code",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Getting Started",
-      "Setup (graft)"
-    ]
-  },
-  {
-    "objectID": "setup-graft.html#create-a-new-graft",
-    "href": "setup-graft.html#create-a-new-graft",
-    "title": "",
-    "section": "Create a new graft",
-    "text": "Create a new graft\nThis step can be done by the contributor, or the trunk maintainer.\nClone the repo and create a new graft.\ngit clone ...\nuv run graft-new  --template py-jupyter my-first-graft\nThis will create a and push a git branch graft/my-first-graft, also updating the grafts.yaml configuration file. The grafts.lock manifest can be updated by running:\nuv run trunk-build\nYou can preview the new graft in the hierarchy using.\nuv run quarto preview docs\nEach graft template carries its own:\nmy-first-graft/\n├── docs/\n│   ├── index.qmd\n│   ├── _quarto.yaml\n├── .gitignore\n├── Makefile\n├── README.md",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Getting Started",
-      "Setup (graft)"
-    ]
-  },
-  {
-    "objectID": "setup-graft.html#add-content-to-the-graft",
-    "href": "setup-graft.html#add-content-to-the-graft",
-    "title": "",
-    "section": "Add content to the graft",
-    "text": "Add content to the graft\nThe branch is an entirely isolated quartodoc project and knows nothing about the trunk.\nThe only contract is the following command must succeed using the python dependencies of the trunk.\nuv run quarto render docs\nSave and push changes to the remote.\ngit commit -am \"added new graft called 'my-first-graft'\"\ngit push\nNote: the main trunk does not execute any scripts. This means outputs in notebooks need to be committed to the branch if they should be shown on the main website.",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Getting Started",
-      "Setup (graft)"
-    ]
-  },
-  {
-    "objectID": "setup-graft.html#retire-a-graft",
-    "href": "setup-graft.html#retire-a-graft",
-    "title": "",
-    "section": "Retire a graft",
-    "text": "Retire a graft\nTo see what can be safely removed, run:\nuv run graft-list\nThen destroy a specific graft branch (local, remote, and config entries) with:\nuv run graft-destroy graft/my-first-graft",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Getting Started",
-      "Setup (graft)"
+      "API Reference"
     ]
   },
   {
@@ -232,15 +115,244 @@
     ]
   },
   {
-    "objectID": "api-reference.html",
-    "href": "api-reference.html",
+    "objectID": "setup-graft.html",
+    "href": "setup-graft.html",
     "title": "",
     "section": "",
-    "text": "Code\n\n\n\n\n\n\nAPI Reference\nProject scripts (via uv run) you can advertise to contributors and maintainers.\n\n\n\n\n\n\n\n\nCommand\nPurpose\nWhen to use\n\n\n\n\nuv run trunk-build\nBuild every graft listed in grafts.yaml and refresh navigation.\nRegular builds in CI or before publishing.\n\n\nuv run trunk-lock\nRegenerate grafts.lock after successful builds.\nAfter trunk-build to persist the manifest.\n\n\nuv run graft-new --template &lt;template&gt; &lt;name&gt;\nCreate a new graft branch from the template.\nOnboard a new section/chapter owner.\n\n\nuv run graft-get &lt;name&gt;\nEnsure a worktree exists locally for a graft branch.\nWhen resuming work on an existing graft.\n\n\nuv run graft-build --branch &lt;name&gt;\nBuild a single graft branch.\nLocal iteration on one section.\n\n\nuv run graft-list\nShow graft branches that can safely be destroyed.\nBefore removing stale grafts.\n\n\nuv run graft-destroy &lt;branch&gt;\nRemove a graft branch locally/remotely and clean config.\nWhen retiring a graft.\n\n\nuv run graft-cleanup-orphans\nRemove .grafts/* directories no longer registered as worktrees.\nRepo hygiene if worktrees drift.\n\n\n\n\nAdd your own helper scripts here, or link to CI workflows that run these commands.",
+    "text": "Code",
     "crumbs": [
       "Overview",
       "quarto-graft",
-      "API Reference"
+      "Getting Started",
+      "Setup (graft)"
+    ]
+  },
+  {
+    "objectID": "setup-graft.html#create-a-new-graft",
+    "href": "setup-graft.html#create-a-new-graft",
+    "title": "",
+    "section": "Create a new graft",
+    "text": "Create a new graft\nThis step can be done by the contributor, or the trunk maintainer.\nClone the repo and create a new graft.\ngit clone ...\nuv run graft-new  --template py-jupyter my-first-graft\nThis will create a and push a git branch graft/my-first-graft, also updating the grafts.yaml configuration file. The grafts.lock manifest can be updated by running:\nuv run trunk-build\nYou can preview the new graft in the hierarchy using.\nuv run quarto preview docs\nEach graft template carries its own:\nmy-first-graft/\n├── docs/\n│   ├── index.qmd\n│   ├── _quarto.yaml\n├── .gitignore\n├── Makefile\n├── README.md",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Getting Started",
+      "Setup (graft)"
+    ]
+  },
+  {
+    "objectID": "setup-graft.html#add-content-to-the-graft",
+    "href": "setup-graft.html#add-content-to-the-graft",
+    "title": "",
+    "section": "Add content to the graft",
+    "text": "Add content to the graft\nThe branch is an entirely isolated quartodoc project and knows nothing about the trunk.\nThe only contract is the following command must succeed using the python dependencies of the trunk.\nuv run quarto render docs\nSave and push changes to the remote.\ngit commit -am \"added new graft called 'my-first-graft'\"\ngit push\nNote: the main trunk does not execute any scripts. This means outputs in notebooks need to be committed to the branch if they should be shown on the main website.",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Getting Started",
+      "Setup (graft)"
+    ]
+  },
+  {
+    "objectID": "setup-graft.html#retire-a-graft",
+    "href": "setup-graft.html#retire-a-graft",
+    "title": "",
+    "section": "Retire a graft",
+    "text": "Retire a graft\nTo see what can be safely removed, run:\nuv run graft-list\nThen destroy a specific graft branch (local, remote, and config entries) with:\nuv run graft-destroy graft/my-first-graft",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Getting Started",
+      "Setup (graft)"
+    ]
+  },
+  {
+    "objectID": "contributing.html",
+    "href": "contributing.html",
+    "title": "",
+    "section": "",
+    "text": "Code",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Contributing"
+    ]
+  },
+  {
+    "objectID": "contributing.html#templates",
+    "href": "contributing.html#templates",
+    "title": "",
+    "section": "Templates",
+    "text": "Templates\nA template is a ready-to-use graft skeleton (project structure, language/tooling, Quarto settings, navigation, dependency strategy). New graft branches start from whatever template lives on the protected template branch.\n\nWhat makes a good template\n\nRuns immediately with make preview.\nIncludes the basics:\n\ndocs/\n_quarto.yaml\nMakefile\npyproject.toml (or equivalent for the stack)\n\nClearly shows:\n\nthe primary language/toolchain,\nhow outputs are rendered,\nhow notebooks or scripts are handled.\n\n\n\n\nTemplates we’d like to see\n\nPython + Jupyter + Polars\nR + Quarto + ggplot\nJavaScript + Observable + WASM\nBook-style chapters vs website-style sections\nResearch reproducibility templates\nInternal documentation templates\n\n\n\nHow template contributions work\n\nOpen a PR to main with your proposed template changes.\nMaintainers review for structure, safety, and ergonomics.\nOnce accepted, maintainers promote it into the protected template branch.\nContributors automatically inherit the updated template when they create new grafts.\n\n\nImportant: No one opens PRs directly into the protected template branch; it remains maintainer-controlled.",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Contributing"
+    ]
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "",
+    "section": "",
+    "text": "Code",
+    "crumbs": [
+      "Overview",
+      "quarto-graft"
+    ]
+  },
+  {
+    "objectID": "index.html#why-quarto-graft-exists",
+    "href": "index.html#why-quarto-graft-exists",
+    "title": "",
+    "section": "Why Quarto Graft exists",
+    "text": "Why Quarto Graft exists\nTraditional versioned collaboration forces everyone into main, leading to merge conflicts, shared heavy dependencies, and a single project shape. Quarto Graft flips that model:\n\nEach contributor owns one branch = one self-contained chapter/section with its own language, environment, and runtime.\nThe trunk never executes contributor code; it only ingests rendered artifacts, keeping main fast and stable.\nBroken branches don’t block the site: last-good fallbacks keep content online with visible warnings.",
+    "crumbs": [
+      "Overview",
+      "quarto-graft"
+    ]
+  },
+  {
+    "objectID": "index.html#what-you-get",
+    "href": "index.html#what-you-get",
+    "title": "",
+    "section": "What you get",
+    "text": "What you get\n\nReady-to-publish Quarto scaffold (navbar, sidebar, favicon, footer, search, GitHub links).\nBranch-grafting build system using git worktrees + uv and automatic navigation updates.\nClean contributor workflow: no cross-branch conflicts or shared dependency coupling; full local preview per branch.\nFailure handling: last-good fallbacks and visible broken-branch stubs.",
+    "crumbs": [
+      "Overview",
+      "quarto-graft"
+    ]
+  },
+  {
+    "objectID": "index.html#who-this-is-for",
+    "href": "index.html#who-this-is-for",
+    "title": "",
+    "section": "Who this is for",
+    "text": "Who this is for\n\nMulti-author books and research publications\nQuant/science teams and education platforms\nInternal documentation portals\n…anybody who wants to track and version threads in isolation",
+    "crumbs": [
+      "Overview",
+      "quarto-graft"
+    ]
+  },
+  {
+    "objectID": "index.html#license",
+    "href": "index.html#license",
+    "title": "",
+    "section": "License",
+    "text": "License\nquarto-graft is released under the MIT License. You are free to use, modify, and redistribute it with attribution.",
+    "crumbs": [
+      "Overview",
+      "quarto-graft"
+    ]
+  },
+  {
+    "objectID": "appendix/glossary.html",
+    "href": "appendix/glossary.html",
+    "title": "",
+    "section": "",
+    "text": "Code\n\n\n\n\n\n\nGlossary\n\nGraft: A git branch containing Quarto content that will be mounted into the trunk site.\nTrunk: The main branch that controls grafts.yaml, runs builds, and publishes.\nWorktree: A checked-out view of a branch living under .grafts/&lt;name&gt;, keeping contributor work isolated.\nExport: The rendered output from a graft branch under docs/grafts__/.",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Glossary"
+    ]
+  },
+  {
+    "objectID": "grafts__/markdown-demo/index.html",
+    "href": "grafts__/markdown-demo/index.html",
+    "title": "",
+    "section": "",
+    "text": "Code",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Grafts from branches",
+      "markdown-demo",
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "grafts__/markdown-demo/index.html#what-to-do-next",
+    "href": "grafts__/markdown-demo/index.html#what-to-do-next",
+    "title": "",
+    "section": "What to do next",
+    "text": "What to do next\n\nReplace this page with your own content.\nAdd more .qmd or .md files under docs/ and link them via the sidebar.\nRun make render (or quarto render docs) to build _site/.\n\nHappy writing!",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Grafts from branches",
+      "markdown-demo",
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "grafts__/jupyter-demo/index.html",
+    "href": "grafts__/jupyter-demo/index.html",
+    "title": "",
+    "section": "",
+    "text": "Code",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Grafts from branches",
+      "jupyter-demo",
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "grafts__/jupyter-demo/index.html#whats-inside",
+    "href": "grafts__/jupyter-demo/index.html#whats-inside",
+    "title": "",
+    "section": "What’s inside",
+    "text": "What’s inside\n\nuv-managed project with a package at src/jupyter_demo/\nQuarto site with navbar/sidebar and a pre-rendered demo notebook\nSimple helpers exported from the package",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Grafts from branches",
+      "jupyter-demo",
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "grafts__/jupyter-demo/index.html#quick-start",
+    "href": "grafts__/jupyter-demo/index.html#quick-start",
+    "title": "",
+    "section": "Quick start",
+    "text": "Quick start\nuv sync\nuv run quarto render docs --no-execute\nThen open _site/index.html or run make preview.",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Grafts from branches",
+      "jupyter-demo",
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "grafts__/jupyter-demo/index.html#use-the-package",
+    "href": "grafts__/jupyter-demo/index.html#use-the-package",
+    "title": "",
+    "section": "Use the package",
+    "text": "Use the package\nfrom jupyter_demo import greet, show_dataframe\ngreet(\"Quarto\")\n\nshow_dataframe()\n```d\n\nSee `notebook.ipynb` for a jupyter notebook example.\n\n\n\n\n:::{#quarto-navigation-envelope .hidden}\n[Quarto Graft]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1zaWRlYmFyLXRpdGxl\"}\n[Quarto Graft]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1uYXZiYXItdGl0bGU=\"}\n[Jupyter Notebook Example]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1uZXh0\"}\n[API Reference]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1wcmV2\"}\n[quarto-graft]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1zaWRlYmFyOnF1YXJ0by1zaWRlYmFyLXNlY3Rpb24tMQ==\"}\n[Playbook]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1zaWRlYmFyOi9wbGF5Ym9vay5odG1sUGxheWJvb2s=\"}\n[Getting Started]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1zaWRlYmFyOnF1YXJ0by1zaWRlYmFyLXNlY3Rpb24tMg==\"}\n[Setup (trunk)]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1zaWRlYmFyOi9zZXR1cC10cnVuay5odG1sU2V0dXAtKHRydW5rKQ==\"}\n[Setup (graft)]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1zaWRlYmFyOi9zZXR1cC1ncmFmdC5odG1sU2V0dXAtKGdyYWZ0KQ==\"}\n[API Reference]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1zaWRlYmFyOi9hcGktcmVmZXJlbmNlLmh0bWxBUEktUmVmZXJlbmNl\"}\n[Grafts from branches]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1zaWRlYmFyOnF1YXJ0by1zaWRlYmFyLXNlY3Rpb24tMw==\"}\n[jupyter-demo]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1zaWRlYmFyOnF1YXJ0by1zaWRlYmFyLXNlY3Rpb24tNA==\"}\n[Overview]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1zaWRlYmFyOi9ncmFmdHNfXy9qdXB5dGVyLWRlbW8vaW5kZXguaHRtbE92ZXJ2aWV3\"}\n[Jupyter Notebook Example]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1zaWRlYmFyOi9ncmFmdHNfXy9qdXB5dGVyLWRlbW8vbm90ZWJvb2suaHRtbEp1cHl0ZXItTm90ZWJvb2stRXhhbXBsZQ==\"}\n[markdown-demo]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1zaWRlYmFyOnF1YXJ0by1zaWRlYmFyLXNlY3Rpb24tNQ==\"}\n[Overview]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1zaWRlYmFyOi9ncmFmdHNfXy9tYXJrZG93bi1kZW1vL2luZGV4Lmh0bWxPdmVydmlldw==\"}\n[Contributing]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1zaWRlYmFyOi9jb250cmlidXRpbmcuaHRtbENvbnRyaWJ1dGluZw==\"}\n[Glossary]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1zaWRlYmFyOi9hcHBlbmRpeC9nbG9zc2FyeS5odG1sR2xvc3Nhcnk=\"}\n[Overview]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1uYXZiYXI6T3ZlcnZpZXc=\"}\n[/index.html]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1uYXZiYXI6L2luZGV4Lmh0bWw=\"}\n[API Reference]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1uYXZiYXI6QVBJIFJlZmVyZW5jZQ==\"}\n[/api-reference.html]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1uYXZiYXI6L2FwaS1yZWZlcmVuY2UuaHRtbA==\"}\n[GitHub]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1uYXZiYXI6R2l0SHVi\"}\n[https://github.com/jr200/quarto-graft]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWludC1uYXZiYXI6aHR0cHM6Ly9naXRodWIuY29tL2pyMjAwL3F1YXJ0by1ncmFmdA==\"}\n[quarto-graft]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWJyZWFkY3J1bWJzLXF1YXJ0by1ncmFmdA==\"}\n[Grafts from branches]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWJyZWFkY3J1bWJzLUdyYWZ0cy1mcm9tLWJyYW5jaGVz\"}\n[jupyter-demo]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWJyZWFkY3J1bWJzLWp1cHl0ZXItZGVtbw==\"}\n[Overview]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLWJyZWFkY3J1bWJzLU92ZXJ2aWV3\"}\n:::\n\n\n\n:::{#quarto-meta-markdown .hidden}\n[Quarto Graft]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLW1ldGF0aXRsZQ==\"}\n[Quarto Graft]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLXR3aXR0ZXJjYXJkdGl0bGU=\"}\n[Quarto Graft]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLW9nY2FyZHRpdGxl\"}\n[Quarto Graft]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLW1ldGFzaXRlbmFtZQ==\"}\n[Skeleton docs for branch-based Quarto builds.]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLXR3aXR0ZXJjYXJkZGVzYw==\"}\n[Skeleton docs for branch-based Quarto builds.]{.hidden .quarto-markdown-envelope-contents render-id=\"cXVhcnRvLW9nY2FyZGRkZXNj\"}\n:::\n\n\n\n\n&lt;!-- --&gt;\n\n::: {.quarto-embedded-source-code}\n```````````````````{.markdown shortcodes=\"false\"}\n# Overview\n\nWelcome to the jupyter-demo graft. This starter shows how to ship a small Python package and surface it in Quarto content (including notebooks).\n\n## What's inside\n\n- uv-managed project with a package at `src/jupyter_demo/`\n- Quarto site with navbar/sidebar and a **pre-rendered** demo notebook\n- Simple helpers exported from the package\n\n## Quick start\n\n```bash\nuv sync\nuv run quarto render docs --no-execute\nThen open _site/index.html or run make preview.",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Grafts from branches",
+      "jupyter-demo",
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "grafts__/jupyter-demo/index.html#use-the-package-1",
+    "href": "grafts__/jupyter-demo/index.html#use-the-package-1",
+    "title": "",
+    "section": "Use the package",
+    "text": "Use the package\nfrom jupyter_demo import greet, show_dataframe\ngreet(\"Quarto\")\n\nshow_dataframe()\n```d\n\nSee `notebook.ipynb` for a jupyter notebook example.\n:::",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Grafts from branches",
+      "jupyter-demo",
+      "Overview"
     ]
   }
 ]
