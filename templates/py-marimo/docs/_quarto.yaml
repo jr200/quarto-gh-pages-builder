@@ -6,6 +6,9 @@ project:
     - "**/*.md"
     - "**/*.qmd"
 
+filters:
+- marimo-team/marimo
+
 website:
   title: "{{ graft_name }}"
   navbar:

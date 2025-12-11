@@ -1,27 +1,63 @@
-# Overview
+# {{ graft_name }}: Marimo + Quarto
 
-Welcome to the {{ graft_name }} graft. This starter shows how to ship a small Python package and surface it in Quarto content (including notebooks).
+Welcome! This graft shows how to pair Quarto with a small Python package and a **self-contained marimo widget** exported to HTML.
 
 ## What's inside
 
 - uv-managed project with a package at `src/{{ package_name }}/`
-- Quarto site with navbar/sidebar and a demo notebook
-- Simple `greet` helper exported from the package
+- marimo + polars dependencies pre-wired for client-side interactivity
+- A marimo app at `docs/marimo_app.py` that exports to `docs/marimo-demo.html`
+- Quarto site with navbar/sidebar linking to the exported HTML
+- Make targets to export the app and render the site
 
 ## Quick start
 
 ```bash
 uv sync
-uv run quarto render docs --no-execute
+make render          # exports marimo_app.py -> marimo-demo.html and renders Quarto
 ```
 
-Then open `_site/index.html` or run `make preview`.
+Then open `_site/index.html` or run `make preview`. Use the sidebar or navbar to open `marimo-demo.html` and play with the widget (fully client-side, no runtime server).
 
-## Use the package
+## How it works
+
+- The marimo app lives in `docs/marimo_app.py`.
+- `make render` runs `marimo export` to build `docs/marimo-demo.html` with embedded assets.
+- Quarto copies that HTML into `_site/` and links it in the nav.
+
+## Peek at the app
+
+The core of `marimo_app.py`:
 
 ```python
-from {{ package_name }} import greet
-greet("Quarto")
+@mo.app
+def app():
+    sales = demo_sales_data()
+    region = mo.ui.dropdown(options=["All"] + sorted(sales.get_column("region").unique().to_list()), value="All")
+    min_revenue = mo.ui.slider(start=0, stop=int(sales.get_column("revenue").max()), step=25, value=200)
+    top_n = mo.ui.slider(start=3, stop=10, value=5, step=1)
+
+    filtered = sales
+    if region.value != "All":
+        filtered = filtered.filter(pl.col("region") == region.value)
+    filtered = (
+        filtered.filter(pl.col("revenue") >= min_revenue.value)
+        .sort("revenue", descending=True)
+        .head(top_n.value)
+    )
+
+    return mo.vstack(
+        [
+            mo.md(f"{greet()} Explore the sample sales data."),
+            mo.hstack([region, min_revenue, top_n], wrap=True, gap="0.75rem"),
+            mo.ui.table(filtered.to_dict(as_series=False)),
+        ],
+        gap="0.75rem",
+    )
 ```
 
-See `notebook.ipynb` for a runnable example.
+## Adapt it
+
+- Swap `demo_sales_data` for your own loader and schema.
+- Add more UI pieces (`mo.ui.select`, `mo.ui.switch`, `mo.ui.number`) and marimo will keep outputs in sync.
+- To ship elsewhere, just copy `_site/marimo-demo.html` (it’s self contained).
