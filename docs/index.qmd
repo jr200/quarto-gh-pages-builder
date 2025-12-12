@@ -1,0 +1,50 @@
+# marimo-demo: Marimo + Quarto
+
+Welcome! This graft shows how to pair Quarto with a small Python package and a **self-contained marimo widget** exported to HTML.
+
+## What's inside
+
+- uv-managed project with a package at `src/marimo_demo/`
+- marimo + polars dependencies pre-wired for client-side interactivity
+- A marimo app at `docs/marimo_app.qmd` that renders to `docs/marimo_app.html`
+- Quarto site with navbar/sidebar linking to the exported HTML
+- Make targets to export the app and render the site
+
+## Quick start
+
+```bash
+uv sync
+make render          # renders marimo_app.qmd -> marimo_app.html and the Quarto site
+```
+
+Then open `_site/index.html` or run `make preview`. Use the sidebar or navbar to open `marimo_app.html` and play with the widget (fully client-side, no runtime server).
+
+## How it works
+
+- The marimo app lives in `docs/marimo_app.qmd`.
+- `make render` runs `quarto render docs` (with the marimo filter) to build `docs/marimo_app.html` with embedded assets.
+- Quarto copies that HTML into `_site/` and links it in the nav.
+
+## Peek at the app
+
+The core of `marimo_app.qmd`:
+
+```python
+base = mo.ui.slider(start=0, stop=20, step=1, value=6, label="Slider value")
+increment = mo.ui.slider(start=-10, stop=10, step=1, value=3, label="Add this")
+result = base.value + increment.value
+
+mo.vstack(
+    [
+        mo.hstack([base, increment], wrap=True, gap="0.75rem"),
+        mo.md(f"**Sum:** {base.value} + {increment.value} = **{result}**"),
+    ],
+    gap="0.75rem",
+)
+```
+
+## Adapt it
+
+- Replace the inputs with the controls your app needs — marimo will keep the output in sync.
+- Add more UI pieces (`mo.ui.select`, `mo.ui.switch`, `mo.ui.table`) to build out your interface.
+- To ship elsewhere, just copy `_site/marimo_app.html` (it’s self contained).

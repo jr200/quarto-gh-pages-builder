@@ -1,0 +1,43 @@
+project:
+  type: website
+  output-dir: _site
+  render:
+    - "**/*.ipynb"
+    - "**/*.md"
+    - "**/*.qmd"
+
+filters:
+- marimo-team/marimo
+
+website:
+  title: "marimo-demo"
+  page-navigation: true
+  back-to-top-navigation: true
+  open-graph: true
+  sidebar:
+    style: floating
+    search: true
+    background: "#f8f9fa"
+    contents:
+      - index.qmd
+      - marimo_app.qmd
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+
+execute:
+  freeze: auto
+
+
+format:
+  html:
+    theme: zephyr
+    toc: true
+    code-tools: true
+    code-fold: true
+    code-summary: "Show the code"
+
+execute:
+  enabled: false
