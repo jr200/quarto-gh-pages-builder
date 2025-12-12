@@ -19,4 +19,4 @@ format:
     toc: true
 
 execute:
-  enabled: false
+  freeze: auto

@@ -30,32 +30,14 @@ Then open `_site/index.html` or run `make preview`. Use the sidebar or navbar to
 The core of `marimo_app.qmd`:
 
 ```python
-first = mo.ui.slider(start=0, stop=20, step=1, value=6, label="Slider A")
-second = mo.ui.number(value=3, min_value=0, max_value=20, step=1, label="Number B")
-operation = mo.ui.dropdown(
-    [("+ add", "add"), ("- subtract", "subtract"), ("× multiply", "multiply"), ("÷ divide", "divide")],
-    value="add",
-    label="Operation",
-)
-
-def calculate(a: float, b: float, op: str) -> float | str:
-    if op == "add":
-        return a + b
-    if op == "subtract":
-        return a - b
-    if op == "multiply":
-        return a * b
-    if op == "divide":
-        return "undefined" if b == 0 else a / b
-    return "?"
-
-symbol = { "add": "+", "subtract": "−", "multiply": "×", "divide": "÷" }[operation.value]
-result = calculate(first.value, second.value, operation.value)
+base = mo.ui.slider(start=0, stop=20, step=1, value=6, label="Slider value")
+increment = mo.ui.slider(start=-10, stop=10, step=1, value=3, label="Add this")
+result = base.value + increment.value
 
 mo.vstack(
     [
-        mo.hstack([first, second, operation], wrap=True, gap="0.75rem"),
-        mo.md(f"**Result:** {first.value} {symbol} {second.value} = **{result}**"),
+        mo.hstack([base, increment], wrap=True, gap="0.75rem"),
+        mo.md(f"**Sum:** {base.value} + {increment.value} = **{result}**"),
     ],
     gap="0.75rem",
 )
