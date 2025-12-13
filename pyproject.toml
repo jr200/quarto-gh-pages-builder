@@ -6,9 +6,9 @@ readme = "README.md"
 authors = [{ name = "quarto-graft" }]
 requires-python = ">=3.11"
 dependencies = [
-    "polars>=1.35.2",
     "quarto-cli>=1.8.26",
-    "marimo>=0.8.17",
+    "marimo>=0.18.4",
+    "quarto>=0.1.0",
 ]
 
 [build-system]

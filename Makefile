@@ -14,7 +14,7 @@ render: env
 	@echo "Rendering Quarto project in $(DOCS_DIR)/..."
 	uv run quarto render "$(DOCS_DIR)" --no-execute
 
-preview: env
+preview: render
 	@echo "Starting Quarto preview for $(DOCS_DIR)/..."
 	uv run quarto preview "$(DOCS_DIR)"
 
