@@ -3,3 +3,5 @@ branches:
   branch: graft/markdown-demo
 - name: marimo-demo
   branch: graft/marimo-demo
+- name: jupyter-demo
+  branch: graft/jupyter-demo
