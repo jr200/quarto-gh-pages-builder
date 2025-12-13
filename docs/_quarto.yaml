@@ -52,9 +52,10 @@ website:
           contents:
           - grafts__/markdown-demo/index.qmd
           _autogen_branch: graft/markdown-demo
-        - section: graft/marimo-demo
+        - section: marimo-demo
           contents:
           - grafts__/marimo-demo/index.qmd
+          - grafts__/marimo-demo/marimo_app.qmd
           _autogen_branch: graft/marimo-demo
       - contributing.qmd
       - appendix/glossary.qmd

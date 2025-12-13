@@ -2,17 +2,19 @@
   "graft/marimo-demo": {
     "branch_key": "marimo-demo",
     "exported": [
-      "index.qmd"
+      "index.qmd",
+      "marimo_app.qmd"
     ],
-    "last_checked": "2025-12-12T14:52:13.057832Z",
-    "title": "graft/marimo-demo"
+    "last_checked": "2025-12-13T10:45:13.521395Z",
+    "last_good": "28d8a1e12029b6c504cddd633a56f91fe2600a15",
+    "title": "marimo-demo"
   },
   "graft/markdown-demo": {
     "branch_key": "markdown-demo",
     "exported": [
       "index.qmd"
     ],
-    "last_checked": "2025-12-12T14:52:12.938836Z",
+    "last_checked": "2025-12-13T10:45:13.416114Z",
     "last_good": "6f5f3f8587a4ef3c103a8d5dce1ebdba6b476240",
     "title": "markdown-demo"
   }
