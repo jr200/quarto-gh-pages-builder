@@ -1,6 +1,6 @@
-# {{ graft_name }}: Marimo + Quarto
+# Overview
 
-Welcome! This graft shows how to pair Quarto with a small Python package and a **self-contained marimo widget** exported to HTML.
+Welcome! This {{ graft_name }} graft shows how to pair Quarto with a small Python package and a **self-contained marimo widget** exported to HTML.
 
 ## What's inside
 
@@ -24,24 +24,6 @@ Then open `_site/index.html` or run `make preview`. Use the sidebar or navbar to
 - The marimo app lives in `docs/marimo_app.qmd`.
 - `make render` runs `quarto render docs` (with the marimo filter) to build `docs/marimo_app.html` with embedded assets.
 - Quarto copies that HTML into `_site/` and links it in the nav.
-
-## Peek at the app
-
-The core of `marimo_app.qmd`:
-
-```python
-base = mo.ui.slider(start=0, stop=20, step=1, value=6, label="Slider value")
-increment = mo.ui.slider(start=-10, stop=10, step=1, value=3, label="Add this")
-result = base.value + increment.value
-
-mo.vstack(
-    [
-        mo.hstack([base, increment], wrap=True, gap="0.75rem"),
-        mo.md(f"**Sum:** {base.value} + {increment.value} = **{result}**"),
-    ],
-    gap="0.75rem",
-)
-```
 
 ## Adapt it
 
