@@ -10,6 +10,10 @@ website:
   favicon: docs/favicon.svg
   repo-url: https://github.com/jr200/quarto-graft
   repo-actions: [source, issue]
+  page-footer:
+    left: "[quarto-graft](https://github.com/jr200/quarto-graft)"
+    right: "Last build: {{< meta site_build >}}"
+
   navbar:
     title: "{{ project_name }}"
     logo: docs/favicon.svg
@@ -57,9 +61,6 @@ format:
     code-summary: "Show the code"
 
     link-external-newwindow: true
-    page-footer:
-      left: "[quarto-graft](https://github.com/jr200/quarto-graft)"
-      right: "Last build: {{< meta site_build >}}"
     number-sections: false
 
 highlight-style: a11y
