@@ -288,16 +288,31 @@ def create_worktree(ref: str, name: str) -> Path:
 
 
 def remove_worktree(worktree_name: str | Path, force: bool = False) -> None:
-    """Remove a git worktree by name or absolute path."""
+    """
+    Remove a git worktree by name or absolute path.
+
+    This function removes:
+    - The worktree directory itself
+    - The git admin directory (.git/worktrees/<name>)
+    - Any branch created by pygit2.add_worktree() with the same name
+
+    This ensures that temporary worktrees created during builds don't leave
+    behind orphaned branches like "head-marimo-75a809".
+    """
     wt_dir = Path(worktree_name)
     if not wt_dir.is_absolute():
         wt_dir = WORKTREES_CACHE / wt_dir
-    if not wt_dir.exists():
+
+    repo = _get_repo()
+    name = wt_dir.name
+
+    # Early exit if nothing to clean up
+    worktree_exists = wt_dir.exists()
+    branch_exists = name in repo.branches.local
+    if not worktree_exists and not branch_exists:
         return
 
     try:
-        repo = _get_repo()
-        name = wt_dir.name
         # Attempt removal via git CLI first (cleans admin dir)
         try:
             run_git(["worktree", "remove", "-f", wt_dir.as_posix()], cwd=ROOT)
@@ -317,6 +332,17 @@ def remove_worktree(worktree_name: str | Path, force: bool = False) -> None:
         # Remove working directory itself
         if wt_dir.exists():
             shutil.rmtree(wt_dir)
+
+        # Delete the branch created by pygit2.add_worktree() if it exists
+        # This cleans up temporary branches like "head-marimo-75a809" created during builds
+        if name in repo.branches.local:
+            try:
+                branch = repo.branches.local[name]
+                branch.delete()
+                logger.debug(f"Deleted branch: {name}")
+            except Exception as e:
+                logger.debug(f"Failed to delete branch {name}: {e}")
+
         logger.debug(f"Removed worktree: {wt_dir}")
     except Exception:
         logger.warning(f"Failed to remove worktree via pygit2/git, removing manually: {wt_dir}")
