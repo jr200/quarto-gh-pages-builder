@@ -142,6 +142,6 @@ Grafts will attach to these named sections.
 ## How It Works
 
 1. **Grafts attach to collars**: Each graft specifies a collar in `grafts.yaml`
-2. **Build process**: `quarto-graft build` renders each graft in its worktree
+2. **Build process**: `quarto-graft build` renders each graft in isolation
 3. **Auto-navigation**: Built content is injected after the matching collar marker
 4. **Atomic updates**: The trunk's `_quarto.yaml` is updated automatically

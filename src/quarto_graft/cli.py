@@ -10,7 +10,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from .branches import destroy_graft, init_trunk, load_manifest, new_graft_branch, read_branches_list
+from .branches import branch_to_key, destroy_graft, init_trunk, load_manifest, new_graft_branch, read_branches_list
 from .build import build_branch, update_manifests
 from .constants import (
     GRAFT_TEMPLATES_DIR,
@@ -21,7 +21,7 @@ from .constants import (
     TRUNK_ADDONS_DIR,
     TRUNK_TEMPLATES_DIR,
 )
-from .git_utils import run_git
+from .git_utils import remove_worktree, run_git
 from .quarto_config import apply_manifest
 from .template_sources import TemplateSource, load_template_sources_from_config
 
@@ -554,9 +554,19 @@ def graft_create(
         branch_name=git_branch_name,
     )
 
+    # Clean up the temporary worktree created during graft initialization
+    # The build process will create its own temporary worktrees as needed
+    try:
+        branch_key = branch_to_key(name)
+        remove_worktree(branch_key, force=True)
+        # Prune any stale worktree references from git
+        run_git(["worktree", "prune"], cwd=ROOT)
+        logger.debug(f"Cleaned up temporary worktree for {branch_key}")
+    except Exception as e:
+        logger.debug(f"Failed to clean up worktree: {e}")
+
     console.print(f"[green]✓[/green] New orphan graft branch '{git_branch_name}' created from template '{template_name}'")
     console.print(f"[bold]Collar:[/bold] {collar}")
-    console.print(f"[bold]Git worktree ready at:[/bold] {wt_dir}")
 
     # Display trunk instructions if present
     if trunk_instructions:

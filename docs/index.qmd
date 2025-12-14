@@ -1,6 +1,6 @@
 # quarto-graft
 
-> A Python CLI for multi-author Quarto documentation using git worktrees
+> A Python CLI for multi-author Quarto documentation using git branches
 
 **Quarto Graft** is a command-line tool that lets multiple authors collaborate on a single Quarto website without merge conflicts. Each author works in an isolated git branch (a "graft"), and the main branch (the "trunk") automatically assembles everything into one unified, searchable site.
 
@@ -14,7 +14,7 @@ The **trunk** is your main branch and the foundation of your Quarto site. It def
 
 ### Grafts
 **Grafts** are isolated git branches where authors work independently. Each graft:
-- Runs in its own git worktree with its own dependencies
+- Has its own dependencies and build environment
 - Can use any language or environment (Python, R, Julia, etc.)
 - Specifies which **collar** it attaches to
 - Gets automatically included in the trunk's navigation
@@ -59,7 +59,7 @@ Everything is **template-based** and customizable:
 
 - 🚀 Python CLI (`quarto-graft`) for project management
 - 📦 Customizable trunk and graft templates
-- 🔧 Git worktree-based isolation
+- 🔧 Git branch-based isolation
 - 🎯 Multiple collar attachment points
 - 🔄 Automatic navigation updates
 - 💾 Last-good build fallbacks
@@ -127,7 +127,6 @@ quarto-graft graft create demo --template py-jupyter --collar main
 
 **This creates:**
 - Git branch: `graft/demo` (customizable with `--branch-name`)
-- Worktree at: `.grafts-cache/demo/`
 - Entry in `grafts.yaml`
 - Automatically pushes to origin (use `--no-push` to skip)
 
@@ -159,23 +158,18 @@ quarto preview
 
 ### Working on a Graft
 
-Authors can work on grafts in two ways:
+Authors work on graft branches like any other git branch:
 
-**Option 1: Use the worktree directory** (recommended for independent work)
 ```bash
-cd .grafts-cache/demo
+# Checkout the graft branch
+git checkout graft/demo
+
 # Edit files, run notebooks, commit, push
 git add . && git commit -m "Updated content"
 git push
-```
 
-**Option 2: Checkout the branch** (if you need to switch contexts)
-```bash
-git checkout graft/demo
-# Work normally
-git add . && git commit -m "Updates"
-git push
-git checkout main  # Return to trunk
+# Return to trunk when done
+git checkout main
 ```
 
 After pushing graft changes, rebuild from trunk to see updates:

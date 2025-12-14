@@ -139,7 +139,6 @@ class BranchSpec(TypedDict):
 
     name: str          # logical graft name
     branch: str        # git branch name
-    local_path: str    # worktree directory under .grafts-cache/
     collar: str        # attachment point in trunk _quarto.yaml
 
 
@@ -203,7 +202,7 @@ def remove_from_grafts_config(branch: str) -> list[str]:
     Remove a branch from grafts.yaml.
 
     Returns:
-        List of local_path keys removed (for cleaning worktrees).
+        List of name keys removed (for cleaning cache).
     """
     if not GRAFTS_CONFIG_FILE.exists():
         return []
@@ -224,8 +223,8 @@ def remove_from_grafts_config(branch: str) -> list[str]:
                 continue
         elif isinstance(item, dict):
             if item.get("branch") == branch:
-                local_path = str(item.get("local_path") or item.get("name") or branch)
-                removed_keys.append(branch_to_key(local_path))
+                name = str(item.get("name") or branch)
+                removed_keys.append(branch_to_key(name))
                 continue
         kept.append(item)
 
@@ -305,7 +304,7 @@ def save_manifest(manifest: dict[str, ManifestEntry]) -> None:
 
 def _validate_label(label: str, value: str) -> None:
     """
-    Validate a label (branch name, graft name, local_path, collar) for safety.
+    Validate a label (branch name, graft name, collar) for safety.
 
     Args:
         label: Human-readable name of what's being validated (e.g., "branch name")
@@ -339,13 +338,13 @@ def read_branches_list(path: Path | None = None) -> list[BranchSpec]:
 
     specs: list[BranchSpec] = []
     seen_branches: set[str] = set()
-    seen_local_paths: set[str] = set()
+    seen_names: set[str] = set()
 
     for idx, item in enumerate(raw_list):
         if not isinstance(item, dict):
             raise ValueError(
                 f"grafts.yaml entry {idx} must be a dict with keys: name, branch, collar. "
-                f"Optional: local_path. Got: {type(item).__name__}"
+                f"Got: {type(item).__name__}"
             )
 
         if "name" not in item or "branch" not in item:
@@ -355,16 +354,15 @@ def read_branches_list(path: Path | None = None) -> list[BranchSpec]:
 
         name = str(item.get("name", "")).strip()
         branch = str(item.get("branch", "")).strip()
-        local_path = str(item.get("local_path") or name).strip()
         collar = str(item.get("collar", "")).strip()
-        spec: BranchSpec = {"name": name, "branch": branch, "local_path": local_path, "collar": collar}
+        # Ignore local_path if present (backwards compatibility)
+        spec: BranchSpec = {"name": name, "branch": branch, "collar": collar}
 
         if not spec["name"] or not spec["branch"] or not spec["collar"]:
             raise ValueError("grafts.yaml entries must include non-empty 'name', 'branch', and 'collar'")
 
         _validate_label("graft name", spec["name"])
         _validate_label("git branch name", spec["branch"])
-        _validate_label("local_path", spec["local_path"])
         _validate_label("collar", spec["collar"])
 
         if spec["branch"] in PROTECTED_BRANCHES:
@@ -374,13 +372,13 @@ def read_branches_list(path: Path | None = None) -> list[BranchSpec]:
         if spec["branch"] in seen_branches:
             logger.warning("Duplicate branch '%s' found in grafts.yaml; ignoring subsequent entries", spec["branch"])
             continue
-        if spec["local_path"] in seen_local_paths:
+        if spec["name"] in seen_names:
             logger.warning(
-                "Duplicate local_path '%s' found in grafts.yaml; ignoring subsequent entries", spec["local_path"]
+                "Duplicate name '%s' found in grafts.yaml; ignoring subsequent entries", spec["name"]
             )
             continue
         seen_branches.add(spec["branch"])
-        seen_local_paths.add(spec["local_path"])
+        seen_names.add(spec["name"])
         specs.append(spec)
 
     if PROTECTED_BRANCHES.intersection(seen_branches):
@@ -396,7 +394,6 @@ def new_graft_branch(
     collar: str,
     push: bool = False,
     branch_name: str | None = None,
-    local_path: str | None = None,
 ) -> tuple[Path, str | None]:
     """
     Create a new orphan graft branch from a template.
@@ -407,7 +404,6 @@ def new_graft_branch(
         collar: Attachment point in trunk _quarto.yaml (e.g., 'main', 'notes', 'bugs')
         push: Whether to push the new branch to remote
         branch_name: Git branch name (defaults to name)
-        local_path: Local worktree path (defaults to name)
 
     Returns:
         A tuple of (worktree_path, trunk_instructions_content)
@@ -431,13 +427,6 @@ def new_graft_branch(
     if branch in PROTECTED_BRANCHES:
         raise RuntimeError(f"'{branch}' is a protected branch name, cannot use for graft branch")
 
-    # Validate local_path
-    loc_path = local_path or name
-    try:
-        _validate_label("local_path", loc_path)
-    except ValueError as e:
-        raise RuntimeError(str(e)) from e
-
     repo = _open_repo()
     already_local = branch in repo.branches.local
     already_remote = f"origin/{branch}" in repo.branches.remote
@@ -460,7 +449,7 @@ def new_graft_branch(
         raise RuntimeError(f"Graft template directory not found: {template_dir}")
 
     # Create worktree + new branch
-    branch_key = branch_to_key(loc_path)
+    branch_key = branch_to_key(name)
     wt_dir = WORKTREES_CACHE / branch_key
     if wt_dir.exists():
         raise RuntimeError(
@@ -474,8 +463,10 @@ def new_graft_branch(
             "Cannot create a graft because the repository has no commits yet. "
             "Commit your trunk files first, then retry."
         )
-    # pygit2.add_worktree does not accept keyword args; default ref is HEAD
-    repo.add_worktree(branch_key, str(wt_dir))
+    # Create worktree detached at HEAD to avoid creating an unwanted branch
+    # pygit2.add_worktree(name, path) creates a branch named 'name' by default
+    # To avoid this, we pass HEAD as the ref so it creates a detached worktree
+    repo.add_worktree(branch_key, str(wt_dir), ref=repo.head)
     wt_repo = pygit2.Repository(str(wt_dir))
 
     # Reset worktree to clean state
@@ -499,7 +490,7 @@ def new_graft_branch(
     context = {
         "graft_name": name,
         "graft_branch": branch,
-        "graft_local_path": loc_path,
+        "graft_local_path": name,  # kept for template compatibility
         "graft_slug": branch_key,
         "package_name": pkg_name,
         "project_slug": _project_slug(pkg_name),
@@ -558,8 +549,6 @@ def new_graft_branch(
 
     if not exists:
         entry: dict[str, str] = {"name": name, "branch": branch, "collar": collar}
-        if loc_path != name:
-            entry["local_path"] = loc_path
         branches_list.append(entry)
         data["branches"] = branches_list
         atomic_write_yaml(GRAFTS_CONFIG_FILE, data)

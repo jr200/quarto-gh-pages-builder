@@ -264,17 +264,16 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
     Build a single branch into docs/grafts__/<branch_key>/... with fallback logic.
     """
     if isinstance(spec, str):
-        spec = {"name": spec, "branch": spec, "local_path": spec}  # type: ignore[assignment]
+        spec = {"name": spec, "branch": spec, "collar": ""}  # type: ignore[assignment]
 
     branch = spec["branch"]
     graft_name = spec["name"]
-    local_path = spec.get("local_path") or graft_name
 
     manifest = load_manifest()
     entry = manifest.get(branch, {})
     last_good_sha = entry.get("last_good")
 
-    branch_key = branch_to_key(local_path)
+    branch_key = branch_to_key(graft_name)
     # Prefer remote ref if available, otherwise fall back to local
     head_ref = f"origin/{branch}" if _branch_exists(f"origin/{branch}") else branch
     head_sha: str | None = None

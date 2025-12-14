@@ -25,7 +25,6 @@ branches: []
 # - name: demo1
 #   branch: graft/demo1
 #   collar: main
-#   local_path: demo1  # optional, defaults to name
 #
 # Available collars are defined in _quarto.yaml as _GRAFT_COLLAR markers.
 # Common collars: main, notes, bugs

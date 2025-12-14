@@ -160,7 +160,7 @@ quarto-graft build --branch graft/my-tutorial
 
 **What it does:**
 1. Fetches latest commits from all graft branches
-2. Renders each graft in its worktree
+2. Renders each graft in isolation
 3. Copies outputs to `docs/grafts__/`
 4. Updates `grafts.lock` manifest
 5. Updates trunk `_quarto.yaml` navigation
@@ -233,9 +233,6 @@ branches:
 - `name` - Display name
 - `branch` - Git branch name
 - `collar` - Attachment point
-
-**Optional fields:**
-- `local_path` - Worktree directory (defaults to `name`)
 
 ### `grafts.lock`
 

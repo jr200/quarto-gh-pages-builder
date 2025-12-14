@@ -256,7 +256,7 @@ def apply_manifest() -> None:
             if not entry:
                 continue
             title = entry.get("title") or spec["name"]
-            branch_key = entry.get("branch_key") or branch_to_key(spec["local_path"])
+            branch_key = entry.get("branch_key") or branch_to_key(spec["name"])
             exported: list[str] = entry.get("exported") or []
             if not exported:
                 continue

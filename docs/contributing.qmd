@@ -87,7 +87,6 @@ my-graft-template/
 - `{{ graft_name }}` - Display name of the graft
 - `{{ graft_branch }}` - Git branch name
 - `{{ graft_slug }}` - URL-safe identifier
-- `{{ graft_local_path }}` - Local worktree path
 
 **Example graft `_quarto.yaml`:**
 ```yaml
