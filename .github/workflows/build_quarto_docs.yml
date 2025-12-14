@@ -43,6 +43,6 @@ jobs:
         if: github.event_name != 'workflow_dispatch'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          event-type: dispatch-publish-pypi
+          event-type: dispatch-publish-uv-pypi
           client-payload: ${{ steps.prepare_payload.outputs.payload }}
 

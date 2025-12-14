@@ -1,9 +1,9 @@
-name: build-python-wheel-pure
+name: publish-uv-pypi
 
 on:
   repository_dispatch:
     types:
-      - dispatch-build-python-wheel-pure
+      - dispatch-publish-uv-pypi
 
   workflow_dispatch:
     inputs:
@@ -12,16 +12,17 @@ on:
         required: false
         type: string
         default: "refs/heads/master"
-      artifact_glob:
-        description: artifact-glob
+      build-args:
+        description: "build-args"
         required: false
         type: string
-        default: ""
-      artifact_name:
-        description: artifact-name
+        default: -v
+      publish-args:
+        description: "publish-args"
         required: false
         type: string
-        default: "pywheel"
+        default: -vvv
+
 
 jobs:
   configure:
@@ -32,11 +33,14 @@ jobs:
 
   main:
     needs: configure
-    uses: jr200/github-action-templates/.github/workflows/build_python_wheel_pure.yml@main
+    uses: jr200/github-action-templates/.github/workflows/publish_uv_pypi.yml@main
     with:
       checkout-ref: ${{ fromJson(needs.configure.outputs.context).checkout-ref }}
-      artifact_glob: ${{ fromJson(needs.configure.outputs.context).artifact_glob }}
-      artifact_name: ${{ fromJson(needs.configure.outputs.context).artifact_name }}
+      build-args: ${{ fromJson(needs.configure.outputs.context).build-args }}
+      publish-args: ${{ fromJson(needs.configure.outputs.context).publish-args }}
+    secrets:
+      pypi_api_token: ${{ secrets.PYPI_API_TOKEN }}
+
 
   spawn-workflow:
     needs: main
@@ -48,7 +52,7 @@ jobs:
           ${{ toJson(github.event.client_payload) }}
           EOF
           
-          cat old_payload.json | jq '. + {"pywheel_run_id": "${{ github.run_id }}"}' > new_payload.json
+          cat old_payload.json | jq '. + {"pypi_run_id": "${{ github.run_id }}"}' > new_payload.json
           echo "payload=$(cat new_payload.json | jq -c '.')" >> $GITHUB_OUTPUT
 
       - name: dispatch-next-workflow
@@ -56,5 +60,5 @@ jobs:
         if: github.event_name != 'workflow_dispatch'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          event-type: dispatch-build-sphinx-docs
+          event-type: dispatch-publish-release
           client-payload: ${{ steps.prepare_payload.outputs.payload }}
