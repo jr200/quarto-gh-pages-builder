@@ -343,13 +343,8 @@ def new_graft_branch(
             f"Branch '{branch}' already exists ({where_str}); won't create a new graft with this name."
         )
 
-    # Support both string names (legacy) and direct paths (new multi-source)
-    if isinstance(template, str):
-        template_dir = GRAFT_TEMPLATES_DIR / template
-        template_name = template
-    else:
-        template_dir = template
-        template_name = template.name
+    template_dir = template
+    template_name = template.name
 
     if not template_dir.exists() or not template_dir.is_dir():
         raise RuntimeError(f"Graft template directory not found: {template_dir}")
@@ -409,7 +404,7 @@ def new_graft_branch(
     if len(wt_repo.index) > 0:
         tree_id = wt_repo.index.write_tree()
         sig = wt_repo.default_signature
-        commit_id = wt_repo.create_commit(
+        _commit_id = wt_repo.create_commit(
             f"refs/heads/{branch}",
             sig,
             sig,

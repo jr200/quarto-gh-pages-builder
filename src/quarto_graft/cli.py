@@ -154,7 +154,7 @@ class TemplateValidator:
                 else:
                     console.print(f"  • [cyan]{name}[/cyan]")
         else:
-            console.print(f"  [dim]No templates found[/dim]")
+            console.print("  [dim]No templates found[/dim]")
         console.print()
 
     def select_template_interactive(self) -> tuple[str, Path]:
@@ -677,13 +677,6 @@ def main_callback(ctx: typer.Context) -> None:
                 console.print("[red]Error:[/red] Branch name required")
                 raise typer.Exit(code=1)
             graft_build(branch=branch, no_update_manifest=False)
-        elif group == "graft" and command == "get":
-            # Prompt for branch
-            branch = questionary.text("Enter branch name (e.g. chapter1):").ask()
-            if not branch:
-                console.print("[red]Error:[/red] Branch name required")
-                raise typer.Exit(code=1)
-            graft_get(branch=branch)
         elif group == "graft" and command == "list":
             graft_list()
         elif group == "graft" and command == "destroy":
@@ -704,8 +697,6 @@ def main_callback(ctx: typer.Context) -> None:
                 console.print("[red]Error:[/red] Branch name required")
                 raise typer.Exit(code=1)
             graft_destroy(branch=branch, keep_remote=False)
-        elif group == "graft" and command == "cleanup":
-            graft_cleanup()
 
 
 def main() -> None:
