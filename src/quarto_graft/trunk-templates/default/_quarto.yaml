@@ -4,6 +4,9 @@ project:
   resources:
   - docs/favicon.svg
 
+filters:
+- docs/site-build.lua
+
 website:
   title: "{{ project_name }}"
   description: "Skeleton docs for branch-based Quarto builds."
