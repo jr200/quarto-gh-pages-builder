@@ -112,6 +112,14 @@ def collect_exported_relpaths(docs_dir: Path, cfg: dict[str, Any]) -> list[str]:
     Determine which *source documents* to export from this branch's docs/,
     preserving the branch author's intended order as far as possible.
     """
+    def _resolve_rel(rel: str) -> Path | None:
+        """Resolve a relative path, preferring docs_dir, then docs_dir/docs/."""
+        candidates = [docs_dir / rel, docs_dir / "docs" / rel]
+        for p in candidates:
+            if p.exists():
+                return p
+        return None
+
     project = cfg.get("project") or {}
     render_spec = project.get("render")
 
@@ -128,8 +136,8 @@ def collect_exported_relpaths(docs_dir: Path, cfg: dict[str, Any]) -> list[str]:
     files_from_sidebar = flatten_quarto_contents(sidebar_contents)
     if files_from_sidebar:
         for rel in files_from_sidebar:
-            p = docs_dir / rel
-            if not p.exists():
+            p = _resolve_rel(rel)
+            if p is None:
                 continue
             if p.suffix.lower() not in SUPPORTED_SOURCE_EXTS:
                 continue
@@ -141,8 +149,8 @@ def collect_exported_relpaths(docs_dir: Path, cfg: dict[str, Any]) -> list[str]:
     files_from_book = flatten_quarto_contents(book_chapters)
     if files_from_book:
         for rel in files_from_book:
-            p = docs_dir / rel
-            if not p.exists():
+            p = _resolve_rel(rel)
+            if p is None:
                 continue
             if p.suffix.lower() not in SUPPORTED_SOURCE_EXTS:
                 continue

@@ -21,7 +21,7 @@ from .constants import (
     TRUNK_ADDONS_DIR,
     TRUNK_TEMPLATES_DIR,
 )
-from .git_utils import remove_worktree, run_git
+from .git_utils import has_commits, remove_worktree, run_git
 from .quarto_config import apply_manifest
 from .template_sources import TemplateSource, load_template_sources_from_config
 
@@ -490,6 +490,13 @@ def graft_create(
     ),
 ) -> None:
     """Create a new graft branch from a template."""
+    if not has_commits():
+        console.print(
+            "[red]Error:[/red] Cannot create a graft because the repository has no commits yet.\n"
+            "Commit your trunk files first, then retry."
+        )
+        raise typer.Exit(code=1)
+
     require_trunk()
 
     if name is None:

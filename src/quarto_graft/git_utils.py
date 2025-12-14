@@ -204,6 +204,12 @@ def worktrees_for_branch(branch: str) -> list[Path]:
     return paths
 
 
+def has_commits() -> bool:
+    """Return True if the repository has at least one commit."""
+    repo = _get_repo()
+    return not repo.head_is_unborn
+
+
 def fetch_origin() -> None:
     """Fetch and prune origin to ensure refs are up to date before building."""
     logger.info("[fetch] git fetch --prune origin")
