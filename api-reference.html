@@ -539,7 +539,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Build specific graft</span></span>
 <span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> build <span class="at">--branch</span> graft/my-tutorial</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p><strong>What it does:</strong> 1. Fetches latest commits from all graft branches 2. Renders each graft in its worktree 3. Copies outputs to <code>docs/grafts__/</code> 4. Updates <code>grafts.lock</code> manifest 5. Updates trunk <code>_quarto.yaml</code> navigation</p>
+<p><strong>What it does:</strong> 1. Fetches latest commits from all graft branches 2. Renders each graft in isolation 3. Copies outputs to <code>docs/grafts__/</code> 4. Updates <code>grafts.lock</code> manifest 5. Updates trunk <code>_quarto.yaml</code> navigation</p>
 <hr>
 </section>
 </section>
@@ -588,7 +588,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">branch</span><span class="kw">:</span><span class="at"> graft/personal-notes</span></span>
 <span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">collar</span><span class="kw">:</span><span class="at"> notes</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p><strong>Required fields:</strong> - <code>name</code> - Display name - <code>branch</code> - Git branch name - <code>collar</code> - Attachment point</p>
-<p><strong>Optional fields:</strong> - <code>local_path</code> - Worktree directory (defaults to <code>name</code>)</p>
 </section>
 <section id="grafts.lock" class="level3">
 <h3 class="anchored" data-anchor-id="grafts.lock"><code>grafts.lock</code></h3>
@@ -1055,7 +1054,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       &nbsp;
     <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/jr200/quarto-graft/blob/main/api-reference.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/jr200/quarto-graft/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div>
     <div class="nav-footer-right">
-<p>Last build: 2025-12-14 13:10 UTC</p>
+<p>Last build: 2025-12-14 13:34 UTC</p>
 </div>
   </div>
 </footer>
