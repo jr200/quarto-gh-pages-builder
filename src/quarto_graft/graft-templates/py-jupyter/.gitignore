@@ -224,3 +224,5 @@ docs/_styles-quartodoc.css
 docs/grafts__/
 
 .history/
+*.bak
+*.swp
