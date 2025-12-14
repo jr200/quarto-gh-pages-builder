@@ -5,16 +5,15 @@ import shutil
 import subprocess
 from contextlib import contextmanager
 from pathlib import Path
-from typing import List, Optional
 
 import pygit2
 
-from .constants import ROOT, WORKTREES_CACHE, TRUNK_BRANCHES
+from .constants import ROOT, TRUNK_BRANCHES, WORKTREES_CACHE
 
 logger = logging.getLogger(__name__)
 
 
-def _get_repo(cwd: Optional[Path] = None) -> pygit2.Repository:
+def _get_repo(cwd: Path | None = None) -> pygit2.Repository:
     """Open the git repository at cwd (or ROOT)."""
     base = cwd or ROOT
     git_dir = pygit2.discover_repository(str(base))
@@ -39,17 +38,24 @@ def _list_worktree_objects(repo: pygit2.Repository):
     return worktrees
 
 
-def run_git(args: List[str], cwd: Optional[Path] = None) -> str:
+def run_git(args: list[str], cwd: Path | None = None) -> str:
     """
-    Emulate minimal git commands used in the project using pygit2.
+    Execute git commands using pygit2 (pure Python implementation).
 
-    Supported:
+    Supported commands:
       - for-each-ref refs/heads --format %(refname:short)
       - show-ref --verify <ref>
       - worktree list --porcelain
       - worktree prune
+      - worktree remove -f <path>
       - branch -D <branch>
-      - rev-parse <ref>
+      - rev-parse [--verify] <ref>
+      - push origin <refspec>
+      - fetch --prune origin
+
+    Raises:
+        subprocess.CalledProcessError: For git command errors (for API compatibility)
+        NotImplementedError: For unsupported git commands
     """
     repo = _get_repo(cwd)
 
@@ -63,7 +69,7 @@ def run_git(args: List[str], cwd: Optional[Path] = None) -> str:
         ref = args[2]
         if ref in repo.references:
             return ref
-        raise subprocess.CalledProcessError(1, ["git", *args])
+        raise subprocess.CalledProcessError(1, ["git", *args], "ref not found")
 
     # worktree list --porcelain
     if args[:3] == ["worktree", "list", "--porcelain"]:
@@ -79,6 +85,20 @@ def run_git(args: List[str], cwd: Optional[Path] = None) -> str:
         cleanup_orphan_worktrees()
         return ""
 
+    # worktree remove -f <path>
+    if args[:2] == ["worktree", "remove"] and "-f" in args:
+        # Extract path (last argument that's not a flag)
+        path_arg = [a for a in args if not a.startswith("-")][-1]
+        path = Path(path_arg)
+        name = path.name
+        try:
+            wt = repo.lookup_worktree(name)
+            wt.prune(force=True)
+        except (KeyError, Exception):
+            # Best effort - may not exist
+            pass
+        return ""
+
     # branch -D <branch>
     if args[:2] == ["branch", "-D"] and len(args) == 3:
         branch = args[2]
@@ -88,7 +108,7 @@ def run_git(args: List[str], cwd: Optional[Path] = None) -> str:
             pass
         return ""
 
-    # rev-parse
+    # rev-parse [--verify] <ref>
     if args[0] == "rev-parse":
         if args[1] == "--verify" and len(args) > 2:
             ref = args[2]
@@ -97,16 +117,56 @@ def run_git(args: List[str], cwd: Optional[Path] = None) -> str:
         try:
             obj = repo.revparse_single(ref)
             return str(obj.id)
+        except KeyError as e:
+            raise subprocess.CalledProcessError(1, ["git", *args], f"ref not found: {ref}") from e
+
+    # push origin <refspec>
+    if args[0] == "push" and len(args) >= 2:
+        try:
+            origin = repo.remotes["origin"]
+        except KeyError as e:
+            raise subprocess.CalledProcessError(1, ["git", *args], "remote 'origin' not found") from e
+
+        # Handle deletion (push origin :refs/heads/branch)
+        if args[-1].startswith(":"):
+            ref_to_delete = args[-1][1:]  # Remove leading :
+            try:
+                origin.push([f":{ref_to_delete}"])
+            except Exception as e:
+                logger.debug(f"Push delete failed: {e}")
+                # Not necessarily an error - branch may not exist on remote
+            return ""
+
+        # Handle normal push
+        refspec = args[-1]
+        try:
+            origin.push([refspec])
+        except Exception as e:
+            raise subprocess.CalledProcessError(1, ["git", *args], f"push failed: {e}") from e
+        return ""
+
+    # fetch --prune origin
+    if args[0] == "fetch":
+        try:
+            origin = repo.remotes["origin"]
         except KeyError:
-            raise subprocess.CalledProcessError(1, ["git", *args])
+            # No origin remote
+            return ""
+        prune = "--prune" in args
+        try:
+            origin.fetch(prune=prune)
+        except Exception as e:
+            raise subprocess.CalledProcessError(1, ["git", *args], f"fetch failed: {e}") from e
+        return ""
 
-    # Fallback: delegate to real git
-    cmd = ["git"] + args
-    proc = subprocess.run(cmd, cwd=cwd, check=True, capture_output=True, text=True)
-    return proc.stdout.strip()
+    # Unsupported command
+    raise NotImplementedError(
+        f"Git command not supported via pygit2: {' '.join(args)}. "
+        "Please file an issue at https://github.com/jr200/quarto-graft/issues"
+    )
 
 
-def list_worktree_paths() -> List[Path]:
+def list_worktree_paths() -> list[Path]:
     """Return a list of worktree paths registered with git."""
     repo = _get_repo()
     return [path for _, path, _ in _list_worktree_objects(repo)]
@@ -118,10 +178,10 @@ def is_worktree(path: Path) -> bool:
     return path_resolved in list_worktree_paths()
 
 
-def worktrees_for_branch(branch: str) -> List[Path]:
+def worktrees_for_branch(branch: str) -> list[Path]:
     """Return paths of worktrees checked out at a given branch."""
     repo = _get_repo()
-    paths: List[Path] = []
+    paths: list[Path] = []
     for _, path, shorthand in _list_worktree_objects(repo):
         if shorthand == branch:
             paths.append(path)
@@ -160,7 +220,7 @@ def _resolve_ref(repo: pygit2.Repository, ref: str) -> pygit2.Object:
     try:
         return repo.revparse_single(ref)
     except Exception as e:
-        raise RuntimeError(f"Reference not found: {ref} ({e})")
+        raise RuntimeError(f"Reference not found: {ref} ({e})") from e
 
 
 def create_worktree(ref: str, name: str) -> Path:
@@ -302,22 +362,43 @@ def delete_worktree(branch: str) -> None:
     remove_worktree(branch)
 
 
-def cleanup_orphan_worktrees() -> List[Path]:
+def cleanup_orphan_worktrees() -> list[Path]:
     """
     Remove directories under .grafts-cache/ that are no longer registered with git.
 
     Returns:
-        List of removed worktree paths.
+        List of successfully removed worktree paths.
+        Failed removals are logged but don't stop the cleanup process.
     """
     WORKTREES_CACHE.mkdir(exist_ok=True)
     registered = set(list_worktree_paths())
-    removed: List[Path] = []
+    removed: list[Path] = []
+    failures: list[tuple[Path, Exception]] = []
+
     for path in WORKTREES_CACHE.iterdir():
         if not path.is_dir():
             continue
         if path.resolve() in registered:
             continue
+
         logger.info(f"[cleanup-worktrees] Removing orphaned worktree dir {path}")
-        shutil.rmtree(path)
-        removed.append(path)
+        try:
+            shutil.rmtree(path)
+            removed.append(path)
+        except PermissionError as e:
+            logger.warning(f"[cleanup-worktrees] Permission denied removing {path}: {e}")
+            failures.append((path, e))
+        except OSError as e:
+            logger.warning(f"[cleanup-worktrees] Failed to remove {path}: {e}")
+            failures.append((path, e))
+        except Exception as e:
+            logger.error(f"[cleanup-worktrees] Unexpected error removing {path}: {e}")
+            failures.append((path, e))
+
+    if failures:
+        logger.warning(
+            f"[cleanup-worktrees] Failed to remove {len(failures)} orphaned worktrees. "
+            "You may need to manually delete them or check permissions."
+        )
+
     return removed

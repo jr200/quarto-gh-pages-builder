@@ -15,6 +15,7 @@ env:
 lint:
 	@echo "Running ruff..."
 	uv run ruff check . --fix
+	uv run ruff check --output-format=github .
 
 ## Render the main Quarto document
 render:
@@ -37,3 +38,9 @@ clean-all: clean
 	find . -type f -name '*.py[co]' -delete
 	find . -type d -name '__pycache__' -delete
 	find . -type d -name '.mypy_cache' -print0 | xargs -0 rm -rf
+
+cov:
+	uv run pytest --cov
+
+test:
+	uv run pytest

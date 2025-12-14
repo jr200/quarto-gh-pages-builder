@@ -4,20 +4,28 @@ import logging
 import os
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Optional, Set
 
 import questionary
 import typer
 from rich.console import Console
 from rich.table import Table
 
-from .branches import new_graft_branch, read_branches_list, init_trunk
-from .build import update_manifests, build_branch
+from .branches import destroy_graft, init_trunk, load_manifest, new_graft_branch, read_branches_list
+from .build import build_branch, update_manifests
+from .constants import (
+    GRAFT_TEMPLATES_DIR,
+    GRAFTS_CONFIG_FILE,
+    PROTECTED_BRANCHES,
+    ROOT,
+    TEMPLATE_SOURCE_BUILTIN,
+    TRUNK_ADDONS_DIR,
+    TRUNK_TEMPLATES_DIR,
+)
 from .git_utils import run_git
 from .quarto_config import apply_manifest
-from .branches import destroy_graft, load_manifest
-from .constants import PROTECTED_BRANCHES, ROOT, TRUNK_TEMPLATES_DIR, GRAFT_TEMPLATES_DIR, GRAFTS_CONFIG_FILE
 from .template_sources import TemplateSource, load_template_sources_from_config
+
+logger = logging.getLogger(__name__)
 
 app = typer.Typer(
     name="quarto-graft",
@@ -60,7 +68,7 @@ MAIN_MENU_COMMANDS = [
 ]
 
 
-def show_main_menu() -> Optional[str]:
+def show_main_menu() -> str | None:
     """Show inline command selector."""
     return questionary.select(
         "Select a command:",
@@ -70,7 +78,7 @@ def show_main_menu() -> Optional[str]:
     ).ask()
 
 
-def select_template(templates: list[str], template_type: str) -> Optional[str]:
+def select_template(templates: list[str], template_type: str) -> str | None:
     """Show inline template selector."""
     if not templates:
         return None
@@ -89,15 +97,15 @@ class TemplateValidator:
     def __init__(self, builtin_dir: Path, template_type: str):
         self.builtin_dir = builtin_dir
         self.template_type = template_type
-        self._custom_sources: Optional[List[TemplateSource]] = None
+        self._custom_sources: list[TemplateSource] | None = None
 
-    def _get_custom_sources(self) -> List[TemplateSource]:
+    def _get_custom_sources(self) -> list[TemplateSource]:
         """Lazy-load custom template sources from grafts.yaml."""
         if self._custom_sources is None:
             self._custom_sources = load_template_sources_from_config()
         return self._custom_sources
 
-    def discover_templates(self) -> Dict[str, Path]:
+    def discover_templates(self) -> dict[str, Path]:
         """
         Return dictionary mapping template names to their paths.
 
@@ -107,7 +115,7 @@ class TemplateValidator:
             Dict[template_name, template_path]
         """
         # Collect templates from all sources
-        templates_by_source: Dict[str, Dict[str, Path]] = {}
+        templates_by_source: dict[str, dict[str, Path]] = {}
 
         # 1. Built-in templates (always available)
         if self.builtin_dir.exists():
@@ -117,7 +125,7 @@ class TemplateValidator:
                 if entry.is_dir() and not entry.name.startswith("with-")
             }
             if builtin_templates:
-                templates_by_source["builtin"] = builtin_templates
+                templates_by_source[TEMPLATE_SOURCE_BUILTIN] = builtin_templates
 
         # 2. Custom sources from grafts.yaml
         for source in self._get_custom_sources():
@@ -131,8 +139,8 @@ class TemplateValidator:
                 templates_by_source[source.source_name] = source_templates
 
         # 3. Merge templates and handle duplicates
-        final_templates: Dict[str, Path] = {}
-        template_sources: Dict[str, List[str]] = {}  # template_name -> [source_names]
+        final_templates: dict[str, Path] = {}
+        template_sources: dict[str, list[str]] = {}  # template_name -> [source_names]
 
         # First pass: collect which templates appear in which sources
         for source_name, templates in templates_by_source.items():
@@ -206,7 +214,7 @@ class TemplateValidator:
 
         return selected, templates[selected]
 
-    def validate_template(self, template: Optional[str]) -> tuple[str, Path]:
+    def validate_template(self, template: str | None) -> tuple[str, Path]:
         """
         Validate template exists or show interactive selector.
 
@@ -258,13 +266,13 @@ def _configure_logging() -> None:
     )
 
 
-def _discover_grafts() -> Dict[str, Set[str]]:
+def _discover_grafts() -> dict[str, set[str]]:
     """Return branches from git, grafts.yaml, and grafts.lock."""
     git_branches = _git_local_branches()
     yaml_branches = _yaml_branches()
     manifest_branches = set(load_manifest().keys())
 
-    def _filter(branches: Set[str]) -> Set[str]:
+    def _filter(branches: set[str]) -> set[str]:
         return {b for b in branches if b not in PROTECTED_BRANCHES}
 
     return {
@@ -275,20 +283,46 @@ def _discover_grafts() -> Dict[str, Set[str]]:
     }
 
 
-def _git_local_branches() -> Set[str]:
+def _git_local_branches() -> set[str]:
+    """
+    Get local git branches.
+
+    Returns:
+        Set of branch names, or empty set if not in a git repository
+
+    Raises:
+        RuntimeError: If git operations fail unexpectedly
+    """
     try:
         out = run_git(["for-each-ref", "refs/heads", "--format", "%(refname:short)"], cwd=ROOT)
-    except subprocess.CalledProcessError:
+        return {line.strip() for line in out.splitlines() if line.strip()}
+    except subprocess.CalledProcessError as e:
+        # Not in a git repo or no branches yet
+        logger.debug(f"Could not list git branches: {e}")
         return set()
-    return {line.strip() for line in out.splitlines() if line.strip()}
+    except Exception as e:
+        logger.error(f"Unexpected error listing git branches: {e}")
+        console.print(f"[yellow]Warning:[/yellow] Could not list git branches: {e}")
+        return set()
 
 
-def _yaml_branches() -> Set[str]:
+def _yaml_branches() -> set[str]:
+    """
+    Get branches defined in grafts.yaml.
+
+    Returns:
+        Set of branch names from grafts.yaml, or empty set if file doesn't exist
+    """
     try:
         specs = read_branches_list()
+        return {spec["branch"] for spec in specs if spec.get("branch")}
     except FileNotFoundError:
+        logger.debug("grafts.yaml not found")
         return set()
-    return {spec["branch"] for spec in specs if spec.get("branch")}
+    except Exception as e:
+        logger.error(f"Error reading grafts.yaml: {e}")
+        console.print(f"[red]Error:[/red] Failed to read grafts.yaml: {e}")
+        return set()
 
 
 # ============================================================================
@@ -303,23 +337,23 @@ def trunk_list() -> None:
 
 @trunk_app.command("init")
 def trunk_init(
-    name: Optional[str] = typer.Argument(
+    name: str | None = typer.Argument(
         None,
         help="Name of the main site/project (e.g. 'My Documentation')",
     ),
-    template: Optional[str] = typer.Option(
+    template: str | None = typer.Option(
         None,
         "--template",
         "-t",
         help="Template name under trunk-templates/",
     ),
-    overwrite: Optional[bool] = typer.Option(
+    overwrite: bool | None = typer.Option(
         None,
         "--overwrite/--no-overwrite",
         help="Overwrite existing docs/ directory if it exists",
         show_default=False,
     ),
-    with_addons: Optional[List[str]] = typer.Option(
+    with_addons: list[str] | None = typer.Option(  # noqa: B008
         None,
         "--with",
         help="Include addon from trunk-templates/with-addons/NAME (can be used multiple times)",
@@ -353,7 +387,7 @@ def trunk_init(
 
     # Prompt for addons if not provided
     if with_addons is None:
-        with_dir = TRUNK_TEMPLATES_DIR / "with-addons"
+        with_dir = TRUNK_TEMPLATES_DIR / TRUNK_ADDONS_DIR
         if with_dir.exists():
             available_addons = sorted([
                 entry.name for entry in with_dir.iterdir()
@@ -428,23 +462,23 @@ def trunk_lock() -> None:
 
 @graft_app.command("create")
 def graft_create(
-    name: Optional[str] = typer.Argument(
+    name: str | None = typer.Argument(
         None,
         help="Name of the new graft branch (e.g. demo)",
     ),
-    template: Optional[str] = typer.Option(
+    template: str | None = typer.Option(
         None,
         "--template",
         "-t",
         help="Template name under graft-templates/",
     ),
-    collar: Optional[str] = typer.Option(
+    collar: str | None = typer.Option(
         None,
         "--collar",
         "-c",
         help="Attachment point in trunk _quarto.yaml (e.g. main, notes, bugs)",
     ),
-    branch_name: Optional[str] = typer.Option(
+    branch_name: str | None = typer.Option(
         None,
         "--branch-name",
         help="Git branch name to create (default: graft/<name>)",
@@ -535,7 +569,7 @@ def graft_create(
 
 @graft_app.command("build")
 def graft_build(
-    branch: Optional[str] = typer.Option(
+    branch: str | None = typer.Option(
         None,
         "--branch",
         "-b",
@@ -613,7 +647,7 @@ def graft_list() -> None:
 
 @graft_app.command("destroy")
 def graft_destroy(
-    branch: Optional[str] = typer.Argument(
+    branch: str | None = typer.Argument(
         None,
         help="Git branch name to delete (e.g. graft/chapter1)",
     ),

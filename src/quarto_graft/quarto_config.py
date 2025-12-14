@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Dict, List, Mapping
+from typing import Any
 
 from .branches import BranchSpec, branch_to_key, load_manifest, read_branches_list, save_manifest
 from .constants import (
     GRAFT_COLLAR_MARKER,
+    QUARTO_CONFIG_YAML,
     QUARTO_PROJECT_YAML,
-    QUARTO_CONFIG_YAML
+    YAML_AUTOGEN_MARKER,
 )
+from .file_utils import atomic_write_yaml
 from .yaml_utils import get_yaml_loader
 
 logger = logging.getLogger(__name__)
@@ -23,7 +26,7 @@ SUPPORTED_SOURCE_EXTS = {
     ".ipynb",
 }
 
-def load_quarto_config(docs_dir: Path) -> Dict[str, Any]:
+def load_quarto_config(docs_dir: Path) -> dict[str, Any]:
     """Load Quarto configuration from docs directory."""
     qfile_yaml = docs_dir / QUARTO_CONFIG_YAML
     if qfile_yaml.exists():
@@ -34,7 +37,7 @@ def load_quarto_config(docs_dir: Path) -> Dict[str, Any]:
     return yaml_loader.load(cfg_path.read_text(encoding="utf-8")) or {}
 
 
-def list_available_collars(config_path: Path | None = None) -> List[str]:
+def list_available_collars(config_path: Path | None = None) -> list[str]:
     """
     List all available collar attachment points defined in the trunk _quarto.yaml.
 
@@ -48,7 +51,7 @@ def list_available_collars(config_path: Path | None = None) -> List[str]:
     yaml_loader = get_yaml_loader()
     config = yaml_loader.load(config_path.read_text(encoding="utf-8")) or {}
 
-    collars: List[str] = []
+    collars: list[str] = []
 
     def find_collars(node: Any) -> None:
         """Recursively search for _GRAFT_COLLAR markers."""
@@ -77,11 +80,11 @@ def list_available_collars(config_path: Path | None = None) -> List[str]:
     return collars
 
 
-def flatten_quarto_contents(entries: Any) -> List[str]:
+def flatten_quarto_contents(entries: Any) -> list[str]:
     """
     Flatten Quarto-style contents/chapters structures into an ordered list of files.
     """
-    files: List[str] = []
+    files: list[str] = []
 
     def walk(node: Any) -> None:
         if isinstance(node, str):
@@ -104,7 +107,7 @@ def flatten_quarto_contents(entries: Any) -> List[str]:
     return files
 
 
-def collect_exported_relpaths(docs_dir: Path, cfg: Dict[str, Any]) -> List[str]:
+def collect_exported_relpaths(docs_dir: Path, cfg: dict[str, Any]) -> list[str]:
     """
     Determine which *source documents* to export from this branch's docs/,
     preserving the branch author's intended order as far as possible.
@@ -119,7 +122,7 @@ def collect_exported_relpaths(docs_dir: Path, cfg: Dict[str, Any]) -> List[str]:
     book = cfg.get("book") or {}
     book_chapters = book.get("chapters")
 
-    relpaths: List[str] = []
+    relpaths: list[str] = []
 
     # website.sidebar.contents: use nav order
     files_from_sidebar = flatten_quarto_contents(sidebar_contents)
@@ -177,7 +180,7 @@ def collect_exported_relpaths(docs_dir: Path, cfg: Dict[str, Any]) -> List[str]:
     return relpaths
 
 
-def derive_section_title(cfg: Dict[str, Any], branch: str) -> str:
+def derive_section_title(cfg: dict[str, Any], branch: str) -> str:
     """Derive the section title from Quarto configuration or use branch name."""
     website = cfg.get("website") or {}
     book = cfg.get("book") or {}
@@ -189,14 +192,14 @@ def is_collar_marker(item: Any) -> bool:
     return isinstance(item, Mapping) and GRAFT_COLLAR_MARKER in item
 
 
-def _find_all_collars(seq: List[Any]) -> Dict[str, tuple[List[Any], int]]:
+def _find_all_collars(seq: list[Any]) -> dict[str, tuple[list[Any], int]]:
     """
     Find all collar markers in the structure.
     Returns dict mapping collar_name -> (list_ref, index).
     """
-    collars: Dict[str, tuple[List[Any], int]] = {}
+    collars: dict[str, tuple[list[Any], int]] = {}
 
-    def search(items: List[Any]) -> None:
+    def search(items: list[Any]) -> None:
         for idx, item in enumerate(items):
             if is_collar_marker(item):
                 collar_name = item[GRAFT_COLLAR_MARKER]
@@ -220,7 +223,7 @@ def apply_manifest() -> None:
     quarto_file = QUARTO_PROJECT_YAML
     # text = quarto_file.read_text(encoding="utf-8")
 
-    with open(quarto_file, "rt") as fp:
+    with open(quarto_file) as fp:
         yaml_loader = get_yaml_loader()
         # data = yaml_loader.load(text) or {}
         data = yaml_loader.load(fp) or {}
@@ -229,7 +232,7 @@ def apply_manifest() -> None:
     project_type = str(project.get("type") or "").lower()
 
     manifest = load_manifest()
-    branches: List[BranchSpec] = read_branches_list()
+    branches: list[BranchSpec] = read_branches_list()
     branch_set = {b["branch"] for b in branches}
 
     # Prune manifest entries for branches no longer listed
@@ -241,9 +244,9 @@ def apply_manifest() -> None:
         save_manifest(manifest)
 
     # Build auto-generated items grouped by collar
-    def build_collar_items(item_type: str) -> Dict[str, List[Any]]:
+    def build_collar_items(item_type: str) -> dict[str, list[Any]]:
         """Build items grouped by collar. item_type is 'part' (book) or 'section' (website)."""
-        collar_items: Dict[str, List[Any]] = {}
+        collar_items: dict[str, list[Any]] = {}
         content_key = "chapters" if item_type == "part" else "contents"
 
         for spec in branches:
@@ -254,7 +257,7 @@ def apply_manifest() -> None:
                 continue
             title = entry.get("title") or spec["name"]
             branch_key = entry.get("branch_key") or branch_to_key(spec["local_path"])
-            exported: List[str] = entry.get("exported") or []
+            exported: list[str] = entry.get("exported") or []
             if not exported:
                 continue
 
@@ -262,7 +265,7 @@ def apply_manifest() -> None:
             item = {
                 item_type: title,
                 content_key: paths,
-                "_autogen_branch": branch,
+                YAML_AUTOGEN_MARKER: branch,
             }
 
             if collar not in collar_items:
@@ -271,7 +274,7 @@ def apply_manifest() -> None:
         return collar_items
 
     # Helper: update all collars with their grafts
-    def splice_collars(seq: List[Any], collar_items: Dict[str, List[Any]]) -> None:
+    def splice_collars(seq: list[Any], collar_items: dict[str, list[Any]]) -> None:
         """Find all collar markers and inject the appropriate grafts after each."""
         collars = _find_all_collars(seq)
 
@@ -285,7 +288,7 @@ def apply_manifest() -> None:
                 ch = target_list[end_idx]
                 if not isinstance(ch, Mapping):
                     break
-                if "_autogen_branch" not in ch:
+                if YAML_AUTOGEN_MARKER not in ch:
                     break
                 end_idx += 1
 
@@ -320,10 +323,7 @@ def apply_manifest() -> None:
         )
 
     # Write YAML back atomically
-    temp_file = quarto_file.with_suffix(".yaml.tmp")
-    with temp_file.open("w", encoding="utf-8") as f:
-        yaml_loader.dump(data, f)
-    temp_file.replace(quarto_file)
+    atomic_write_yaml(quarto_file, data)
 
     logger.info("Synced docs/ with manifest:")
     for spec in branches:

@@ -4,7 +4,8 @@ from pathlib import Path
 
 # The CLI is meant to run from the user's project root, not the package install
 # directory. ROOT is therefore the current working directory at runtime.
-ROOT = Path.cwd()
+# We resolve to absolute path immediately to prevent issues if os.chdir() is called.
+ROOT = Path.cwd().resolve()
 
 # Templates are bundled with the package under src/quarto_graft/.
 PACKAGE_ROOT = Path(__file__).resolve().parent
@@ -24,6 +25,13 @@ QUARTO_CONFIG_YAML = "_quarto.yaml"
 
 # Marker for graft attachment points in _quarto.yaml
 GRAFT_COLLAR_MARKER = "_GRAFT_COLLAR"
+
+# Marker for auto-generated content in _quarto.yaml
+YAML_AUTOGEN_MARKER = "_autogen_branch"
+
+# Template source names
+TEMPLATE_SOURCE_BUILTIN = "builtin"
+TRUNK_ADDONS_DIR = "with-addons"
 
 # Protected branch names that cannot be used as grafts
 TRUNK_BRANCHES = {"main", "master"}

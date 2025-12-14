@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from ruamel.yaml import YAML  # type: ignore
 
-_yaml_loader: Optional[YAML] = None
+_yaml_loader: YAML | None = None
 
 
 def get_yaml_loader() -> YAML:

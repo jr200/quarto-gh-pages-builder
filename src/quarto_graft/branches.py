@@ -5,20 +5,21 @@ import logging
 import re
 import shutil
 from pathlib import Path
-from typing import Dict, List, TypedDict
+from typing import TypedDict
 
-from jinja2 import Environment, FileSystemLoader, StrictUndefined, TemplateSyntaxError
 import pygit2
+from jinja2 import Environment, FileSystemLoader, StrictUndefined, TemplateSyntaxError
 
 from .constants import (
     GRAFTS_CONFIG_FILE,
     GRAFTS_MANIFEST_FILE,
+    MAIN_DOCS,
     PROTECTED_BRANCHES,
     ROOT,
-    WORKTREES_CACHE,
     TRUNK_TEMPLATES_DIR,
-    MAIN_DOCS,
+    WORKTREES_CACHE,
 )
+from .file_utils import atomic_write_json, atomic_write_yaml
 from .git_utils import remove_worktree, run_git, worktrees_for_branch
 from .yaml_utils import get_yaml_loader
 
@@ -56,16 +57,25 @@ def _escape_quarto_shortcodes(text: str) -> str:
     return SHORTCODE_PATTERN.sub(_repl, text)
 
 
-def _render_template_tree(template_dir: Path, dest_dir: Path, context: Dict[str, str]) -> None:
+def _render_template_tree(template_dir: Path, dest_dir: Path, context: dict[str, str]) -> None:
     """
     Render a template directory (Jinja2) into dest_dir.
 
     File and directory names, as well as file contents, are rendered.
     Binary files are copied as-is if they cannot be decoded as UTF-8.
+
+    SECURITY WARNING:
+    - autoescape=False is intentional for Quarto/Markdown templates
+    - Only use trusted template sources (built-in, verified repos, local paths)
+    - Untrusted templates from arbitrary URLs could contain malicious code
+    - Context variables are user-controlled but limited to safe strings
+
+    The context dict contains only simple strings (names, slugs) that are
+    validated upstream. Templates themselves should be from trusted sources.
     """
     env = Environment(
         loader=FileSystemLoader(str(template_dir)),
-        autoescape=False,
+        autoescape=False,  # Required for Quarto shortcodes, but means templates must be trusted
         keep_trailing_newline=True,
         undefined=StrictUndefined,
     )
@@ -122,7 +132,7 @@ class ManifestEntry(TypedDict, total=False):
     last_checked: str
     title: str
     branch_key: str
-    exported: List[str]
+    exported: list[str]
 
 class BranchSpec(TypedDict):
     """Configuration for a single graft branch."""
@@ -134,8 +144,50 @@ class BranchSpec(TypedDict):
 
 
 def branch_to_key(branch: str) -> str:
-    """Convert branch name to filesystem-safe key."""
-    return branch.replace("/", "-")
+    """
+    Convert branch name to filesystem-safe key.
+
+    Protects against path traversal attacks by:
+    - Converting slashes and backslashes to hyphens
+    - Collapsing multiple dots
+    - Removing leading/trailing dots and hyphens
+    - Rejecting dangerous names like "." or ".."
+
+    Args:
+        branch: Branch or path name to convert
+
+    Returns:
+        Filesystem-safe key
+
+    Raises:
+        ValueError: If the resulting key is invalid or dangerous
+    """
+    # First check for dangerous names exactly
+    if branch in {".", "..", "~"}:
+        raise ValueError(f"Invalid branch key (dangerous path): '{branch}'")
+
+    # Check for path traversal patterns before normalization
+    # Reject exactly two dots in sequence (path traversal), but allow 3+ dots (will be collapsed)
+    # Also allow leading/trailing ".." since they'll be stripped
+    # Pattern: match ".." that is NOT at start/end and is exactly 2 dots
+    trimmed = branch.strip(".-")
+    if ".." in trimmed and re.search(r"(?<!\.)\.\.(?!\.)", trimmed):
+        raise ValueError(f"Invalid branch key (contains path traversal): '{branch}'")
+
+    # Replace path separators with hyphens
+    key = branch.replace("/", "-").replace("\\", "-")
+
+    # Collapse sequences of dots (prevents ../ traversal)
+    key = re.sub(r"\.\.+", ".", key)
+
+    # Remove leading/trailing dots and hyphens
+    key = key.strip(".-")
+
+    # Validate result is not empty
+    if not key:
+        raise ValueError(f"Invalid branch key (dangerous path): '{branch}'")
+
+    return key
 
 
 def _open_repo() -> pygit2.Repository:
@@ -146,7 +198,7 @@ def _open_repo() -> pygit2.Repository:
     return pygit2.Repository(git_dir)
 
 
-def remove_from_grafts_config(branch: str) -> List[str]:
+def remove_from_grafts_config(branch: str) -> list[str]:
     """
     Remove a branch from grafts.yaml.
 
@@ -162,8 +214,8 @@ def remove_from_grafts_config(branch: str) -> List[str]:
     if not isinstance(branches_list, list):
         return []
 
-    kept: List = []
-    removed_keys: List[str] = []
+    kept: list = []
+    removed_keys: list[str] = []
 
     for item in branches_list:
         if isinstance(item, str):
@@ -179,36 +231,93 @@ def remove_from_grafts_config(branch: str) -> List[str]:
 
     if len(kept) != len(branches_list):
         data["branches"] = kept
-        temp_file = GRAFTS_CONFIG_FILE.with_suffix(".yaml.tmp")
-        with temp_file.open("w", encoding="utf-8") as f:
-            yaml_loader.dump(data, f)
-        temp_file.replace(GRAFTS_CONFIG_FILE)
+        atomic_write_yaml(GRAFTS_CONFIG_FILE, data)
 
     return removed_keys
 
 
-def load_manifest() -> Dict[str, ManifestEntry]:
-    """Load the grafts.lock manifest file."""
+def load_manifest() -> dict[str, ManifestEntry]:
+    """
+    Load the grafts.lock manifest file.
+
+    If the manifest is corrupted, attempts to restore from backup (.bak file).
+    If no backup exists, returns empty dict and logs error.
+
+    Returns:
+        Manifest dictionary, or empty dict if file doesn't exist or is corrupted
+    """
     if not GRAFTS_MANIFEST_FILE.exists():
         return {}
+
     try:
-        return json.loads(GRAFTS_MANIFEST_FILE.read_text(encoding="utf-8"))
+        content = GRAFTS_MANIFEST_FILE.read_text(encoding="utf-8")
+        return json.loads(content)
     except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse manifest {GRAFTS_MANIFEST_FILE}: {e}")
+        logger.error(f"Corrupt manifest file {GRAFTS_MANIFEST_FILE}: {e}")
+
+        # Try to restore from backup
+        backup_file = GRAFTS_MANIFEST_FILE.with_suffix(".lock.bak")
+        if backup_file.exists():
+            logger.warning(f"Attempting to restore manifest from backup: {backup_file}")
+            try:
+                backup_content = backup_file.read_text(encoding="utf-8")
+                manifest = json.loads(backup_content)
+                # Save restored manifest
+                save_manifest(manifest)
+                logger.info("Successfully restored manifest from backup")
+                return manifest
+            except Exception as restore_error:
+                logger.error(f"Backup restoration failed: {restore_error}")
+
+        # No backup or restoration failed - save corrupted file for debugging
+        corrupted_path = GRAFTS_MANIFEST_FILE.with_suffix(".lock.corrupted")
+        try:
+            import shutil
+            shutil.copy2(GRAFTS_MANIFEST_FILE, corrupted_path)
+            logger.error(
+                f"Saved corrupted manifest to {corrupted_path} for debugging. "
+                "Starting with empty manifest."
+            )
+        except Exception:
+            pass
+
         return {}
 
 
-def save_manifest(manifest: Dict[str, ManifestEntry]) -> None:
-    """Save the grafts.lock manifest file atomically."""
-    temp_file = GRAFTS_MANIFEST_FILE.with_suffix(".lock.tmp")
-    temp_file.write_text(
-        json.dumps(manifest, indent=2, sort_keys=True),
-        encoding="utf-8",
-    )
-    temp_file.replace(GRAFTS_MANIFEST_FILE)
+def save_manifest(manifest: dict[str, ManifestEntry]) -> None:
+    """
+    Save the grafts.lock manifest file atomically with backup.
+
+    Creates a .bak file before overwriting to allow recovery from corruption.
+    """
+    # Create backup of existing manifest before overwriting
+    backup_file = GRAFTS_MANIFEST_FILE.with_suffix(".lock.bak")
+    if GRAFTS_MANIFEST_FILE.exists():
+        try:
+            import shutil
+            shutil.copy2(GRAFTS_MANIFEST_FILE, backup_file)
+        except Exception as e:
+            logger.warning(f"Failed to create manifest backup: {e}")
+
+    # Write new manifest atomically
+    atomic_write_json(GRAFTS_MANIFEST_FILE, manifest)
 
 
 def _validate_label(label: str, value: str) -> None:
+    """
+    Validate a label (branch name, graft name, local_path, collar) for safety.
+
+    Args:
+        label: Human-readable name of what's being validated (e.g., "branch name")
+        value: The value to validate
+
+    Raises:
+        ValueError: If validation fails
+
+    Rules:
+    - No whitespace characters
+    - Only alphanumeric, dots, underscores, slashes, and hyphens
+    """
     if any(ch.isspace() for ch in value):
         raise ValueError(f"{label} must not contain whitespace: '{value}'")
     if not re.fullmatch(r"[A-Za-z0-9._/-]+", value):
@@ -217,7 +326,7 @@ def _validate_label(label: str, value: str) -> None:
         )
 
 
-def read_branches_list(path: Path | None = None) -> List[BranchSpec]:
+def read_branches_list(path: Path | None = None) -> list[BranchSpec]:
     path = path or GRAFTS_CONFIG_FILE
     if not path.exists():
         raise FileNotFoundError(f"No grafts.yaml found at {path}")
@@ -228,7 +337,7 @@ def read_branches_list(path: Path | None = None) -> List[BranchSpec]:
     if not isinstance(raw_list, list):
         raise ValueError("grafts.yaml 'branches' must be a list")
 
-    specs: List[BranchSpec] = []
+    specs: list[BranchSpec] = []
     seen_branches: set[str] = set()
     seen_local_paths: set[str] = set()
 
@@ -306,31 +415,28 @@ def new_graft_branch(
 
     The graft's display name (`name`) can differ from the git branch name (`branch_name`).
     """
-    if any(ch.isspace() for ch in name):
-        raise RuntimeError("Graft name must not contain whitespace")
-    if not re.fullmatch(r"[A-Za-z0-9._/-]+", name):
-        raise RuntimeError(
-            f"Invalid graft name '{name}': only letters, digits, ., _, /, and - are allowed"
-        )
+    # Validate graft name
+    try:
+        _validate_label("graft name", name)
+    except ValueError as e:
+        raise RuntimeError(str(e)) from e
 
+    # Validate branch name
     branch = branch_name or name
-    if any(ch.isspace() for ch in branch):
-        raise RuntimeError("Git branch name must not contain whitespace")
-    if not re.fullmatch(r"[A-Za-z0-9._/-]+", branch):
-        raise RuntimeError(
-            f"Invalid git branch name '{branch}': only letters, digits, ., _, /, and - are allowed"
-        )
+    try:
+        _validate_label("git branch name", branch)
+    except ValueError as e:
+        raise RuntimeError(str(e)) from e
 
     if branch in PROTECTED_BRANCHES:
         raise RuntimeError(f"'{branch}' is a protected branch name, cannot use for graft branch")
 
+    # Validate local_path
     loc_path = local_path or name
-    if any(ch.isspace() for ch in loc_path):
-        raise RuntimeError("local_path must not contain whitespace")
-    if not re.fullmatch(r"[A-Za-z0-9._/-]+", loc_path):
-        raise RuntimeError(
-            f"Invalid local_path '{loc_path}': only letters, digits, ., _, /, and - are allowed"
-        )
+    try:
+        _validate_label("local_path", loc_path)
+    except ValueError as e:
+        raise RuntimeError(str(e)) from e
 
     repo = _open_repo()
     already_local = branch in repo.branches.local
@@ -451,15 +557,12 @@ def new_graft_branch(
     )
 
     if not exists:
-        entry: Dict[str, str] = {"name": name, "branch": branch, "collar": collar}
+        entry: dict[str, str] = {"name": name, "branch": branch, "collar": collar}
         if loc_path != name:
             entry["local_path"] = loc_path
         branches_list.append(entry)
         data["branches"] = branches_list
-        temp_file = GRAFTS_CONFIG_FILE.with_suffix(".yaml.tmp")
-        with temp_file.open("w", encoding="utf-8") as f:
-            yaml_loader.dump(data, f)
-        temp_file.replace(GRAFTS_CONFIG_FILE)
+        atomic_write_yaml(GRAFTS_CONFIG_FILE, data)
         logger.info(f"[new-graft] Added '{branch}' to grafts.yaml")
     else:
         logger.info(f"[new-graft] '{branch}' already exists in grafts.yaml; not adding")
@@ -468,7 +571,7 @@ def new_graft_branch(
     return wt_dir, trunk_instructions_content
 
 
-def destroy_graft(branch: str, delete_remote: bool = True) -> Dict[str, List[str]]:
+def destroy_graft(branch: str, delete_remote: bool = True) -> dict[str, list[str]]:
     """
     Remove all traces of a graft branch:
     - delete worktrees under .grafts-cache/
@@ -476,7 +579,7 @@ def destroy_graft(branch: str, delete_remote: bool = True) -> Dict[str, List[str
     - delete remote branch (if requested)
     - remove from grafts.yaml and grafts.lock
     """
-    summary: Dict[str, List[str]] = {
+    summary: dict[str, list[str]] = {
         "worktrees_removed": [],
         "config_removed": [],
         "manifest_removed": [],
@@ -605,7 +708,8 @@ def init_trunk(
 
     # Apply additional "with" templates
     if with_templates:
-        with_dir = TRUNK_TEMPLATES_DIR / "with-addons"
+        from .constants import TRUNK_ADDONS_DIR
+        with_dir = TRUNK_TEMPLATES_DIR / TRUNK_ADDONS_DIR
         for with_name in with_templates:
             with_template_dir = with_dir / with_name
             if not with_template_dir.exists() or not with_template_dir.is_dir():

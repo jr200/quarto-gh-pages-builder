@@ -56,5 +56,5 @@ jobs:
         if: github.event_name != 'workflow_dispatch'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          event-type: dispatch-build-sphinx-docs
+          event-type: dispatch-build-quarto-docs
           client-payload: ${{ steps.prepare_payload.outputs.payload }}

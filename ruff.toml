@@ -1,7 +1,22 @@
+line-length = 120
+target-version = "py311"
+
 extend-exclude = [
   "src/quarto_graft/graft-templates/**/*.ipynb",
   "src/quarto_graft/graft-templates/**/*.py"
 ]
 
 [lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+]
 per-file-ignores = { "graft-templates/**/pyproject.toml" = ["ALL"] }

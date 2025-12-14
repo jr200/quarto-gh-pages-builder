@@ -4,25 +4,25 @@ import logging
 import shutil
 import subprocess
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from uuid import uuid4
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Tuple, Union
+from typing import Literal
+from uuid import uuid4
 
 from .branches import (
-    ManifestEntry,
     BranchSpec,
+    ManifestEntry,
     branch_to_key,
     load_manifest,
     read_branches_list,
     save_manifest,
 )
+from .constants import GRAFTS_BUILD_DIR
 from .git_utils import (
     fetch_origin,
     managed_worktree,
     run_git,
 )
-from .constants import GRAFTS_BUILD_DIR
 from .quarto_config import (
     collect_exported_relpaths,
     derive_section_title,
@@ -38,11 +38,11 @@ class BuildResult:
     branch_key: str
     title: str
     status: Literal["ok", "fallback", "broken"]
-    head_sha: Optional[str]
-    last_good_sha: Optional[str]
+    head_sha: str | None
+    last_good_sha: str | None
     built_at: str
-    exported_relpaths: List[str]
-    exported_dest_paths: List[Path]
+    exported_relpaths: list[str]
+    exported_dest_paths: list[Path]
 
 
 def _temp_worktree_name(branch_key: str, label: str) -> str:
@@ -53,7 +53,7 @@ def _temp_worktree_name(branch_key: str, label: str) -> str:
 def inject_failure_header(
     qmd: Path,
     branch: str,
-    head_sha: Optional[str],
+    head_sha: str | None,
     last_good_sha: str,
 ) -> None:
     """Inject a warning header when using fallback content."""
@@ -80,9 +80,9 @@ You are seeing content from the last known good commit **`{last_good_short}`**.
 def create_broken_stub(
     branch_key: str,
     branch: str,
-    head_sha: Optional[str],
+    head_sha: str | None,
     out_dir: Path,
-) -> List[Path]:
+) -> list[Path]:
     """Create a stub page when no successful build exists."""
     msg_sha = (
         f" at commit `{head_sha[:7]}`"
@@ -107,7 +107,7 @@ Please fix the build for branch **`{branch}`**.
     return [target]
 
 
-def _find_quarto_command() -> List[str]:
+def _find_quarto_command() -> list[str]:
     """Find the quarto command to use, checking for uv first, then falling back to quarto."""
     try:
         subprocess.run(
@@ -148,9 +148,9 @@ def _export_from_worktree(
     ref: str,
     worktree_name: str,
     inject_warning: bool = False,
-    warn_head_sha: Optional[str] = None,
-    warn_last_good_sha: Optional[str] = None,
-) -> Tuple[str, str, List[str], List[Path]]:
+    warn_head_sha: str | None = None,
+    warn_last_good_sha: str | None = None,
+) -> tuple[str, str, list[str], list[Path]]:
     """
     Export content from a worktree for the given ref.
     """
@@ -167,8 +167,8 @@ def _export_from_worktree(
             dest_dir = GRAFTS_BUILD_DIR / branch_key
             dest_dir.mkdir(parents=True, exist_ok=True)
 
-            exported_dest_paths: List[Path] = []
-            exported_relpaths_for_main: List[str] = []
+            exported_dest_paths: list[Path] = []
+            exported_relpaths_for_main: list[str] = []
 
             for src_rel in src_relpaths:
                 src = project_dir / src_rel
@@ -206,17 +206,17 @@ def _export_from_worktree(
 
 
 def _update_manifest_entry(
-    manifest: Dict[str, ManifestEntry],
+    manifest: dict[str, ManifestEntry],
     branch: str,
     branch_key: str,
     title: str,
-    exported_relpaths: List[str],
-    last_good: Optional[str] = None,
-    now: Optional[str] = None,
+    exported_relpaths: list[str],
+    last_good: str | None = None,
+    now: str | None = None,
 ) -> None:
     """Update a manifest entry for a branch."""
     if now is None:
-        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        now = datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
     entry: ManifestEntry = {
         "last_checked": now,
@@ -231,13 +231,13 @@ def _update_manifest_entry(
 
 
 def _create_broken_stub_and_update_manifest(
-    manifest: Dict[str, ManifestEntry],
+    manifest: dict[str, ManifestEntry],
     branch: str,
     branch_key: str,
-    head_sha: Optional[str],
+    head_sha: str | None,
     update_manifest: bool,
     now: str,
-) -> Tuple[List[Path], List[str]]:
+) -> tuple[list[Path], list[str]]:
     """Create a broken stub and optionally update the manifest."""
     dest_dir = GRAFTS_BUILD_DIR / branch_key
     exported_dest_paths = create_broken_stub(branch_key, branch, head_sha, dest_dir)
@@ -259,7 +259,7 @@ def _branch_exists(ref: str) -> bool:
         return False
 
 
-def build_branch(spec: Union[BranchSpec, str], update_manifest: bool = True, fetch: bool = True) -> BuildResult:
+def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bool = True) -> BuildResult:
     """
     Build a single branch into docs/grafts__/<branch_key>/... with fallback logic.
     """
@@ -277,13 +277,13 @@ def build_branch(spec: Union[BranchSpec, str], update_manifest: bool = True, fet
     branch_key = branch_to_key(local_path)
     # Prefer remote ref if available, otherwise fall back to local
     head_ref = f"origin/{branch}" if _branch_exists(f"origin/{branch}") else branch
-    head_sha: Optional[str] = None
+    head_sha: str | None = None
 
-    now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    now = datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
     title: str = graft_name  # default
-    exported_relpaths: List[str] = []
-    exported_dest_paths: List[Path] = []
+    exported_relpaths: list[str] = []
+    exported_dest_paths: list[Path] = []
     status: Literal["ok", "fallback", "broken"]
 
     if fetch:
@@ -387,9 +387,9 @@ def build_branch(spec: Union[BranchSpec, str], update_manifest: bool = True, fet
 
 
 def update_manifests(
-    branches: Optional[List[Union[BranchSpec, str]]] = None,
+    branches: list[BranchSpec | str] | None = None,
     update_manifest: bool = True,
-) -> Dict[str, BuildResult]:
+) -> dict[str, BuildResult]:
     fetch_origin()
     if branches is None:
         branches = read_branches_list()
@@ -403,7 +403,7 @@ def update_manifests(
             manifest.pop(b, None)
         save_manifest(manifest)
 
-    results: Dict[str, BuildResult] = {}
+    results: dict[str, BuildResult] = {}
     for spec in branches:
         branch_name = spec if isinstance(spec, str) else spec["branch"]
         graft_name = spec if isinstance(spec, str) else spec["name"]

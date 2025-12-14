@@ -8,7 +8,6 @@ import shutil
 import tarfile
 import zipfile
 from pathlib import Path
-from typing import Dict, List, Optional
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
@@ -25,7 +24,7 @@ TEMPLATE_CACHE_DIR = ROOT / ".quarto-graft" / ".template-cache"
 class TemplateSource:
     """Represents a source of templates (local path, URL, or archive)."""
 
-    def __init__(self, spec: Dict[str, str], source_name: str = "custom"):
+    def __init__(self, spec: dict[str, str], source_name: str = "custom"):
         """
         Initialize a template source.
 
@@ -35,7 +34,7 @@ class TemplateSource:
         """
         self.spec = spec
         self.source_name = source_name
-        self._resolved_path: Optional[Path] = None
+        self._resolved_path: Path | None = None
 
     def resolve(self) -> Path:
         """
@@ -93,6 +92,11 @@ class TemplateSource:
         Supports:
         - Direct archive URLs (.zip, .tar.gz, .tgz)
         - GitHub archive URLs
+
+        Security:
+        - 30 second timeout
+        - 100MB max download size
+        - Size validation before full download
         """
         # Create cache directory
         TEMPLATE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -112,12 +116,30 @@ class TemplateSource:
 
         logger.info(f"[template-source] Downloading templates from: {url}")
 
-        # Download the file
+        # Download the file with security constraints
+        MAX_DOWNLOAD_SIZE = 100 * 1024 * 1024  # 100MB
+        DOWNLOAD_TIMEOUT = 30  # seconds
+
         try:
-            with urlopen(url) as response:
-                content = response.read()
+            with urlopen(url, timeout=DOWNLOAD_TIMEOUT) as response:
+                # Check content length header
+                content_length = response.headers.get('Content-Length')
+                if content_length:
+                    size = int(content_length)
+                    if size > MAX_DOWNLOAD_SIZE:
+                        raise RuntimeError(
+                            f"Template archive too large ({size / 1024 / 1024:.1f}MB). "
+                            f"Maximum allowed: {MAX_DOWNLOAD_SIZE / 1024 / 1024}MB"
+                        )
+
+                # Read with size limit enforcement
+                content = response.read(MAX_DOWNLOAD_SIZE + 1)
+                if len(content) > MAX_DOWNLOAD_SIZE:
+                    raise RuntimeError(
+                        f"Template download exceeded size limit of {MAX_DOWNLOAD_SIZE / 1024 / 1024}MB"
+                    )
         except Exception as e:
-            raise RuntimeError(f"Failed to download template source from {url}: {e}")
+            raise RuntimeError(f"Failed to download template source from {url}: {e}") from e
 
         # Determine file type and extract
         if url.endswith(".zip") or "zip" in parsed.path.lower():
@@ -193,7 +215,7 @@ class TemplateSource:
                 # Extract directly
                 tf.extractall(dest)
 
-    def discover_templates(self, template_type: str) -> List[str]:
+    def discover_templates(self, template_type: str) -> list[str]:
         """
         Discover templates of a given type from this source.
 
@@ -233,7 +255,7 @@ class TemplateSource:
 
         return sorted(set(templates))
 
-    def get_template_path(self, template_name: str, template_type: str) -> Optional[Path]:
+    def get_template_path(self, template_name: str, template_type: str) -> Path | None:
         """
         Get the path to a specific template.
 
@@ -264,7 +286,7 @@ class TemplateSource:
     # ------------------------------------------------------------------
     # GitHub handling
     # ------------------------------------------------------------------
-    def _parse_github_url(self, url: str) -> Optional[Dict[str, str]]:
+    def _parse_github_url(self, url: str) -> dict[str, str] | None:
         """
         Parse a GitHub URL to extract repo and ref.
 
@@ -291,7 +313,7 @@ class TemplateSource:
 
         return {"repo": f"{user}/{repo}", "ref": ref}
 
-    def _resolve_github(self, repo: str, ref: Optional[str] = None) -> Path:
+    def _resolve_github(self, repo: str, ref: str | None = None) -> Path:
         """
         Resolve a GitHub repository by cloning it (optionally at a ref/tag/branch).
 
@@ -331,18 +353,18 @@ class TemplateSource:
                         repo_obj.checkout_tree(target)
                         repo_obj.set_head(target.id)
                         repo_obj.state_cleanup()
-                    except (KeyError, pygit2.GitError):
-                        raise RuntimeError(f"Ref '{ref}' not found in {clone_url}")
+                    except (KeyError, pygit2.GitError) as e:
+                        raise RuntimeError(f"Ref '{ref}' not found in {clone_url}") from e
         except (pygit2.GitError, RuntimeError) as e:
             # Clean up failed clone
             if cache_dir.exists():
                 shutil.rmtree(cache_dir, ignore_errors=True)
-            raise RuntimeError(f"Failed to clone {clone_url} (ref: {ref or 'default'}): {e}")
+            raise RuntimeError(f"Failed to clone {clone_url} (ref: {ref or 'default'}): {e}") from e
 
         return cache_dir
 
 
-def load_template_sources_from_config() -> List[TemplateSource]:
+def load_template_sources_from_config() -> list[TemplateSource]:
     """
     Load template sources from grafts.yaml.
 
