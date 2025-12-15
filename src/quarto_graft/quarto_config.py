@@ -120,9 +120,29 @@ def collect_exported_relpaths(docs_dir: Path, cfg: dict[str, Any]) -> list[str]:
     def _resolve_entry(entry: str) -> list[Path]:
         """
         Resolve an entry from sidebar/chapters contents.
-        Handles individual files, directories, and glob patterns.
+        Handles individual files, directories, glob patterns, and "auto".
         Returns a list of matching file paths.
         """
+        # Handle "auto" - include all files except index pages
+        if entry.lower() == "auto":
+            matches = []
+            index_names = {"index.qmd", "index.md", "index.rmd", "index.rmarkdown", "index.ipynb"}
+            for p in sorted(docs_dir.rglob("*"), key=lambda p: p.as_posix()):
+                if not p.is_file():
+                    continue
+                if p.suffix.lower() not in SUPPORTED_SOURCE_EXTS:
+                    continue
+                # Exclude index files (home pages)
+                if p.name.lower() in index_names:
+                    continue
+                # Exclude hidden files and special directories
+                if any(part.startswith(".") for part in p.parts):
+                    continue
+                if any(part in {"_site", ".quarto", "__pycache__", "node_modules"} for part in p.parts):
+                    continue
+                matches.append(p)
+            return matches
+
         # Check if it's a glob pattern (contains * or **)
         if "*" in entry:
             matches = []
@@ -173,7 +193,12 @@ def collect_exported_relpaths(docs_dir: Path, cfg: dict[str, Any]) -> list[str]:
     relpaths: list[str] = []
 
     # website.sidebar.contents: use nav order
-    files_from_sidebar = flatten_quarto_contents(sidebar_contents)
+    # Handle both string and list values for contents
+    if isinstance(sidebar_contents, str):
+        files_from_sidebar = [sidebar_contents]
+    else:
+        files_from_sidebar = flatten_quarto_contents(sidebar_contents)
+
     if files_from_sidebar:
         for entry in files_from_sidebar:
             paths = _resolve_entry(entry)
@@ -187,7 +212,12 @@ def collect_exported_relpaths(docs_dir: Path, cfg: dict[str, Any]) -> list[str]:
             return relpaths
 
     # book.chapters: for branch-type "book" projects
-    files_from_book = flatten_quarto_contents(book_chapters)
+    # Handle both string and list values for chapters
+    if isinstance(book_chapters, str):
+        files_from_book = [book_chapters]
+    else:
+        files_from_book = flatten_quarto_contents(book_chapters)
+
     if files_from_book:
         for entry in files_from_book:
             paths = _resolve_entry(entry)
