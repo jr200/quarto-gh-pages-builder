@@ -6,12 +6,12 @@ website:
   title: "{{ graft_name }}"
   navbar:
     left:
-      - href: index.qmd
+      - href: docs/index.qmd
         text: Overview
   sidebar:
     style: floating
     contents:
-      - index.qmd
+      - docs/index.qmd
 
 format:
   html:

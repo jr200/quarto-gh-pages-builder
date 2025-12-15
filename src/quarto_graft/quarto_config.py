@@ -112,13 +112,48 @@ def collect_exported_relpaths(docs_dir: Path, cfg: dict[str, Any]) -> list[str]:
     Determine which *source documents* to export from this branch's docs/,
     preserving the branch author's intended order as far as possible.
     """
-    def _resolve_rel(rel: str) -> Path | None:
-        """Resolve a relative path, preferring docs_dir, then docs_dir/docs/."""
-        candidates = [docs_dir / rel, docs_dir / "docs" / rel]
-        for p in candidates:
-            if p.exists():
-                return p
-        return None
+    def _resolve_entry(entry: str) -> list[Path]:
+        """
+        Resolve an entry from sidebar/chapters contents.
+        Handles individual files, directories, and glob patterns.
+        Returns a list of matching file paths.
+        """
+        # Check if it's a glob pattern (contains * or **)
+        if "*" in entry:
+            matches = []
+            for p in docs_dir.glob(entry):
+                if p.is_file() and p.suffix.lower() in SUPPORTED_SOURCE_EXTS:
+                    matches.append(p)
+            return sorted(matches, key=lambda p: p.as_posix())
+
+        # Try direct path
+        direct = docs_dir / entry
+
+        # If it's a directory, find all supported files in it
+        if direct.exists() and direct.is_dir():
+            matches = []
+            for p in sorted(direct.rglob("*"), key=lambda p: p.as_posix()):
+                if p.is_file() and p.suffix.lower() in SUPPORTED_SOURCE_EXTS:
+                    matches.append(p)
+            return matches
+
+        # If it's a file, return it
+        if direct.exists() and direct.is_file():
+            return [direct]
+
+        # If not found directly, search recursively for exact relative match
+        rel_path = Path(entry)
+        for p in docs_dir.rglob(rel_path.name):
+            if not p.is_file():
+                continue
+            try:
+                # Check if the full relative path matches exactly
+                if p.relative_to(docs_dir).as_posix() == entry:
+                    return [p]
+            except ValueError:
+                continue
+
+        return []
 
     project = cfg.get("project") or {}
     render_spec = project.get("render")
@@ -135,26 +170,28 @@ def collect_exported_relpaths(docs_dir: Path, cfg: dict[str, Any]) -> list[str]:
     # website.sidebar.contents: use nav order
     files_from_sidebar = flatten_quarto_contents(sidebar_contents)
     if files_from_sidebar:
-        for rel in files_from_sidebar:
-            p = _resolve_rel(rel)
-            if p is None:
-                continue
-            if p.suffix.lower() not in SUPPORTED_SOURCE_EXTS:
-                continue
-            relpaths.append(p.relative_to(docs_dir).as_posix())
+        for entry in files_from_sidebar:
+            paths = _resolve_entry(entry)
+            for p in paths:
+                if p.suffix.lower() not in SUPPORTED_SOURCE_EXTS:
+                    continue
+                rel = p.relative_to(docs_dir).as_posix()
+                if rel not in relpaths:
+                    relpaths.append(rel)
         if relpaths:
             return relpaths
 
     # book.chapters: for branch-type "book" projects
     files_from_book = flatten_quarto_contents(book_chapters)
     if files_from_book:
-        for rel in files_from_book:
-            p = _resolve_rel(rel)
-            if p is None:
-                continue
-            if p.suffix.lower() not in SUPPORTED_SOURCE_EXTS:
-                continue
-            relpaths.append(p.relative_to(docs_dir).as_posix())
+        for entry in files_from_book:
+            paths = _resolve_entry(entry)
+            for p in paths:
+                if p.suffix.lower() not in SUPPORTED_SOURCE_EXTS:
+                    continue
+                rel = p.relative_to(docs_dir).as_posix()
+                if rel not in relpaths:
+                    relpaths.append(rel)
         if relpaths:
             return relpaths
 

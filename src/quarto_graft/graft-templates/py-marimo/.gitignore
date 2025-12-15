@@ -214,8 +214,8 @@ __marimo__/
 .streamlit/secrets.toml
 
 # Quarto documentation
-docs/_site/
-docs/.quarto/
+_site/
+.quarto/
 .quarto/   
 docs/_freeze/
 docs/.jupyter_cache/

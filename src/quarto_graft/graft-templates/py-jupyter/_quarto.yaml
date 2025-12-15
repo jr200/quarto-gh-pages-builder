@@ -11,14 +11,14 @@ website:
   navbar:
     left:
       - text: "Overview"
-        href: index.qmd
+        href: docs/index.qmd
       - text: "Jupyter Notebook"
-        href: notebook.ipynb
+        href: docs/notebook.ipynb
   sidebar:
     style: floating
     contents:
-      - href: index.qmd
-      - href: notebook.ipynb
+      - href: docs/index.qmd
+      - href: docs/notebook.ipynb
 
 format:
   html:

@@ -19,8 +19,8 @@ website:
     search: true
     background: "#f8f9fa"
     contents:
-      - index.qmd
-      - app.qmd
+      - docs/index.qmd
+      - docs/app.qmd
 
 # execute:
 #   freeze: auto
