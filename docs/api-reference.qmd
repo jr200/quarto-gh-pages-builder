@@ -20,30 +20,40 @@ quarto-graft [COMMAND] [SUBCOMMAND] [OPTIONS]
 
 ### `trunk init`
 
-Initialize a new trunk project from a template.
+Initialize trunk in the current directory from a template.
 
 ```bash
-quarto-graft trunk init PROJECT_NAME [OPTIONS]
+quarto-graft trunk init [NAME] [OPTIONS]
 ```
 
 **Arguments:**
-- `PROJECT_NAME` - Name of the new project
+- `NAME` - Name of the site/project (e.g., "My Documentation"). Optional - will prompt if not provided.
 
 **Options:**
 - `--template, -t TEXT` - Template name or path (default: "default")
+- `--overwrite/--no-overwrite` - Overwrite existing docs/ directory if it exists
+- `--with TEXT` - Include addon from trunk-templates/with-addons/ (can be used multiple times)
 - `--help` - Show help message
 
 **Examples:**
 ```bash
-# Create from default template
-quarto-graft trunk init my-project
+# Interactive mode (prompts for name and template)
+quarto-graft trunk init
 
-# Create from custom template
-quarto-graft trunk init my-project --template /path/to/template
+# Provide site name
+quarto-graft trunk init "My Documentation"
 
-# Create from built-in template
-quarto-graft trunk init my-project --template minimal
+# Use a custom template
+quarto-graft trunk init "My Docs" --template /path/to/template
+
+# Use a built-in template
+quarto-graft trunk init "My Site" --template minimal
+
+# Include addons
+quarto-graft trunk init "My Docs" --with navbar-search --with dark-mode
 ```
+
+> **Note:** This command works in your **current directory** and does NOT create a subdirectory. Run it from your git repository root.
 
 ---
 

@@ -145,8 +145,9 @@ website:
 2. **Test it thoroughly:**
    ```bash
    # For trunk templates
-   quarto-graft trunk init test-project --template my-template
-   cd test-project
+   mkdir test-project && cd test-project
+   git init && git commit --allow-empty -m "init"
+   quarto-graft trunk init "Test Project" --template my-template
    quarto preview
 
    # For graft templates
@@ -174,7 +175,7 @@ website:
    - Feature 2
 
    ## Example
-   `quarto-graft trunk init my-proj --template my-template`
+   `quarto-graft trunk init "My Project" --template my-template`
    ```
 
 4. **Submit a pull request:**

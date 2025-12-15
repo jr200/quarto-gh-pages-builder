@@ -88,7 +88,7 @@ sidebar:
 
 **How to Contribute**:
 1. Create a template directory with required structure
-2. Test it: `quarto-graft trunk init test --template ./my-template`
+2. Test it: `quarto-graft trunk init "Test Project" --template ./my-template`
 3. Submit PR with template in appropriate directory
 4. Maintainers review and merge
 
@@ -147,6 +147,6 @@ my-org-templates/
     └── product-docs/
 
 # Use organizational templates
-quarto-graft trunk init project --template my-org-templates/trunk-templates/corporate
+quarto-graft trunk init "My Project" --template my-org-templates/trunk-templates/corporate
 quarto-graft graft create study --template my-org-templates/graft-templates/research-paper
 ```

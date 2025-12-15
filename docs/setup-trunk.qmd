@@ -10,17 +10,20 @@ pip install quarto-graft
 
 ## Create a New Trunk
 
-Initialize a new project from a template:
+Initialize a trunk in your current directory:
 
 ```bash
-quarto-graft trunk init my-project
-cd my-project
+# Interactive mode (will prompt for site name and template)
+quarto-graft trunk init
+
+# Or provide all options
+quarto-graft trunk init "My Documentation" --template default
 ```
 
-This creates:
+This creates files in your current directory:
 
 ```
-my-project/
+.
 ├── _quarto.yaml          # Site config with collar markers
 ├── grafts.yaml           # Graft configuration
 ├── grafts.lock           # Build manifest (auto-generated)
@@ -31,6 +34,8 @@ my-project/
     ├── favicon.svg
     └── grafts__/         # Auto-generated graft content
 ```
+
+> **Note:** The command works in your **current directory** and does NOT create a subdirectory. Make sure you're in your git repository root before running it.
 
 ## Understanding the Trunk Template
 
@@ -72,8 +77,8 @@ On first build, no grafts exist yet, so collars will be empty.
 You can create custom trunk templates for your organization:
 
 ```bash
-# Create from custom template directory
-quarto-graft trunk init my-project --template /path/to/template
+# Use a custom template
+quarto-graft trunk init "My Docs" --template /path/to/template
 
 # Template structure
 my-trunk-template/
