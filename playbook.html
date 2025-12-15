@@ -471,7 +471,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p><strong>Template Types</strong>:</p>
 <p><strong>Trunk Templates</strong>: Define site structure, styling, collars - Located in <code>src/quarto_graft/trunk-templates/</code> - Include <code>_quarto.yaml</code>, <code>docs/</code>, <code>grafts.yaml</code> - Use Jinja2 for customization</p>
 <p><strong>Graft Templates</strong>: Provide starter content for different use cases - Located in <code>src/quarto_graft/graft-templates/</code> - Examples: <code>python-notebook</code>, <code>r-analysis</code>, <code>documentation</code> - Include language-specific dependencies</p>
-<p><strong>How to Contribute</strong>: 1. Create a template directory with required structure 2. Test it: <code>quarto-graft trunk init test --template ./my-template</code> 3. Submit PR with template in appropriate directory 4. Maintainers review and merge</p>
+<p><strong>How to Contribute</strong>: 1. Create a template directory with required structure 2. Test it: <code>quarto-graft trunk init "Test Project" --template ./my-template</code> 3. Submit PR with template in appropriate directory 4. Maintainers review and merge</p>
 <p><strong>Template Best Practices</strong>: - Include clear README with template purpose - Provide working example content - Document required dependencies - Use Jinja2 variables for customization (<code>{ project_name }</code>, etc.)</p>
 </section>
 </section>
@@ -513,7 +513,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    <span class="ex">└──</span> product-docs/</span>
 <span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Use organizational templates</span></span>
-<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk init project <span class="at">--template</span> my-org-templates/trunk-templates/corporate</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk init <span class="st">"My Project"</span> <span class="at">--template</span> my-org-templates/trunk-templates/corporate</span>
 <span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> graft create study <span class="at">--template</span> my-org-templates/graft-templates/research-paper</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 
 
@@ -950,7 +950,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       &nbsp;
     <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/jr200/quarto-graft/blob/main/playbook.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/jr200/quarto-graft/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div>
     <div class="nav-footer-right">
-<p>Last build: 2025-12-14 15:51 UTC</p>
+<p>Last build: 2025-12-15 00:54 UTC</p>
 </div>
   </div>
 </footer>

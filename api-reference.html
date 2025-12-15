@@ -459,19 +459,28 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="trunk-commands">Trunk Commands</h2>
 <section id="trunk-init" class="level3">
 <h3 class="anchored" data-anchor-id="trunk-init"><code>trunk init</code></h3>
-<p>Initialize a new trunk project from a template.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk init PROJECT_NAME <span class="pp">[</span><span class="ss">OPTIONS</span><span class="pp">]</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p><strong>Arguments:</strong> - <code>PROJECT_NAME</code> - Name of the new project</p>
-<p><strong>Options:</strong> - <code>--template, -t TEXT</code> - Template name or path (default: “default”) - <code>--help</code> - Show help message</p>
+<p>Initialize trunk in the current directory from a template.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk init <span class="pp">[</span><span class="ss">NAME</span><span class="pp">]</span> <span class="pp">[</span><span class="ss">OPTIONS</span><span class="pp">]</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Arguments:</strong> - <code>NAME</code> - Name of the site/project (e.g., “My Documentation”). Optional - will prompt if not provided.</p>
+<p><strong>Options:</strong> - <code>--template, -t TEXT</code> - Template name or path (default: “default”) - <code>--overwrite/--no-overwrite</code> - Overwrite existing docs/ directory if it exists - <code>--with TEXT</code> - Include addon from trunk-templates/with-addons/ (can be used multiple times) - <code>--help</code> - Show help message</p>
 <p><strong>Examples:</strong></p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create from default template</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk init my-project</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Interactive mode (prompts for name and template)</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk init</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Create from custom template</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk init my-project <span class="at">--template</span> /path/to/template</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Provide site name</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk init <span class="st">"My Documentation"</span></span>
 <span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Create from built-in template</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk init my-project <span class="at">--template</span> minimal</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Use a custom template</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk init <span class="st">"My Docs"</span> <span class="at">--template</span> /path/to/template</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Use a built-in template</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk init <span class="st">"My Site"</span> <span class="at">--template</span> minimal</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Include addons</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk init <span class="st">"My Docs"</span> <span class="at">--with</span> navbar-search <span class="at">--with</span> dark-mode</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<blockquote class="blockquote">
+<p><strong>Note:</strong> This command works in your <strong>current directory</strong> and does NOT create a subdirectory. Run it from your git repository root.</p>
+</blockquote>
 <hr>
 </section>
 </section>
@@ -1054,7 +1063,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       &nbsp;
     <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/jr200/quarto-graft/blob/main/api-reference.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/jr200/quarto-graft/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div>
     <div class="nav-footer-right">
-<p>Last build: 2025-12-14 15:51 UTC</p>
+<p>Last build: 2025-12-15 00:54 UTC</p>
 </div>
   </div>
 </footer>
