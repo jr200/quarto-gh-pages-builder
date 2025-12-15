@@ -256,9 +256,12 @@ trunk_validator = TemplateValidator(TRUNK_TEMPLATES_DIR, "trunk")
 graft_validator = TemplateValidator(GRAFT_TEMPLATES_DIR, "graft")
 
 
-def _configure_logging() -> None:
-    """Configure basic logging from env (QBB_LOG_LEVEL)."""
-    level_name = os.getenv("QBB_LOG_LEVEL", "INFO").upper()
+def _configure_logging(log_level: str | None = None) -> None:
+    """Configure basic logging from parameter, env (QBB_LOG_LEVEL), or default to INFO."""
+    if log_level is None:
+        log_level = os.getenv("QBB_LOG_LEVEL", "INFO")
+
+    level_name = log_level.upper()
     level = getattr(logging, level_name, logging.INFO)
     logging.basicConfig(
         level=level,
@@ -741,9 +744,18 @@ def graft_destroy(
 # ============================================================================
 
 @app.callback(invoke_without_command=True)
-def main_callback(ctx: typer.Context) -> None:
+def main_callback(
+    ctx: typer.Context,
+    log_level: str = typer.Option(
+        None,
+        "--log-level",
+        "-L",
+        help="Set logging level (DEBUG, INFO, WARNING, ERROR)",
+        envvar="QBB_LOG_LEVEL",
+    ),
+) -> None:
     """Main callback - launches interactive mode if no command given."""
-    _configure_logging()
+    _configure_logging(log_level)
 
     # If a subcommand was invoked, do nothing here
     if ctx.invoked_subcommand is not None:

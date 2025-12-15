@@ -146,9 +146,21 @@ def collect_exported_relpaths(docs_dir: Path, cfg: dict[str, Any]) -> list[str]:
         # Check if it's a glob pattern (contains * or **)
         if "*" in entry:
             matches = []
-            for p in docs_dir.glob(entry):
-                if p.is_file() and p.suffix.lower() in SUPPORTED_SOURCE_EXTS:
-                    matches.append(p)
+            # Special handling for patterns ending with /** (recursive match)
+            # In Python 3.12, glob("path/**") doesn't match files inside, only the directory
+            # We need to use rglob or append "/*" to the pattern
+            if entry.endswith("/**"):
+                # Use rglob for recursive matching
+                base_path = docs_dir / entry[:-3]  # Remove the "/**" suffix
+                if base_path.exists() and base_path.is_dir():
+                    for p in base_path.rglob("*"):
+                        if p.is_file() and p.suffix.lower() in SUPPORTED_SOURCE_EXTS:
+                            matches.append(p)
+            else:
+                # Use glob for other patterns
+                for p in docs_dir.glob(entry):
+                    if p.is_file() and p.suffix.lower() in SUPPORTED_SOURCE_EXTS:
+                        matches.append(p)
             return sorted(matches, key=lambda p: p.as_posix())
 
         # Try direct path
@@ -200,14 +212,19 @@ def collect_exported_relpaths(docs_dir: Path, cfg: dict[str, Any]) -> list[str]:
         files_from_sidebar = flatten_quarto_contents(sidebar_contents)
 
     if files_from_sidebar:
+        logger.debug(f"Processing sidebar contents: {files_from_sidebar}")
         for entry in files_from_sidebar:
+            logger.debug(f"  Resolving entry: {entry!r}")
             paths = _resolve_entry(entry)
+            logger.debug(f"    Found {len(paths)} path(s)")
             for p in paths:
                 if p.suffix.lower() not in SUPPORTED_SOURCE_EXTS:
                     continue
                 rel = p.relative_to(docs_dir).as_posix()
+                logger.debug(f"    Adding: {rel}")
                 if rel not in relpaths:
                     relpaths.append(rel)
+        logger.debug(f"Total sidebar files: {len(relpaths)}")
         if relpaths:
             return relpaths
 
