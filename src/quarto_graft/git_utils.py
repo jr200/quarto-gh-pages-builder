@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 import subprocess
 from contextlib import contextmanager
@@ -39,15 +40,23 @@ def _list_worktree_objects(repo: pygit2.Repository):
 
 
 def _get_auth_callbacks() -> pygit2.RemoteCallbacks:
-    """Create RemoteCallbacks with SSH agent authentication support."""
+    """Create RemoteCallbacks with SSH agent and GITHUB_TOKEN authentication support."""
 
     class AuthCallbacks(pygit2.RemoteCallbacks):
         def credentials(self, url, username_from_url, allowed_types):
-            # Try SSH agent first (most common for GitHub/GitLab)
+            # Try GITHUB_TOKEN for HTTPS authentication (works for private/enterprise repos)
+            if allowed_types & pygit2.credentials.CredentialType.USERPASS_PLAINTEXT:
+                token = os.environ.get("GITHUB_TOKEN")
+                if token:
+                    # For GitHub, username can be anything when using a token
+                    return pygit2.UserPass("x-access-token", token)
+
+            # Try SSH agent (most common for GitHub/GitLab)
             if allowed_types & pygit2.credentials.CredentialType.SSH_KEY:
                 # Use git as username if connecting to GitHub/GitLab
                 username = username_from_url or "git"
                 return pygit2.KeypairFromAgent(username)
+
             # Fallback to default credential types
             return None
 
