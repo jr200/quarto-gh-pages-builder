@@ -1,41 +1,5 @@
 [
   {
-    "objectID": "playbook.html",
-    "href": "playbook.html",
-    "title": "Playbook",
-    "section": "",
-    "text": "Quarto Graft separates concerns: contributors work in isolated graft branches, while the trunk maintainer orchestrates the unified site.\nThis page explains the roles and workflows in a quarto-graft project.\n\n\n\n\nResponsibility: Create and maintain content in an isolated graft branch.\nWorkflow: 1. Request a graft from the trunk maintainer (or create one yourself if you have access) 2. Check out your graft branch: git checkout graft/my-graft 3. Edit content in docs/ 4. Preview locally: quarto preview docs 5. Commit and push: git add . && git commit -m \"Update content\" && git push\nKey Points: - You never merge back to main — the trunk pulls your rendered content - Your graft has its own dependencies (Python packages, R libraries, etc.) - Execute notebooks before committing (trunk doesn’t run code) - Preview your graft standalone or wait for trunk maintainer to build the full site\nExample Session:\ngit checkout graft/my-tutorial\nvim docs/chapter1.qmd\nquarto preview docs           # Preview your graft\ngit add docs/chapter1.qmd\ngit commit -m \"Add chapter 1\"\ngit push\n\n\n\nResponsibility: Manage the overall site structure, collars, builds, and graft lifecycle.\nOwns: - The main branch and _quarto.yaml (collar definitions) - grafts.yaml configuration - Build and publish pipeline - Graft lifecycle management\nCommon Tasks:\nCreate a new graft for a contributor:\nquarto-graft graft create contributor-name --collar articles\nBuild all grafts and update navigation:\nquarto-graft build\nList and manage grafts:\nquarto-graft graft list\nquarto-graft graft destroy old-graft\nDefine new collars in _quarto.yaml:\nsidebar:\n  contents:\n    - section: New Section\n      contents:\n        - _GRAFT_COLLAR: new-collar\n\n\n\nResponsibility: Design and contribute reusable templates for trunks and grafts.\nTemplate Types:\nTrunk Templates: Define site structure, styling, collars - Located in src/quarto_graft/trunk-templates/ - Include _quarto.yaml, docs/, grafts.yaml - Use Jinja2 for customization\nGraft Templates: Provide starter content for different use cases - Located in src/quarto_graft/graft-templates/ - Examples: python-notebook, r-analysis, documentation - Include language-specific dependencies\nHow to Contribute: 1. Create a template directory with required structure 2. Test it: quarto-graft trunk init \"Test Project\" --template ./my-template 3. Submit PR with template in appropriate directory 4. Maintainers review and merge\nTemplate Best Practices: - Include clear README with template purpose - Provide working example content - Document required dependencies - Use Jinja2 variables for customization ({ project_name }, etc.)\n\n\n\n\n\n\nTrunk maintainer edits _quarto.yaml:\nsidebar:\n  contents:\n    - section: Case Studies\n      contents:\n        - _GRAFT_COLLAR: case-studies\nAuthors can now create grafts that attach to case-studies:\nquarto-graft graft create my-case-study --collar case-studies\n\n\n\n\nContent creator archives their work (optional)\nTrunk maintainer destroys the graft:\nquarto-graft graft destroy old-graft\nRebuild to update navigation:\nquarto-graft build\n\n\n\n\nOrganizations can create standard templates:\n# Organization's template repo\nmy-org-templates/\n├── trunk-templates/\n│   └── corporate/\n│       ├── _quarto.yaml     # Corporate branding\n│       ├── docs/\n│       └── grafts.yaml\n└── graft-templates/\n    ├── research-paper/\n    └── product-docs/\n\n# Use organizational templates\nquarto-graft trunk init \"My Project\" --template my-org-templates/trunk-templates/corporate\nquarto-graft graft create study --template my-org-templates/graft-templates/research-paper",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Playbook"
-    ]
-  },
-  {
-    "objectID": "playbook.html#roles",
-    "href": "playbook.html#roles",
-    "title": "Playbook",
-    "section": "",
-    "text": "Responsibility: Create and maintain content in an isolated graft branch.\nWorkflow: 1. Request a graft from the trunk maintainer (or create one yourself if you have access) 2. Check out your graft branch: git checkout graft/my-graft 3. Edit content in docs/ 4. Preview locally: quarto preview docs 5. Commit and push: git add . && git commit -m \"Update content\" && git push\nKey Points: - You never merge back to main — the trunk pulls your rendered content - Your graft has its own dependencies (Python packages, R libraries, etc.) - Execute notebooks before committing (trunk doesn’t run code) - Preview your graft standalone or wait for trunk maintainer to build the full site\nExample Session:\ngit checkout graft/my-tutorial\nvim docs/chapter1.qmd\nquarto preview docs           # Preview your graft\ngit add docs/chapter1.qmd\ngit commit -m \"Add chapter 1\"\ngit push\n\n\n\nResponsibility: Manage the overall site structure, collars, builds, and graft lifecycle.\nOwns: - The main branch and _quarto.yaml (collar definitions) - grafts.yaml configuration - Build and publish pipeline - Graft lifecycle management\nCommon Tasks:\nCreate a new graft for a contributor:\nquarto-graft graft create contributor-name --collar articles\nBuild all grafts and update navigation:\nquarto-graft build\nList and manage grafts:\nquarto-graft graft list\nquarto-graft graft destroy old-graft\nDefine new collars in _quarto.yaml:\nsidebar:\n  contents:\n    - section: New Section\n      contents:\n        - _GRAFT_COLLAR: new-collar\n\n\n\nResponsibility: Design and contribute reusable templates for trunks and grafts.\nTemplate Types:\nTrunk Templates: Define site structure, styling, collars - Located in src/quarto_graft/trunk-templates/ - Include _quarto.yaml, docs/, grafts.yaml - Use Jinja2 for customization\nGraft Templates: Provide starter content for different use cases - Located in src/quarto_graft/graft-templates/ - Examples: python-notebook, r-analysis, documentation - Include language-specific dependencies\nHow to Contribute: 1. Create a template directory with required structure 2. Test it: quarto-graft trunk init \"Test Project\" --template ./my-template 3. Submit PR with template in appropriate directory 4. Maintainers review and merge\nTemplate Best Practices: - Include clear README with template purpose - Provide working example content - Document required dependencies - Use Jinja2 variables for customization ({ project_name }, etc.)",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Playbook"
-    ]
-  },
-  {
-    "objectID": "playbook.html#workflows",
-    "href": "playbook.html#workflows",
-    "title": "Playbook",
-    "section": "",
-    "text": "Trunk maintainer edits _quarto.yaml:\nsidebar:\n  contents:\n    - section: Case Studies\n      contents:\n        - _GRAFT_COLLAR: case-studies\nAuthors can now create grafts that attach to case-studies:\nquarto-graft graft create my-case-study --collar case-studies\n\n\n\n\nContent creator archives their work (optional)\nTrunk maintainer destroys the graft:\nquarto-graft graft destroy old-graft\nRebuild to update navigation:\nquarto-graft build\n\n\n\n\nOrganizations can create standard templates:\n# Organization's template repo\nmy-org-templates/\n├── trunk-templates/\n│   └── corporate/\n│       ├── _quarto.yaml     # Corporate branding\n│       ├── docs/\n│       └── grafts.yaml\n└── graft-templates/\n    ├── research-paper/\n    └── product-docs/\n\n# Use organizational templates\nquarto-graft trunk init \"My Project\" --template my-org-templates/trunk-templates/corporate\nquarto-graft graft create study --template my-org-templates/graft-templates/research-paper",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Playbook"
-    ]
-  },
-  {
     "objectID": "appendix/glossary.html",
     "href": "appendix/glossary.html",
     "title": "Glossary",
@@ -105,351 +69,6 @@
       "Overview",
       "quarto-graft",
       "Glossary"
-    ]
-  },
-  {
-    "objectID": "index.html",
-    "href": "index.html",
-    "title": "quarto-graft",
-    "section": "",
-    "text": "A Python CLI for multi-author Quarto documentation using git branches\n\nQuarto Graft is a command-line tool that lets multiple authors collaborate on a single Quarto website without merge conflicts. Each author works in an isolated git branch (a “graft”), and the main branch (the “trunk”) automatically assembles everything into one unified, searchable site.\n\n\n\n\nThe trunk is your main branch and the foundation of your Quarto site. It defines: - The overall site structure (navbar, sidebar, styling) - Collars: named attachment points where grafts connect (e.g., “main”, “notes”, “bugs”) - Site configuration and templates\n\n\n\nGrafts are isolated git branches where authors work independently. Each graft: - Has its own dependencies and build environment - Can use any language or environment (Python, R, Julia, etc.) - Specifies which collar it attaches to - Gets automatically included in the trunk’s navigation\n\n\n\nCollars are attachment points in the trunk’s _quarto.yaml that organize grafts into sections:\nsidebar:\n  contents:\n    - section: My Grafts\n      contents:\n        - _GRAFT_COLLAR: main\n    - section: Notes\n      contents:\n        - _GRAFT_COLLAR: notes\n\n\n\nEverything is template-based and customizable: - Trunk templates: Define your site’s look, feel, and structure - Graft templates: Provide starter content for different types of contributions - Templates use Jinja2 for configuration - Create custom templates for your organization\n\n\n\n\nTraditional multi-author collaboration problems: - Merge conflicts on main - Shared dependencies causing version conflicts - One author’s broken code blocks everyone - Can’t use different languages/tools per section\nQuarto Graft solutions: - ✅ Each author owns a branch = zero merge conflicts - ✅ Each graft has independent dependencies - ✅ Broken grafts use last-good fallbacks with warnings - ✅ Mix Python, R, Julia, or any language per graft - ✅ Trunk never executes contributor code, only renders artifacts - ✅ Organize content with multiple collars (sections)\n\n\n\n\n🚀 Python CLI (quarto-graft) for project management\n📦 Customizable trunk and graft templates\n🔧 Git branch-based isolation\n🎯 Multiple collar attachment points\n🔄 Automatic navigation updates\n💾 Last-good build fallbacks\n🔍 Full-site search across all grafts\n⚡ Fast trunk builds (no code execution)\n\n\n\n\n\nMulti-author books and research publications\nData science teams (quant research, education platforms)\nInternal documentation portals\nOpen source projects with distributed contributors\nAnyone managing versioned, multi-contributor content\n\n\n\n\n\n\nBefore using Quarto Graft, ensure you have:\n\nPython 3.11+ installed\nGit initialized in your project (git init and at least one commit)\nQuarto CLI installed:\npip install quarto-cli\n# OR download from https://quarto.org/docs/get-started/\n\n\n\n\npip install quarto-graft\n\n\n\nThe trunk is your main documentation site. Run this from your git repository root:\n# Interactive mode (recommended for first-time setup)\nquarto-graft trunk init\n\n# Or non-interactive with options\nquarto-graft trunk init --template markdown\nThis creates: - _quarto.yaml - Quarto configuration with collar markers - grafts.yaml - Graft branch configuration (initially empty) - index.qmd - Landing page for your site\n\nNote: The command runs in your current directory (doesn’t create a subdirectory).\n\n\n\n\nA graft is an isolated author branch:\n# Interactive mode (will prompt for template and collar)\nquarto-graft graft create demo\n\n# Or specify all options\nquarto-graft graft create demo --template py-jupyter --collar main\nThis creates: - Git branch: graft/demo (customizable with --branch-name) - Entry in grafts.yaml - Automatically pushes to origin (use --no-push to skip)\nAvailable templates: - markdown - Simple Markdown/QMD documents - py-jupyter - Python + Jupyter notebooks - py-marimo - Python + Marimo notebooks\n\n\n\nBuild all grafts and update the trunk:\n# Build all grafts (fetches latest, builds, updates navigation)\nquarto-graft trunk build\n\n# Preview the complete site locally\nquarto preview\nWhat happens during trunk build: 1. Fetches latest changes from all graft branches 2. Builds each graft in isolation (or uses last-good fallback if broken) 3. Exports content to grafts__/&lt;graft-name&gt;/ 4. Updates _quarto.yaml with navigation 5. Creates/updates grafts.lock with build state\nView your site: Open the URL from quarto preview (usually http://localhost:4200)\n\n\n\nAuthors work on graft branches like any other git branch:\n# Checkout the graft branch\ngit checkout graft/demo\n\n# Edit files, run notebooks, commit, push\ngit add . && git commit -m \"Updated content\"\ngit push\n\n# Return to trunk when done\ngit checkout main\nAfter pushing graft changes, rebuild from trunk to see updates:\nquarto-graft trunk build\n\n\n\n# 1. Set up project\nmkdir my-docs && cd my-docs\ngit init\ngit commit --allow-empty -m \"Initial commit\"\n\n# 2. Install quarto-graft\npip install quarto-graft\n\n# 3. Initialize trunk\nquarto-graft trunk init\ngit add .\ngit commit -m \"Initialize trunk\"\ngit push -u origin main\n\n# 4. Create graft for Alice\nquarto-graft graft create alice-chapter --collar main\n\n# 5. Alice works in her graft\ncd .grafts-cache/alice-chapter\n# ... edit files ...\ngit add . && git commit -m \"Added my chapter\"\ngit push\ncd ../..\n\n# 6. Build and preview trunk\ngit checkout main\nquarto-graft trunk build\nquarto preview\n\n# 7. Deploy to GitHub Pages (when ready)\nquarto publish gh-pages\n\n\n\n\n\n\n\n\n\n\nCommand\nDescription\n\n\n\n\nquarto-graft trunk init\nCreate trunk structure from template\n\n\nquarto-graft trunk build\nBuild all grafts and update trunk navigation\n\n\nquarto-graft trunk lock\nUpdate _quarto.yaml from grafts.lock (no rebuild)\n\n\nquarto-graft graft create &lt;name&gt;\nCreate new graft branch\n\n\nquarto-graft graft build --branch &lt;name&gt;\nBuild single graft\n\n\nquarto-graft graft list\nShow all graft branches and their status\n\n\nquarto-graft graft destroy &lt;name&gt;\nDelete graft (branch, worktree, config)\n\n\n\n\n\n\n\nInteractive mode: Run quarto-graft with no arguments\nCommand help: Use --help on any command\nIssues: https://github.com/jr200/quarto-graft/issues\n\n\n\n\n\nReleased under the MIT License. Free to use, modify, and redistribute with attribution.",
-    "crumbs": [
-      "Overview",
-      "quarto-graft"
-    ]
-  },
-  {
-    "objectID": "index.html#key-concepts",
-    "href": "index.html#key-concepts",
-    "title": "quarto-graft",
-    "section": "",
-    "text": "The trunk is your main branch and the foundation of your Quarto site. It defines: - The overall site structure (navbar, sidebar, styling) - Collars: named attachment points where grafts connect (e.g., “main”, “notes”, “bugs”) - Site configuration and templates\n\n\n\nGrafts are isolated git branches where authors work independently. Each graft: - Has its own dependencies and build environment - Can use any language or environment (Python, R, Julia, etc.) - Specifies which collar it attaches to - Gets automatically included in the trunk’s navigation\n\n\n\nCollars are attachment points in the trunk’s _quarto.yaml that organize grafts into sections:\nsidebar:\n  contents:\n    - section: My Grafts\n      contents:\n        - _GRAFT_COLLAR: main\n    - section: Notes\n      contents:\n        - _GRAFT_COLLAR: notes\n\n\n\nEverything is template-based and customizable: - Trunk templates: Define your site’s look, feel, and structure - Graft templates: Provide starter content for different types of contributions - Templates use Jinja2 for configuration - Create custom templates for your organization",
-    "crumbs": [
-      "Overview",
-      "quarto-graft"
-    ]
-  },
-  {
-    "objectID": "index.html#why-use-quarto-graft",
-    "href": "index.html#why-use-quarto-graft",
-    "title": "quarto-graft",
-    "section": "",
-    "text": "Traditional multi-author collaboration problems: - Merge conflicts on main - Shared dependencies causing version conflicts - One author’s broken code blocks everyone - Can’t use different languages/tools per section\nQuarto Graft solutions: - ✅ Each author owns a branch = zero merge conflicts - ✅ Each graft has independent dependencies - ✅ Broken grafts use last-good fallbacks with warnings - ✅ Mix Python, R, Julia, or any language per graft - ✅ Trunk never executes contributor code, only renders artifacts - ✅ Organize content with multiple collars (sections)",
-    "crumbs": [
-      "Overview",
-      "quarto-graft"
-    ]
-  },
-  {
-    "objectID": "index.html#what-you-get",
-    "href": "index.html#what-you-get",
-    "title": "quarto-graft",
-    "section": "",
-    "text": "🚀 Python CLI (quarto-graft) for project management\n📦 Customizable trunk and graft templates\n🔧 Git branch-based isolation\n🎯 Multiple collar attachment points\n🔄 Automatic navigation updates\n💾 Last-good build fallbacks\n🔍 Full-site search across all grafts\n⚡ Fast trunk builds (no code execution)",
-    "crumbs": [
-      "Overview",
-      "quarto-graft"
-    ]
-  },
-  {
-    "objectID": "index.html#who-this-is-for",
-    "href": "index.html#who-this-is-for",
-    "title": "quarto-graft",
-    "section": "",
-    "text": "Multi-author books and research publications\nData science teams (quant research, education platforms)\nInternal documentation portals\nOpen source projects with distributed contributors\nAnyone managing versioned, multi-contributor content",
-    "crumbs": [
-      "Overview",
-      "quarto-graft"
-    ]
-  },
-  {
-    "objectID": "index.html#quick-start",
-    "href": "index.html#quick-start",
-    "title": "quarto-graft",
-    "section": "",
-    "text": "Before using Quarto Graft, ensure you have:\n\nPython 3.11+ installed\nGit initialized in your project (git init and at least one commit)\nQuarto CLI installed:\npip install quarto-cli\n# OR download from https://quarto.org/docs/get-started/\n\n\n\n\npip install quarto-graft\n\n\n\nThe trunk is your main documentation site. Run this from your git repository root:\n# Interactive mode (recommended for first-time setup)\nquarto-graft trunk init\n\n# Or non-interactive with options\nquarto-graft trunk init --template markdown\nThis creates: - _quarto.yaml - Quarto configuration with collar markers - grafts.yaml - Graft branch configuration (initially empty) - index.qmd - Landing page for your site\n\nNote: The command runs in your current directory (doesn’t create a subdirectory).\n\n\n\n\nA graft is an isolated author branch:\n# Interactive mode (will prompt for template and collar)\nquarto-graft graft create demo\n\n# Or specify all options\nquarto-graft graft create demo --template py-jupyter --collar main\nThis creates: - Git branch: graft/demo (customizable with --branch-name) - Entry in grafts.yaml - Automatically pushes to origin (use --no-push to skip)\nAvailable templates: - markdown - Simple Markdown/QMD documents - py-jupyter - Python + Jupyter notebooks - py-marimo - Python + Marimo notebooks\n\n\n\nBuild all grafts and update the trunk:\n# Build all grafts (fetches latest, builds, updates navigation)\nquarto-graft trunk build\n\n# Preview the complete site locally\nquarto preview\nWhat happens during trunk build: 1. Fetches latest changes from all graft branches 2. Builds each graft in isolation (or uses last-good fallback if broken) 3. Exports content to grafts__/&lt;graft-name&gt;/ 4. Updates _quarto.yaml with navigation 5. Creates/updates grafts.lock with build state\nView your site: Open the URL from quarto preview (usually http://localhost:4200)\n\n\n\nAuthors work on graft branches like any other git branch:\n# Checkout the graft branch\ngit checkout graft/demo\n\n# Edit files, run notebooks, commit, push\ngit add . && git commit -m \"Updated content\"\ngit push\n\n# Return to trunk when done\ngit checkout main\nAfter pushing graft changes, rebuild from trunk to see updates:\nquarto-graft trunk build\n\n\n\n# 1. Set up project\nmkdir my-docs && cd my-docs\ngit init\ngit commit --allow-empty -m \"Initial commit\"\n\n# 2. Install quarto-graft\npip install quarto-graft\n\n# 3. Initialize trunk\nquarto-graft trunk init\ngit add .\ngit commit -m \"Initialize trunk\"\ngit push -u origin main\n\n# 4. Create graft for Alice\nquarto-graft graft create alice-chapter --collar main\n\n# 5. Alice works in her graft\ncd .grafts-cache/alice-chapter\n# ... edit files ...\ngit add . && git commit -m \"Added my chapter\"\ngit push\ncd ../..\n\n# 6. Build and preview trunk\ngit checkout main\nquarto-graft trunk build\nquarto preview\n\n# 7. Deploy to GitHub Pages (when ready)\nquarto publish gh-pages\n\n\n\n\n\n\n\n\n\n\nCommand\nDescription\n\n\n\n\nquarto-graft trunk init\nCreate trunk structure from template\n\n\nquarto-graft trunk build\nBuild all grafts and update trunk navigation\n\n\nquarto-graft trunk lock\nUpdate _quarto.yaml from grafts.lock (no rebuild)\n\n\nquarto-graft graft create &lt;name&gt;\nCreate new graft branch\n\n\nquarto-graft graft build --branch &lt;name&gt;\nBuild single graft\n\n\nquarto-graft graft list\nShow all graft branches and their status\n\n\nquarto-graft graft destroy &lt;name&gt;\nDelete graft (branch, worktree, config)\n\n\n\n\n\n\n\nInteractive mode: Run quarto-graft with no arguments\nCommand help: Use --help on any command\nIssues: https://github.com/jr200/quarto-graft/issues",
-    "crumbs": [
-      "Overview",
-      "quarto-graft"
-    ]
-  },
-  {
-    "objectID": "index.html#license",
-    "href": "index.html#license",
-    "title": "quarto-graft",
-    "section": "",
-    "text": "Released under the MIT License. Free to use, modify, and redistribute with attribution.",
-    "crumbs": [
-      "Overview",
-      "quarto-graft"
-    ]
-  },
-  {
-    "objectID": "contributing.html",
-    "href": "contributing.html",
-    "title": "Contributing",
-    "section": "",
-    "text": "Thank you for your interest in contributing to Quarto Graft! This project welcomes contributions of code, templates, documentation, and ideas.\n\n\n\n\nAreas to contribute: - CLI improvements and new commands - Template rendering engine - Build system optimizations - Error handling and user experience - Test coverage\nProcess: 1. Fork the repository 2. Create a feature branch: git checkout -b feature/my-feature 3. Make your changes with tests 4. Run tests: pytest 5. Submit a pull request\nDevelopment setup:\ngit clone https://github.com/jr200/quarto-graft\ncd quarto-graft\npip install -e \".[dev]\"\npytest\n\n\n\nTemplates are reusable starter projects for trunks and grafts.\n\n\nDefine the initial structure and styling of a Quarto site.\nLocation: src/quarto_graft/trunk-templates/\nRequired structure:\nmy-trunk-template/\n├── _quarto.yaml          # Jinja2 template with collars\n├── docs/\n│   ├── index.qmd         # Jinja2 template\n│   └── appendix/\n│       └── glossary.qmd\n└── grafts.yaml           # Initial config\nAvailable Jinja2 variables: - { project_name } - User-provided project name - { project_slug } - URL-safe version of project name - { package_name } - Python package name\nExample collar definition:\n# In _quarto.yaml template\nsidebar:\n  contents:\n    - section: {{ project_name }}\n      contents:\n        - _GRAFT_COLLAR: main\n    - section: Documentation\n      contents:\n        - _GRAFT_COLLAR: docs\n\n\n\nProvide starter content for different types of contributions.\nLocation: src/quarto_graft/graft-templates/\nRequired structure:\nmy-graft-template/\n├── docs/\n│   ├── index.qmd         # Jinja2 template\n│   └── _quarto.yaml      # Graft-specific config\n├── README.md\n└── pyproject.toml        # Optional dependencies\nAvailable Jinja2 variables: - { graft_name } - Display name of the graft - { graft_branch } - Git branch name - { graft_slug } - URL-safe identifier\nExample graft _quarto.yaml:\nproject:\n  type: website\n  output-dir: _site\n\nwebsite:\n  title: \"{{ graft_name }}\"\n  sidebar:\n    contents:\n      - docs/index.qmd\n\n\n\n\nTrunk templates: - Minimal (single-page site) - Documentation portal (corporate style) - Book template (chapter-based) - Research publication template - Course/tutorial site template\nGraft templates: - Python + Jupyter + Pandas - R + Quarto + ggplot2 - Julia + Pluto notebooks - Observable + D3.js - Documentation (API reference) - Research paper template - Tutorial/workshop template\n\n\n\n✅ Do: - Include a README explaining the template purpose - Provide working example content - Use clear variable names in Jinja2 templates - Document required dependencies - Test the template before submitting - Use consistent styling and structure\n❌ Don’t: - Hardcode project-specific names - Include large binary files - Use deprecated Quarto features - Require proprietary software - Include secrets or credentials\n\n\n\n\nCreate your template in the appropriate directory:\n\nsrc/quarto_graft/trunk-templates/my-template/\nsrc/quarto_graft/graft-templates/my-template/\n\nTest it thoroughly:\n# For trunk templates\nmkdir test-project && cd test-project\ngit init && git commit --allow-empty -m \"init\"\nquarto-graft trunk init \"Test Project\" --template my-template\nquarto preview\n\n# For graft templates\nquarto-graft graft create test-graft --template my-template\ngit checkout graft/test-graft\nquarto preview docs\nDocument it with a README in the template directory:\n# My Template\n\n## Description\nBrief description of what this template provides.\n\n## Use Case\nWho should use this template and when.\n\n## Requirements\n- Quarto &gt;= 1.4\n- Python &gt;= 3.10 (if applicable)\n\n## Features\n- Feature 1\n- Feature 2\n\n## Example\n`quarto-graft trunk init \"My Project\" --template my-template`\nSubmit a pull request:\n\nTitle: “Add [trunk|graft] template: [template-name]”\nDescription: Explain the use case and features\nInclude screenshots if applicable\n\n\n\n\n\nHelp improve the docs in docs/: - Fix typos and clarify explanations - Add examples and use cases - Improve CLI command documentation - Create tutorials and guides\nBuild docs locally:\ncd docs\nquarto preview\n\n\n\nBug reports: - Use GitHub Issues - Include version: quarto-graft --version - Provide minimal reproducible example - Include error messages and logs\nFeature requests: - Describe the use case - Explain current workarounds - Suggest implementation approach\n\n\n\n\n\nFollow PEP 8 for Python code\nUse type hints\nWrite docstrings for public functions\nKeep functions focused and testable\n\n\n\n\nRun the test suite:\npytest                    # All tests\npytest tests/test_cli.py  # Specific file\npytest -v                 # Verbose output\n\n\n\n\nOpen a GitHub Discussion\nCheck existing issues and PRs\nReview the documentation\n\nThank you for contributing! 🎉",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Contributing"
-    ]
-  },
-  {
-    "objectID": "contributing.html#types-of-contributions",
-    "href": "contributing.html#types-of-contributions",
-    "title": "Contributing",
-    "section": "",
-    "text": "Areas to contribute: - CLI improvements and new commands - Template rendering engine - Build system optimizations - Error handling and user experience - Test coverage\nProcess: 1. Fork the repository 2. Create a feature branch: git checkout -b feature/my-feature 3. Make your changes with tests 4. Run tests: pytest 5. Submit a pull request\nDevelopment setup:\ngit clone https://github.com/jr200/quarto-graft\ncd quarto-graft\npip install -e \".[dev]\"\npytest\n\n\n\nTemplates are reusable starter projects for trunks and grafts.\n\n\nDefine the initial structure and styling of a Quarto site.\nLocation: src/quarto_graft/trunk-templates/\nRequired structure:\nmy-trunk-template/\n├── _quarto.yaml          # Jinja2 template with collars\n├── docs/\n│   ├── index.qmd         # Jinja2 template\n│   └── appendix/\n│       └── glossary.qmd\n└── grafts.yaml           # Initial config\nAvailable Jinja2 variables: - { project_name } - User-provided project name - { project_slug } - URL-safe version of project name - { package_name } - Python package name\nExample collar definition:\n# In _quarto.yaml template\nsidebar:\n  contents:\n    - section: {{ project_name }}\n      contents:\n        - _GRAFT_COLLAR: main\n    - section: Documentation\n      contents:\n        - _GRAFT_COLLAR: docs\n\n\n\nProvide starter content for different types of contributions.\nLocation: src/quarto_graft/graft-templates/\nRequired structure:\nmy-graft-template/\n├── docs/\n│   ├── index.qmd         # Jinja2 template\n│   └── _quarto.yaml      # Graft-specific config\n├── README.md\n└── pyproject.toml        # Optional dependencies\nAvailable Jinja2 variables: - { graft_name } - Display name of the graft - { graft_branch } - Git branch name - { graft_slug } - URL-safe identifier\nExample graft _quarto.yaml:\nproject:\n  type: website\n  output-dir: _site\n\nwebsite:\n  title: \"{{ graft_name }}\"\n  sidebar:\n    contents:\n      - docs/index.qmd\n\n\n\n\nTrunk templates: - Minimal (single-page site) - Documentation portal (corporate style) - Book template (chapter-based) - Research publication template - Course/tutorial site template\nGraft templates: - Python + Jupyter + Pandas - R + Quarto + ggplot2 - Julia + Pluto notebooks - Observable + D3.js - Documentation (API reference) - Research paper template - Tutorial/workshop template\n\n\n\n✅ Do: - Include a README explaining the template purpose - Provide working example content - Use clear variable names in Jinja2 templates - Document required dependencies - Test the template before submitting - Use consistent styling and structure\n❌ Don’t: - Hardcode project-specific names - Include large binary files - Use deprecated Quarto features - Require proprietary software - Include secrets or credentials\n\n\n\n\nCreate your template in the appropriate directory:\n\nsrc/quarto_graft/trunk-templates/my-template/\nsrc/quarto_graft/graft-templates/my-template/\n\nTest it thoroughly:\n# For trunk templates\nmkdir test-project && cd test-project\ngit init && git commit --allow-empty -m \"init\"\nquarto-graft trunk init \"Test Project\" --template my-template\nquarto preview\n\n# For graft templates\nquarto-graft graft create test-graft --template my-template\ngit checkout graft/test-graft\nquarto preview docs\nDocument it with a README in the template directory:\n# My Template\n\n## Description\nBrief description of what this template provides.\n\n## Use Case\nWho should use this template and when.\n\n## Requirements\n- Quarto &gt;= 1.4\n- Python &gt;= 3.10 (if applicable)\n\n## Features\n- Feature 1\n- Feature 2\n\n## Example\n`quarto-graft trunk init \"My Project\" --template my-template`\nSubmit a pull request:\n\nTitle: “Add [trunk|graft] template: [template-name]”\nDescription: Explain the use case and features\nInclude screenshots if applicable\n\n\n\n\n\nHelp improve the docs in docs/: - Fix typos and clarify explanations - Add examples and use cases - Improve CLI command documentation - Create tutorials and guides\nBuild docs locally:\ncd docs\nquarto preview\n\n\n\nBug reports: - Use GitHub Issues - Include version: quarto-graft --version - Provide minimal reproducible example - Include error messages and logs\nFeature requests: - Describe the use case - Explain current workarounds - Suggest implementation approach",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Contributing"
-    ]
-  },
-  {
-    "objectID": "contributing.html#code-style",
-    "href": "contributing.html#code-style",
-    "title": "Contributing",
-    "section": "",
-    "text": "Follow PEP 8 for Python code\nUse type hints\nWrite docstrings for public functions\nKeep functions focused and testable",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Contributing"
-    ]
-  },
-  {
-    "objectID": "contributing.html#testing",
-    "href": "contributing.html#testing",
-    "title": "Contributing",
-    "section": "",
-    "text": "Run the test suite:\npytest                    # All tests\npytest tests/test_cli.py  # Specific file\npytest -v                 # Verbose output",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Contributing"
-    ]
-  },
-  {
-    "objectID": "contributing.html#questions",
-    "href": "contributing.html#questions",
-    "title": "Contributing",
-    "section": "",
-    "text": "Open a GitHub Discussion\nCheck existing issues and PRs\nReview the documentation\n\nThank you for contributing! 🎉",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Contributing"
-    ]
-  },
-  {
-    "objectID": "setup-graft.html",
-    "href": "setup-graft.html",
-    "title": "Graft Setup",
-    "section": "",
-    "text": "Grafts are isolated git branches where individual authors work on content.\n\n\nFrom your trunk directory:\nquarto-graft graft create my-first-graft\nThis will: 1. Prompt you to select a collar (attachment point) 2. Create an orphan git branch graft/my-first-graft 3. Initialize the branch from a template 4. Update grafts.yaml with the new entry 5. Push the branch to remote (by default)\nExample interaction:\n? Enter graft branch name: my-first-graft\n? Select template: default\n? Select attachment point (collar): main\n? Use default branch name 'graft/my-first-graft'? Yes\n✓ New orphan graft branch created\nCollar: main\nBranch: graft/my-first-graft\n\n\nEach graft branch is a self-contained Quarto project:\ngraft/my-first-graft (branch)\n├── docs/\n│   ├── index.qmd         # Your content\n│   ├── _quarto.yaml      # Graft-specific config\n├── .gitignore\n├── pyproject.toml        # Optional: graft dependencies\n└── README.md\n\n\n\n\nWhen you create a graft, you must specify which collar it attaches to. Collars are defined in the trunk’s _quarto.yaml:\n# In trunk's _quarto.yaml\nsidebar:\n  contents:\n    - section: Articles\n      contents:\n        - _GRAFT_COLLAR: articles\n    - section: Tutorials\n      contents:\n        - _GRAFT_COLLAR: tutorials\nYour graft in grafts.yaml:\nbranches:\n  - name: my-tutorial\n    branch: graft/my-tutorial\n    collar: tutorials        # Attaches to \"Tutorials\" section\n\n\n\nCheck out your graft branch and work on it directly:\n# Switch to your graft branch\ngit checkout graft/my-first-graft\n\n# Edit your content\nvim docs/index.qmd\n\n# Preview locally\nquarto preview docs\n\n# Commit and push\ngit add .\ngit commit -m \"Add tutorial content\"\ngit push\n\n\n\nIsolated branches: Each graft is a separate git branch with its own history\nOwn dependencies: Each graft can have its own pyproject.toml, requirements.txt, or R packages\nExecute before commit: The trunk doesn’t execute code, only renders outputs\nCommit outputs: Jupyter notebook outputs must be saved to show on the trunk site\nIndependent preview: You can preview grafts standalone without the trunk\nNo merge conflicts: Grafts never merge back to main — the trunk pulls rendered content\n\n\n\n\n\nCreate grafts from custom templates:\n# Use a specific template\nquarto-graft graft create my-graft --template python-notebook\n\n# Use a template from a directory\nquarto-graft graft create my-graft --template /path/to/template\nExample graft template:\nmy-graft-template/\n├── docs/\n│   ├── index.qmd\n│   ├── _quarto.yaml\n├── pyproject.toml\n└── README.md\nTemplates support Jinja2 variables: - { graft_name } - Graft display name - { graft_branch } - Git branch name - { graft_slug } - URL-safe identifier\n\n\n\nAfter pushing graft changes, build from the trunk:\ncd /path/to/trunk\nquarto-graft build         # Builds all grafts\nquarto preview             # Preview the full site\nThe trunk will: 1. Fetch your latest graft commits 2. Render your graft’s content 3. Copy outputs to grafts__/my-first-graft/ 4. Update navigation to include your graft under the specified collar\n\n\n\n\n\nquarto-graft graft list\n\n\n\n# Destroy branch completely (removes from grafts.yaml, deletes local + remote)\nquarto-graft graft destroy my-first-graft\n\n# Keep remote branch\nquarto-graft graft destroy my-first-graft --keep-remote\n\n\n\n\nBuild failures: If your graft fails to build, the trunk will: - Use the last successful build (if available) - Display a warning banner on your graft’s pages - Log the error details\nBroken outputs: Remember to execute and save notebook outputs before committing:\nquarto render docs --execute\ngit add docs/\ngit commit -m \"Update outputs\"",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Getting Started",
-      "Graft Setup"
-    ]
-  },
-  {
-    "objectID": "setup-graft.html#create-a-new-graft",
-    "href": "setup-graft.html#create-a-new-graft",
-    "title": "Graft Setup",
-    "section": "",
-    "text": "From your trunk directory:\nquarto-graft graft create my-first-graft\nThis will: 1. Prompt you to select a collar (attachment point) 2. Create an orphan git branch graft/my-first-graft 3. Initialize the branch from a template 4. Update grafts.yaml with the new entry 5. Push the branch to remote (by default)\nExample interaction:\n? Enter graft branch name: my-first-graft\n? Select template: default\n? Select attachment point (collar): main\n? Use default branch name 'graft/my-first-graft'? Yes\n✓ New orphan graft branch created\nCollar: main\nBranch: graft/my-first-graft\n\n\nEach graft branch is a self-contained Quarto project:\ngraft/my-first-graft (branch)\n├── docs/\n│   ├── index.qmd         # Your content\n│   ├── _quarto.yaml      # Graft-specific config\n├── .gitignore\n├── pyproject.toml        # Optional: graft dependencies\n└── README.md",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Getting Started",
-      "Graft Setup"
-    ]
-  },
-  {
-    "objectID": "setup-graft.html#specifying-a-collar",
-    "href": "setup-graft.html#specifying-a-collar",
-    "title": "Graft Setup",
-    "section": "",
-    "text": "When you create a graft, you must specify which collar it attaches to. Collars are defined in the trunk’s _quarto.yaml:\n# In trunk's _quarto.yaml\nsidebar:\n  contents:\n    - section: Articles\n      contents:\n        - _GRAFT_COLLAR: articles\n    - section: Tutorials\n      contents:\n        - _GRAFT_COLLAR: tutorials\nYour graft in grafts.yaml:\nbranches:\n  - name: my-tutorial\n    branch: graft/my-tutorial\n    collar: tutorials        # Attaches to \"Tutorials\" section",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Getting Started",
-      "Graft Setup"
-    ]
-  },
-  {
-    "objectID": "setup-graft.html#working-in-a-graft",
-    "href": "setup-graft.html#working-in-a-graft",
-    "title": "Graft Setup",
-    "section": "",
-    "text": "Check out your graft branch and work on it directly:\n# Switch to your graft branch\ngit checkout graft/my-first-graft\n\n# Edit your content\nvim docs/index.qmd\n\n# Preview locally\nquarto preview docs\n\n# Commit and push\ngit add .\ngit commit -m \"Add tutorial content\"\ngit push\n\n\n\nIsolated branches: Each graft is a separate git branch with its own history\nOwn dependencies: Each graft can have its own pyproject.toml, requirements.txt, or R packages\nExecute before commit: The trunk doesn’t execute code, only renders outputs\nCommit outputs: Jupyter notebook outputs must be saved to show on the trunk site\nIndependent preview: You can preview grafts standalone without the trunk\nNo merge conflicts: Grafts never merge back to main — the trunk pulls rendered content",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Getting Started",
-      "Graft Setup"
-    ]
-  },
-  {
-    "objectID": "setup-graft.html#using-custom-graft-templates",
-    "href": "setup-graft.html#using-custom-graft-templates",
-    "title": "Graft Setup",
-    "section": "",
-    "text": "Create grafts from custom templates:\n# Use a specific template\nquarto-graft graft create my-graft --template python-notebook\n\n# Use a template from a directory\nquarto-graft graft create my-graft --template /path/to/template\nExample graft template:\nmy-graft-template/\n├── docs/\n│   ├── index.qmd\n│   ├── _quarto.yaml\n├── pyproject.toml\n└── README.md\nTemplates support Jinja2 variables: - { graft_name } - Graft display name - { graft_branch } - Git branch name - { graft_slug } - URL-safe identifier",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Getting Started",
-      "Graft Setup"
-    ]
-  },
-  {
-    "objectID": "setup-graft.html#building-from-the-trunk",
-    "href": "setup-graft.html#building-from-the-trunk",
-    "title": "Graft Setup",
-    "section": "",
-    "text": "After pushing graft changes, build from the trunk:\ncd /path/to/trunk\nquarto-graft build         # Builds all grafts\nquarto preview             # Preview the full site\nThe trunk will: 1. Fetch your latest graft commits 2. Render your graft’s content 3. Copy outputs to grafts__/my-first-graft/ 4. Update navigation to include your graft under the specified collar",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Getting Started",
-      "Graft Setup"
-    ]
-  },
-  {
-    "objectID": "setup-graft.html#managing-grafts",
-    "href": "setup-graft.html#managing-grafts",
-    "title": "Graft Setup",
-    "section": "",
-    "text": "quarto-graft graft list\n\n\n\n# Destroy branch completely (removes from grafts.yaml, deletes local + remote)\nquarto-graft graft destroy my-first-graft\n\n# Keep remote branch\nquarto-graft graft destroy my-first-graft --keep-remote",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Getting Started",
-      "Graft Setup"
-    ]
-  },
-  {
-    "objectID": "setup-graft.html#troubleshooting",
-    "href": "setup-graft.html#troubleshooting",
-    "title": "Graft Setup",
-    "section": "",
-    "text": "Build failures: If your graft fails to build, the trunk will: - Use the last successful build (if available) - Display a warning banner on your graft’s pages - Log the error details\nBroken outputs: Remember to execute and save notebook outputs before committing:\nquarto render docs --execute\ngit add docs/\ngit commit -m \"Update outputs\"",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Getting Started",
-      "Graft Setup"
-    ]
-  },
-  {
-    "objectID": "setup-trunk.html",
-    "href": "setup-trunk.html",
-    "title": "Trunk Setup",
-    "section": "",
-    "text": "The trunk is your main branch that defines the overall Quarto site structure.\n\n\npip install quarto-graft\n\n\n\nInitialize a trunk in your current directory:\n# Interactive mode (will prompt for site name and template)\nquarto-graft trunk init\n\n# Or provide all options\nquarto-graft trunk init \"My Documentation\" --template default\nThis creates files in your current directory:\n.\n├── _quarto.yaml          # Site config with collar markers\n├── grafts.yaml           # Graft configuration\n├── grafts.lock           # Build manifest (auto-generated)\n├── .gitignore\n├── .grafts-cache/        # Internal build cache (gitignored)\n└── docs/                 # Website content\n    ├── index.qmd\n    ├── favicon.svg\n    └── grafts__/         # Auto-generated graft content\n\nNote: The command works in your current directory and does NOT create a subdirectory. Make sure you’re in your git repository root before running it.\n\n\n\n\nThe trunk template defines your site’s structure. Key file: _quarto.yaml\nproject:\n  type: website\n  output-dir: _site\n\nwebsite:\n  title: \"My Project\"\n  sidebar:\n    contents:\n      - docs/index.qmd\n      - section: My Grafts\n        contents:\n          - _GRAFT_COLLAR: main      # Collar attachment point\n      - section: Notes\n        contents:\n          - _GRAFT_COLLAR: notes     # Another collar\nCollars (_GRAFT_COLLAR) are attachment points where grafts connect. When you create a graft, you specify which collar it attaches to.\n\n\n\nquarto-graft build          # Build all grafts\nquarto preview              # Preview the site\nOn first build, no grafts exist yet, so collars will be empty.\n\n\n\n\n\nYou can create custom trunk templates for your organization:\n# Use a custom template\nquarto-graft trunk init \"My Docs\" --template /path/to/template\n\n# Template structure\nmy-trunk-template/\n├── _quarto.yaml          # Jinja2 template\n├── docs/\n│   └── index.qmd         # Jinja2 template\n└── grafts.yaml           # Jinja2 template\nTemplates use Jinja2 variables: - { project_name } - Project name - { project_slug } - URL-safe slug - Custom variables you define\n\n\n\nEdit _quarto.yaml to add/remove collars:\nwebsite:\n  sidebar:\n    contents:\n      - section: Articles\n        contents:\n          - _GRAFT_COLLAR: articles\n      - section: Tutorials\n        contents:\n          - _GRAFT_COLLAR: tutorials\n      - section: Reference\n        contents:\n          - _GRAFT_COLLAR: reference\nGrafts will attach to these named sections.\n\n\n\n\n\nInitialize git and push to GitHub:\ngit init\ngit add .\ngit commit -m \"Initial trunk\"\ngit remote add origin &lt;your-repo-url&gt;\ngit push -u origin main\nCreate gh-pages branch:\ngit checkout --orphan gh-pages\ngit rm -rf .\ngit commit --allow-empty -m \"Initial gh-pages\"\ngit push -u origin gh-pages\ngit checkout main\nConfigure GitHub Pages:\n\nSettings → Pages → Source: gh-pages branch\nSettings → Actions → Permissions: Enable read/write\n\nBuild and publish:\nquarto-graft build\nquarto publish gh-pages\n\n\n\n\n\nGrafts attach to collars: Each graft specifies a collar in grafts.yaml\nBuild process: quarto-graft build renders each graft in isolation\nAuto-navigation: Built content is injected after the matching collar marker\nAtomic updates: The trunk’s _quarto.yaml is updated automatically",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Getting Started",
-      "Trunk Setup"
-    ]
-  },
-  {
-    "objectID": "setup-trunk.html#installation",
-    "href": "setup-trunk.html#installation",
-    "title": "Trunk Setup",
-    "section": "",
-    "text": "pip install quarto-graft",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Getting Started",
-      "Trunk Setup"
-    ]
-  },
-  {
-    "objectID": "setup-trunk.html#create-a-new-trunk",
-    "href": "setup-trunk.html#create-a-new-trunk",
-    "title": "Trunk Setup",
-    "section": "",
-    "text": "Initialize a trunk in your current directory:\n# Interactive mode (will prompt for site name and template)\nquarto-graft trunk init\n\n# Or provide all options\nquarto-graft trunk init \"My Documentation\" --template default\nThis creates files in your current directory:\n.\n├── _quarto.yaml          # Site config with collar markers\n├── grafts.yaml           # Graft configuration\n├── grafts.lock           # Build manifest (auto-generated)\n├── .gitignore\n├── .grafts-cache/        # Internal build cache (gitignored)\n└── docs/                 # Website content\n    ├── index.qmd\n    ├── favicon.svg\n    └── grafts__/         # Auto-generated graft content\n\nNote: The command works in your current directory and does NOT create a subdirectory. Make sure you’re in your git repository root before running it.",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Getting Started",
-      "Trunk Setup"
-    ]
-  },
-  {
-    "objectID": "setup-trunk.html#understanding-the-trunk-template",
-    "href": "setup-trunk.html#understanding-the-trunk-template",
-    "title": "Trunk Setup",
-    "section": "",
-    "text": "The trunk template defines your site’s structure. Key file: _quarto.yaml\nproject:\n  type: website\n  output-dir: _site\n\nwebsite:\n  title: \"My Project\"\n  sidebar:\n    contents:\n      - docs/index.qmd\n      - section: My Grafts\n        contents:\n          - _GRAFT_COLLAR: main      # Collar attachment point\n      - section: Notes\n        contents:\n          - _GRAFT_COLLAR: notes     # Another collar\nCollars (_GRAFT_COLLAR) are attachment points where grafts connect. When you create a graft, you specify which collar it attaches to.",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Getting Started",
-      "Trunk Setup"
-    ]
-  },
-  {
-    "objectID": "setup-trunk.html#first-build",
-    "href": "setup-trunk.html#first-build",
-    "title": "Trunk Setup",
-    "section": "",
-    "text": "quarto-graft build          # Build all grafts\nquarto preview              # Preview the site\nOn first build, no grafts exist yet, so collars will be empty.",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Getting Started",
-      "Trunk Setup"
-    ]
-  },
-  {
-    "objectID": "setup-trunk.html#customizing-your-trunk",
-    "href": "setup-trunk.html#customizing-your-trunk",
-    "title": "Trunk Setup",
-    "section": "",
-    "text": "You can create custom trunk templates for your organization:\n# Use a custom template\nquarto-graft trunk init \"My Docs\" --template /path/to/template\n\n# Template structure\nmy-trunk-template/\n├── _quarto.yaml          # Jinja2 template\n├── docs/\n│   └── index.qmd         # Jinja2 template\n└── grafts.yaml           # Jinja2 template\nTemplates use Jinja2 variables: - { project_name } - Project name - { project_slug } - URL-safe slug - Custom variables you define\n\n\n\nEdit _quarto.yaml to add/remove collars:\nwebsite:\n  sidebar:\n    contents:\n      - section: Articles\n        contents:\n          - _GRAFT_COLLAR: articles\n      - section: Tutorials\n        contents:\n          - _GRAFT_COLLAR: tutorials\n      - section: Reference\n        contents:\n          - _GRAFT_COLLAR: reference\nGrafts will attach to these named sections.",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Getting Started",
-      "Trunk Setup"
-    ]
-  },
-  {
-    "objectID": "setup-trunk.html#publishing-to-github-pages",
-    "href": "setup-trunk.html#publishing-to-github-pages",
-    "title": "Trunk Setup",
-    "section": "",
-    "text": "Initialize git and push to GitHub:\ngit init\ngit add .\ngit commit -m \"Initial trunk\"\ngit remote add origin &lt;your-repo-url&gt;\ngit push -u origin main\nCreate gh-pages branch:\ngit checkout --orphan gh-pages\ngit rm -rf .\ngit commit --allow-empty -m \"Initial gh-pages\"\ngit push -u origin gh-pages\ngit checkout main\nConfigure GitHub Pages:\n\nSettings → Pages → Source: gh-pages branch\nSettings → Actions → Permissions: Enable read/write\n\nBuild and publish:\nquarto-graft build\nquarto publish gh-pages",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Getting Started",
-      "Trunk Setup"
-    ]
-  },
-  {
-    "objectID": "setup-trunk.html#how-it-works",
-    "href": "setup-trunk.html#how-it-works",
-    "title": "Trunk Setup",
-    "section": "",
-    "text": "Grafts attach to collars: Each graft specifies a collar in grafts.yaml\nBuild process: quarto-graft build renders each graft in isolation\nAuto-navigation: Built content is injected after the matching collar marker\nAtomic updates: The trunk’s _quarto.yaml is updated automatically",
-    "crumbs": [
-      "Overview",
-      "quarto-graft",
-      "Getting Started",
-      "Trunk Setup"
     ]
   },
   {
@@ -570,6 +189,387 @@
       "Overview",
       "quarto-graft",
       "CLI Reference"
+    ]
+  },
+  {
+    "objectID": "contributing.html",
+    "href": "contributing.html",
+    "title": "Contributing",
+    "section": "",
+    "text": "Thank you for your interest in contributing to Quarto Graft! This project welcomes contributions of code, templates, documentation, and ideas.\n\n\n\n\nAreas to contribute: - CLI improvements and new commands - Template rendering engine - Build system optimizations - Error handling and user experience - Test coverage\nProcess: 1. Fork the repository 2. Create a feature branch: git checkout -b feature/my-feature 3. Make your changes with tests 4. Run tests: pytest 5. Submit a pull request\nDevelopment setup:\ngit clone https://github.com/jr200/quarto-graft\ncd quarto-graft\npip install -e \".[dev]\"\npytest\n\n\n\nTemplates are reusable starter projects for trunks and grafts.\n\n\nDefine the initial structure and styling of a Quarto site.\nLocation: src/quarto_graft/trunk-templates/\nRequired structure:\nmy-trunk-template/\n├── _quarto.yaml          # Jinja2 template with collars\n├── docs/\n│   ├── index.qmd         # Jinja2 template\n│   └── appendix/\n│       └── glossary.qmd\n└── grafts.yaml           # Initial config\nAvailable Jinja2 variables: - { project_name } - User-provided project name - { project_slug } - URL-safe version of project name - { package_name } - Python package name\nExample collar definition:\n# In _quarto.yaml template\nsidebar:\n  contents:\n    - section: {{ project_name }}\n      contents:\n        - _GRAFT_COLLAR: main\n    - section: Documentation\n      contents:\n        - _GRAFT_COLLAR: docs\n\n\n\nProvide starter content for different types of contributions.\nLocation: src/quarto_graft/graft-templates/\nRequired structure:\nmy-graft-template/\n├── docs/\n│   ├── index.qmd         # Jinja2 template\n│   └── _quarto.yaml      # Graft-specific config\n├── README.md\n└── pyproject.toml        # Optional dependencies\nAvailable Jinja2 variables: - { graft_name } - Display name of the graft - { graft_branch } - Git branch name - { graft_slug } - URL-safe identifier\nExample graft _quarto.yaml:\nproject:\n  type: website\n  output-dir: _site\n\nwebsite:\n  title: \"{{ graft_name }}\"\n  sidebar:\n    contents:\n      - docs/index.qmd\n\n\n\n\nTrunk templates: - Minimal (single-page site) - Documentation portal (corporate style) - Book template (chapter-based) - Research publication template - Course/tutorial site template\nGraft templates: - Python + Jupyter + Pandas - R + Quarto + ggplot2 - Julia + Pluto notebooks - Observable + D3.js - Documentation (API reference) - Research paper template - Tutorial/workshop template\n\n\n\n✅ Do: - Include a README explaining the template purpose - Provide working example content - Use clear variable names in Jinja2 templates - Document required dependencies - Test the template before submitting - Use consistent styling and structure\n❌ Don’t: - Hardcode project-specific names - Include large binary files - Use deprecated Quarto features - Require proprietary software - Include secrets or credentials\n\n\n\n\nCreate your template in the appropriate directory:\n\nsrc/quarto_graft/trunk-templates/my-template/\nsrc/quarto_graft/graft-templates/my-template/\n\nTest it thoroughly:\n# For trunk templates\nmkdir test-project && cd test-project\ngit init && git commit --allow-empty -m \"init\"\nquarto-graft trunk init \"Test Project\" --template my-template\nquarto preview\n\n# For graft templates\nquarto-graft graft create test-graft --template my-template\ngit checkout graft/test-graft\nquarto preview docs\nDocument it with a README in the template directory:\n# My Template\n\n## Description\nBrief description of what this template provides.\n\n## Use Case\nWho should use this template and when.\n\n## Requirements\n- Quarto &gt;= 1.4\n- Python &gt;= 3.10 (if applicable)\n\n## Features\n- Feature 1\n- Feature 2\n\n## Example\n`quarto-graft trunk init \"My Project\" --template my-template`\nSubmit a pull request:\n\nTitle: “Add [trunk|graft] template: [template-name]”\nDescription: Explain the use case and features\nInclude screenshots if applicable\n\n\n\n\n\nHelp improve the docs in docs/: - Fix typos and clarify explanations - Add examples and use cases - Improve CLI command documentation - Create tutorials and guides\nBuild docs locally:\ncd docs\nquarto preview\n\n\n\nBug reports: - Use GitHub Issues - Include version: quarto-graft --version - Provide minimal reproducible example - Include error messages and logs\nFeature requests: - Describe the use case - Explain current workarounds - Suggest implementation approach\n\n\n\n\n\nFollow PEP 8 for Python code\nUse type hints\nWrite docstrings for public functions\nKeep functions focused and testable\n\n\n\n\nRun the test suite:\npytest                    # All tests\npytest tests/test_cli.py  # Specific file\npytest -v                 # Verbose output\n\n\n\n\nOpen a GitHub Discussion\nCheck existing issues and PRs\nReview the documentation\n\nThank you for contributing! 🎉",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Contributing"
+    ]
+  },
+  {
+    "objectID": "contributing.html#types-of-contributions",
+    "href": "contributing.html#types-of-contributions",
+    "title": "Contributing",
+    "section": "",
+    "text": "Areas to contribute: - CLI improvements and new commands - Template rendering engine - Build system optimizations - Error handling and user experience - Test coverage\nProcess: 1. Fork the repository 2. Create a feature branch: git checkout -b feature/my-feature 3. Make your changes with tests 4. Run tests: pytest 5. Submit a pull request\nDevelopment setup:\ngit clone https://github.com/jr200/quarto-graft\ncd quarto-graft\npip install -e \".[dev]\"\npytest\n\n\n\nTemplates are reusable starter projects for trunks and grafts.\n\n\nDefine the initial structure and styling of a Quarto site.\nLocation: src/quarto_graft/trunk-templates/\nRequired structure:\nmy-trunk-template/\n├── _quarto.yaml          # Jinja2 template with collars\n├── docs/\n│   ├── index.qmd         # Jinja2 template\n│   └── appendix/\n│       └── glossary.qmd\n└── grafts.yaml           # Initial config\nAvailable Jinja2 variables: - { project_name } - User-provided project name - { project_slug } - URL-safe version of project name - { package_name } - Python package name\nExample collar definition:\n# In _quarto.yaml template\nsidebar:\n  contents:\n    - section: {{ project_name }}\n      contents:\n        - _GRAFT_COLLAR: main\n    - section: Documentation\n      contents:\n        - _GRAFT_COLLAR: docs\n\n\n\nProvide starter content for different types of contributions.\nLocation: src/quarto_graft/graft-templates/\nRequired structure:\nmy-graft-template/\n├── docs/\n│   ├── index.qmd         # Jinja2 template\n│   └── _quarto.yaml      # Graft-specific config\n├── README.md\n└── pyproject.toml        # Optional dependencies\nAvailable Jinja2 variables: - { graft_name } - Display name of the graft - { graft_branch } - Git branch name - { graft_slug } - URL-safe identifier\nExample graft _quarto.yaml:\nproject:\n  type: website\n  output-dir: _site\n\nwebsite:\n  title: \"{{ graft_name }}\"\n  sidebar:\n    contents:\n      - docs/index.qmd\n\n\n\n\nTrunk templates: - Minimal (single-page site) - Documentation portal (corporate style) - Book template (chapter-based) - Research publication template - Course/tutorial site template\nGraft templates: - Python + Jupyter + Pandas - R + Quarto + ggplot2 - Julia + Pluto notebooks - Observable + D3.js - Documentation (API reference) - Research paper template - Tutorial/workshop template\n\n\n\n✅ Do: - Include a README explaining the template purpose - Provide working example content - Use clear variable names in Jinja2 templates - Document required dependencies - Test the template before submitting - Use consistent styling and structure\n❌ Don’t: - Hardcode project-specific names - Include large binary files - Use deprecated Quarto features - Require proprietary software - Include secrets or credentials\n\n\n\n\nCreate your template in the appropriate directory:\n\nsrc/quarto_graft/trunk-templates/my-template/\nsrc/quarto_graft/graft-templates/my-template/\n\nTest it thoroughly:\n# For trunk templates\nmkdir test-project && cd test-project\ngit init && git commit --allow-empty -m \"init\"\nquarto-graft trunk init \"Test Project\" --template my-template\nquarto preview\n\n# For graft templates\nquarto-graft graft create test-graft --template my-template\ngit checkout graft/test-graft\nquarto preview docs\nDocument it with a README in the template directory:\n# My Template\n\n## Description\nBrief description of what this template provides.\n\n## Use Case\nWho should use this template and when.\n\n## Requirements\n- Quarto &gt;= 1.4\n- Python &gt;= 3.10 (if applicable)\n\n## Features\n- Feature 1\n- Feature 2\n\n## Example\n`quarto-graft trunk init \"My Project\" --template my-template`\nSubmit a pull request:\n\nTitle: “Add [trunk|graft] template: [template-name]”\nDescription: Explain the use case and features\nInclude screenshots if applicable\n\n\n\n\n\nHelp improve the docs in docs/: - Fix typos and clarify explanations - Add examples and use cases - Improve CLI command documentation - Create tutorials and guides\nBuild docs locally:\ncd docs\nquarto preview\n\n\n\nBug reports: - Use GitHub Issues - Include version: quarto-graft --version - Provide minimal reproducible example - Include error messages and logs\nFeature requests: - Describe the use case - Explain current workarounds - Suggest implementation approach",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Contributing"
+    ]
+  },
+  {
+    "objectID": "contributing.html#code-style",
+    "href": "contributing.html#code-style",
+    "title": "Contributing",
+    "section": "",
+    "text": "Follow PEP 8 for Python code\nUse type hints\nWrite docstrings for public functions\nKeep functions focused and testable",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Contributing"
+    ]
+  },
+  {
+    "objectID": "contributing.html#testing",
+    "href": "contributing.html#testing",
+    "title": "Contributing",
+    "section": "",
+    "text": "Run the test suite:\npytest                    # All tests\npytest tests/test_cli.py  # Specific file\npytest -v                 # Verbose output",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Contributing"
+    ]
+  },
+  {
+    "objectID": "contributing.html#questions",
+    "href": "contributing.html#questions",
+    "title": "Contributing",
+    "section": "",
+    "text": "Open a GitHub Discussion\nCheck existing issues and PRs\nReview the documentation\n\nThank you for contributing! 🎉",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Contributing"
+    ]
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "quarto-graft",
+    "section": "",
+    "text": "A Python CLI for multi-author Quarto documentation using git branches\n\nQuarto Graft is a command-line tool that lets multiple authors collaborate on a single Quarto website without merge conflicts. Each author works in an isolated git branch (a “graft”), and the main branch (the “trunk”) automatically assembles everything into one unified, searchable site.\n\n\n\n\nThe trunk is your main branch and the foundation of your Quarto site. It defines: - The overall site structure (navbar, sidebar, styling) - Collars: named attachment points where grafts connect (e.g., “main”, “notes”, “bugs”) - Site configuration and templates\n\n\n\nGrafts are isolated git branches where authors work independently. Each graft: - Has its own dependencies and build environment - Can use any language or environment (Python, R, Julia, etc.) - Specifies which collar it attaches to - Gets automatically included in the trunk’s navigation\n\n\n\nCollars are attachment points in the trunk’s _quarto.yaml that organize grafts into sections:\nsidebar:\n  contents:\n    - section: My Grafts\n      contents:\n        - _GRAFT_COLLAR: main\n    - section: Notes\n      contents:\n        - _GRAFT_COLLAR: notes\n\n\n\nEverything is template-based and customizable: - Trunk templates: Define your site’s look, feel, and structure - Graft templates: Provide starter content for different types of contributions - Templates use Jinja2 for configuration - Create custom templates for your organization\n\n\n\n\nTraditional multi-author collaboration problems: - Merge conflicts on main - Shared dependencies causing version conflicts - One author’s broken code blocks everyone - Can’t use different languages/tools per section\nQuarto Graft solutions: - ✅ Each author owns a branch = zero merge conflicts - ✅ Each graft has independent dependencies - ✅ Broken grafts use last-good fallbacks with warnings - ✅ Mix Python, R, Julia, or any language per graft - ✅ Trunk never executes contributor code, only renders artifacts - ✅ Organize content with multiple collars (sections)\n\n\n\n\n🚀 Python CLI (quarto-graft) for project management\n📦 Customizable trunk and graft templates\n🔧 Git branch-based isolation\n🎯 Multiple collar attachment points\n🔄 Automatic navigation updates\n💾 Last-good build fallbacks\n🔍 Full-site search across all grafts\n⚡ Fast trunk builds (no code execution)\n\n\n\n\n\nMulti-author books and research publications\nData science teams (quant research, education platforms)\nInternal documentation portals\nOpen source projects with distributed contributors\nAnyone managing versioned, multi-contributor content\n\n\n\n\n\n\nBefore using Quarto Graft, ensure you have:\n\nPython 3.11+ installed\nGit initialized in your project (git init and at least one commit)\nQuarto CLI installed:\npip install quarto-cli\n# OR download from https://quarto.org/docs/get-started/\n\n\n\n\npip install quarto-graft\n\n\n\nThe trunk is your main documentation site. Run this from your git repository root:\n# Interactive mode (recommended for first-time setup)\nquarto-graft trunk init\n\n# Or non-interactive with options\nquarto-graft trunk init --template markdown\nThis creates: - _quarto.yaml - Quarto configuration with collar markers - grafts.yaml - Graft branch configuration (initially empty) - index.qmd - Landing page for your site\n\nNote: The command runs in your current directory (doesn’t create a subdirectory).\n\n\n\n\nA graft is an isolated author branch:\n# Interactive mode (will prompt for template and collar)\nquarto-graft graft create demo\n\n# Or specify all options\nquarto-graft graft create demo --template py-jupyter --collar main\nThis creates: - Git branch: graft/demo (customizable with --branch-name) - Entry in grafts.yaml - Automatically pushes to origin (use --no-push to skip)\nAvailable templates: - markdown - Simple Markdown/QMD documents - py-jupyter - Python + Jupyter notebooks - py-marimo - Python + Marimo notebooks\n\n\n\nBuild all grafts and update the trunk:\n# Build all grafts (fetches latest, builds, updates navigation)\nquarto-graft trunk build\n\n# Preview the complete site locally\nquarto preview\nWhat happens during trunk build: 1. Fetches latest changes from all graft branches 2. Builds each graft in isolation (or uses last-good fallback if broken) 3. Exports content to grafts__/&lt;graft-name&gt;/ 4. Updates _quarto.yaml with navigation 5. Creates/updates grafts.lock with build state\nView your site: Open the URL from quarto preview (usually http://localhost:4200)\n\n\n\nAuthors work on graft branches like any other git branch:\n# Checkout the graft branch\ngit checkout graft/demo\n\n# Edit files, run notebooks, commit, push\ngit add . && git commit -m \"Updated content\"\ngit push\n\n# Return to trunk when done\ngit checkout main\nAfter pushing graft changes, rebuild from trunk to see updates:\nquarto-graft trunk build\n\n\n\n# 1. Set up project\nmkdir my-docs && cd my-docs\ngit init\ngit commit --allow-empty -m \"Initial commit\"\n\n# 2. Install quarto-graft\npip install quarto-graft\n\n# 3. Initialize trunk\nquarto-graft trunk init\ngit add .\ngit commit -m \"Initialize trunk\"\ngit push -u origin main\n\n# 4. Create graft for Alice\nquarto-graft graft create alice-chapter --collar main\n\n# 5. Alice works in her graft\ncd .grafts-cache/alice-chapter\n# ... edit files ...\ngit add . && git commit -m \"Added my chapter\"\ngit push\ncd ../..\n\n# 6. Build and preview trunk\ngit checkout main\nquarto-graft trunk build\nquarto preview\n\n# 7. Deploy to GitHub Pages (when ready)\nquarto publish gh-pages\n\n\n\n\n\n\n\n\n\n\nCommand\nDescription\n\n\n\n\nquarto-graft trunk init\nCreate trunk structure from template\n\n\nquarto-graft trunk build\nBuild all grafts and update trunk navigation\n\n\nquarto-graft trunk lock\nUpdate _quarto.yaml from grafts.lock (no rebuild)\n\n\nquarto-graft graft create &lt;name&gt;\nCreate new graft branch\n\n\nquarto-graft graft build --branch &lt;name&gt;\nBuild single graft\n\n\nquarto-graft graft list\nShow all graft branches and their status\n\n\nquarto-graft graft destroy &lt;name&gt;\nDelete graft (branch, worktree, config)\n\n\n\n\n\n\n\nInteractive mode: Run quarto-graft with no arguments\nCommand help: Use --help on any command\nIssues: https://github.com/jr200/quarto-graft/issues\n\n\n\n\n\nReleased under the MIT License. Free to use, modify, and redistribute with attribution.",
+    "crumbs": [
+      "Overview",
+      "quarto-graft"
+    ]
+  },
+  {
+    "objectID": "index.html#key-concepts",
+    "href": "index.html#key-concepts",
+    "title": "quarto-graft",
+    "section": "",
+    "text": "The trunk is your main branch and the foundation of your Quarto site. It defines: - The overall site structure (navbar, sidebar, styling) - Collars: named attachment points where grafts connect (e.g., “main”, “notes”, “bugs”) - Site configuration and templates\n\n\n\nGrafts are isolated git branches where authors work independently. Each graft: - Has its own dependencies and build environment - Can use any language or environment (Python, R, Julia, etc.) - Specifies which collar it attaches to - Gets automatically included in the trunk’s navigation\n\n\n\nCollars are attachment points in the trunk’s _quarto.yaml that organize grafts into sections:\nsidebar:\n  contents:\n    - section: My Grafts\n      contents:\n        - _GRAFT_COLLAR: main\n    - section: Notes\n      contents:\n        - _GRAFT_COLLAR: notes\n\n\n\nEverything is template-based and customizable: - Trunk templates: Define your site’s look, feel, and structure - Graft templates: Provide starter content for different types of contributions - Templates use Jinja2 for configuration - Create custom templates for your organization",
+    "crumbs": [
+      "Overview",
+      "quarto-graft"
+    ]
+  },
+  {
+    "objectID": "index.html#why-use-quarto-graft",
+    "href": "index.html#why-use-quarto-graft",
+    "title": "quarto-graft",
+    "section": "",
+    "text": "Traditional multi-author collaboration problems: - Merge conflicts on main - Shared dependencies causing version conflicts - One author’s broken code blocks everyone - Can’t use different languages/tools per section\nQuarto Graft solutions: - ✅ Each author owns a branch = zero merge conflicts - ✅ Each graft has independent dependencies - ✅ Broken grafts use last-good fallbacks with warnings - ✅ Mix Python, R, Julia, or any language per graft - ✅ Trunk never executes contributor code, only renders artifacts - ✅ Organize content with multiple collars (sections)",
+    "crumbs": [
+      "Overview",
+      "quarto-graft"
+    ]
+  },
+  {
+    "objectID": "index.html#what-you-get",
+    "href": "index.html#what-you-get",
+    "title": "quarto-graft",
+    "section": "",
+    "text": "🚀 Python CLI (quarto-graft) for project management\n📦 Customizable trunk and graft templates\n🔧 Git branch-based isolation\n🎯 Multiple collar attachment points\n🔄 Automatic navigation updates\n💾 Last-good build fallbacks\n🔍 Full-site search across all grafts\n⚡ Fast trunk builds (no code execution)",
+    "crumbs": [
+      "Overview",
+      "quarto-graft"
+    ]
+  },
+  {
+    "objectID": "index.html#who-this-is-for",
+    "href": "index.html#who-this-is-for",
+    "title": "quarto-graft",
+    "section": "",
+    "text": "Multi-author books and research publications\nData science teams (quant research, education platforms)\nInternal documentation portals\nOpen source projects with distributed contributors\nAnyone managing versioned, multi-contributor content",
+    "crumbs": [
+      "Overview",
+      "quarto-graft"
+    ]
+  },
+  {
+    "objectID": "index.html#quick-start",
+    "href": "index.html#quick-start",
+    "title": "quarto-graft",
+    "section": "",
+    "text": "Before using Quarto Graft, ensure you have:\n\nPython 3.11+ installed\nGit initialized in your project (git init and at least one commit)\nQuarto CLI installed:\npip install quarto-cli\n# OR download from https://quarto.org/docs/get-started/\n\n\n\n\npip install quarto-graft\n\n\n\nThe trunk is your main documentation site. Run this from your git repository root:\n# Interactive mode (recommended for first-time setup)\nquarto-graft trunk init\n\n# Or non-interactive with options\nquarto-graft trunk init --template markdown\nThis creates: - _quarto.yaml - Quarto configuration with collar markers - grafts.yaml - Graft branch configuration (initially empty) - index.qmd - Landing page for your site\n\nNote: The command runs in your current directory (doesn’t create a subdirectory).\n\n\n\n\nA graft is an isolated author branch:\n# Interactive mode (will prompt for template and collar)\nquarto-graft graft create demo\n\n# Or specify all options\nquarto-graft graft create demo --template py-jupyter --collar main\nThis creates: - Git branch: graft/demo (customizable with --branch-name) - Entry in grafts.yaml - Automatically pushes to origin (use --no-push to skip)\nAvailable templates: - markdown - Simple Markdown/QMD documents - py-jupyter - Python + Jupyter notebooks - py-marimo - Python + Marimo notebooks\n\n\n\nBuild all grafts and update the trunk:\n# Build all grafts (fetches latest, builds, updates navigation)\nquarto-graft trunk build\n\n# Preview the complete site locally\nquarto preview\nWhat happens during trunk build: 1. Fetches latest changes from all graft branches 2. Builds each graft in isolation (or uses last-good fallback if broken) 3. Exports content to grafts__/&lt;graft-name&gt;/ 4. Updates _quarto.yaml with navigation 5. Creates/updates grafts.lock with build state\nView your site: Open the URL from quarto preview (usually http://localhost:4200)\n\n\n\nAuthors work on graft branches like any other git branch:\n# Checkout the graft branch\ngit checkout graft/demo\n\n# Edit files, run notebooks, commit, push\ngit add . && git commit -m \"Updated content\"\ngit push\n\n# Return to trunk when done\ngit checkout main\nAfter pushing graft changes, rebuild from trunk to see updates:\nquarto-graft trunk build\n\n\n\n# 1. Set up project\nmkdir my-docs && cd my-docs\ngit init\ngit commit --allow-empty -m \"Initial commit\"\n\n# 2. Install quarto-graft\npip install quarto-graft\n\n# 3. Initialize trunk\nquarto-graft trunk init\ngit add .\ngit commit -m \"Initialize trunk\"\ngit push -u origin main\n\n# 4. Create graft for Alice\nquarto-graft graft create alice-chapter --collar main\n\n# 5. Alice works in her graft\ncd .grafts-cache/alice-chapter\n# ... edit files ...\ngit add . && git commit -m \"Added my chapter\"\ngit push\ncd ../..\n\n# 6. Build and preview trunk\ngit checkout main\nquarto-graft trunk build\nquarto preview\n\n# 7. Deploy to GitHub Pages (when ready)\nquarto publish gh-pages\n\n\n\n\n\n\n\n\n\n\nCommand\nDescription\n\n\n\n\nquarto-graft trunk init\nCreate trunk structure from template\n\n\nquarto-graft trunk build\nBuild all grafts and update trunk navigation\n\n\nquarto-graft trunk lock\nUpdate _quarto.yaml from grafts.lock (no rebuild)\n\n\nquarto-graft graft create &lt;name&gt;\nCreate new graft branch\n\n\nquarto-graft graft build --branch &lt;name&gt;\nBuild single graft\n\n\nquarto-graft graft list\nShow all graft branches and their status\n\n\nquarto-graft graft destroy &lt;name&gt;\nDelete graft (branch, worktree, config)\n\n\n\n\n\n\n\nInteractive mode: Run quarto-graft with no arguments\nCommand help: Use --help on any command\nIssues: https://github.com/jr200/quarto-graft/issues",
+    "crumbs": [
+      "Overview",
+      "quarto-graft"
+    ]
+  },
+  {
+    "objectID": "index.html#license",
+    "href": "index.html#license",
+    "title": "quarto-graft",
+    "section": "",
+    "text": "Released under the MIT License. Free to use, modify, and redistribute with attribution.",
+    "crumbs": [
+      "Overview",
+      "quarto-graft"
+    ]
+  },
+  {
+    "objectID": "setup-trunk.html",
+    "href": "setup-trunk.html",
+    "title": "Trunk Setup",
+    "section": "",
+    "text": "The trunk is your main branch that defines the overall Quarto site structure.\n\n\npip install quarto-graft\n\n\n\nInitialize a trunk in your current directory:\n# Interactive mode (will prompt for site name and template)\nquarto-graft trunk init\n\n# Or provide all options\nquarto-graft trunk init \"My Documentation\" --template default\nThis creates files in your current directory:\n.\n├── _quarto.yaml          # Site config with collar markers\n├── grafts.yaml           # Graft configuration\n├── grafts.lock           # Build manifest (auto-generated)\n├── .gitignore\n├── .grafts-cache/        # Internal build cache (gitignored)\n└── docs/                 # Website content\n    ├── index.qmd\n    ├── favicon.svg\n    └── grafts__/         # Auto-generated graft content\n\nNote: The command works in your current directory and does NOT create a subdirectory. Make sure you’re in your git repository root before running it.\n\n\n\n\nThe trunk template defines your site’s structure. Key file: _quarto.yaml\nproject:\n  type: website\n  output-dir: _site\n\nwebsite:\n  title: \"My Project\"\n  sidebar:\n    contents:\n      - docs/index.qmd\n      - section: My Grafts\n        contents:\n          - _GRAFT_COLLAR: main      # Collar attachment point\n      - section: Notes\n        contents:\n          - _GRAFT_COLLAR: notes     # Another collar\nCollars (_GRAFT_COLLAR) are attachment points where grafts connect. When you create a graft, you specify which collar it attaches to.\n\n\n\nquarto-graft build          # Build all grafts\nquarto preview              # Preview the site\nOn first build, no grafts exist yet, so collars will be empty.\n\n\n\n\n\nYou can create custom trunk templates for your organization:\n# Use a custom template\nquarto-graft trunk init \"My Docs\" --template /path/to/template\n\n# Template structure\nmy-trunk-template/\n├── _quarto.yaml          # Jinja2 template\n├── docs/\n│   └── index.qmd         # Jinja2 template\n└── grafts.yaml           # Jinja2 template\nTemplates use Jinja2 variables: - { project_name } - Project name - { project_slug } - URL-safe slug - Custom variables you define\n\n\n\nEdit _quarto.yaml to add/remove collars:\nwebsite:\n  sidebar:\n    contents:\n      - section: Articles\n        contents:\n          - _GRAFT_COLLAR: articles\n      - section: Tutorials\n        contents:\n          - _GRAFT_COLLAR: tutorials\n      - section: Reference\n        contents:\n          - _GRAFT_COLLAR: reference\nGrafts will attach to these named sections.\n\n\n\n\n\nInitialize git and push to GitHub:\ngit init\ngit add .\ngit commit -m \"Initial trunk\"\ngit remote add origin &lt;your-repo-url&gt;\ngit push -u origin main\nCreate gh-pages branch:\ngit checkout --orphan gh-pages\ngit rm -rf .\ngit commit --allow-empty -m \"Initial gh-pages\"\ngit push -u origin gh-pages\ngit checkout main\nConfigure GitHub Pages:\n\nSettings → Pages → Source: gh-pages branch\nSettings → Actions → Permissions: Enable read/write\n\nBuild and publish:\nquarto-graft build\nquarto publish gh-pages\n\n\n\n\n\nGrafts attach to collars: Each graft specifies a collar in grafts.yaml\nBuild process: quarto-graft build renders each graft in isolation\nAuto-navigation: Built content is injected after the matching collar marker\nAtomic updates: The trunk’s _quarto.yaml is updated automatically",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Getting Started",
+      "Trunk Setup"
+    ]
+  },
+  {
+    "objectID": "setup-trunk.html#installation",
+    "href": "setup-trunk.html#installation",
+    "title": "Trunk Setup",
+    "section": "",
+    "text": "pip install quarto-graft",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Getting Started",
+      "Trunk Setup"
+    ]
+  },
+  {
+    "objectID": "setup-trunk.html#create-a-new-trunk",
+    "href": "setup-trunk.html#create-a-new-trunk",
+    "title": "Trunk Setup",
+    "section": "",
+    "text": "Initialize a trunk in your current directory:\n# Interactive mode (will prompt for site name and template)\nquarto-graft trunk init\n\n# Or provide all options\nquarto-graft trunk init \"My Documentation\" --template default\nThis creates files in your current directory:\n.\n├── _quarto.yaml          # Site config with collar markers\n├── grafts.yaml           # Graft configuration\n├── grafts.lock           # Build manifest (auto-generated)\n├── .gitignore\n├── .grafts-cache/        # Internal build cache (gitignored)\n└── docs/                 # Website content\n    ├── index.qmd\n    ├── favicon.svg\n    └── grafts__/         # Auto-generated graft content\n\nNote: The command works in your current directory and does NOT create a subdirectory. Make sure you’re in your git repository root before running it.",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Getting Started",
+      "Trunk Setup"
+    ]
+  },
+  {
+    "objectID": "setup-trunk.html#understanding-the-trunk-template",
+    "href": "setup-trunk.html#understanding-the-trunk-template",
+    "title": "Trunk Setup",
+    "section": "",
+    "text": "The trunk template defines your site’s structure. Key file: _quarto.yaml\nproject:\n  type: website\n  output-dir: _site\n\nwebsite:\n  title: \"My Project\"\n  sidebar:\n    contents:\n      - docs/index.qmd\n      - section: My Grafts\n        contents:\n          - _GRAFT_COLLAR: main      # Collar attachment point\n      - section: Notes\n        contents:\n          - _GRAFT_COLLAR: notes     # Another collar\nCollars (_GRAFT_COLLAR) are attachment points where grafts connect. When you create a graft, you specify which collar it attaches to.",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Getting Started",
+      "Trunk Setup"
+    ]
+  },
+  {
+    "objectID": "setup-trunk.html#first-build",
+    "href": "setup-trunk.html#first-build",
+    "title": "Trunk Setup",
+    "section": "",
+    "text": "quarto-graft build          # Build all grafts\nquarto preview              # Preview the site\nOn first build, no grafts exist yet, so collars will be empty.",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Getting Started",
+      "Trunk Setup"
+    ]
+  },
+  {
+    "objectID": "setup-trunk.html#customizing-your-trunk",
+    "href": "setup-trunk.html#customizing-your-trunk",
+    "title": "Trunk Setup",
+    "section": "",
+    "text": "You can create custom trunk templates for your organization:\n# Use a custom template\nquarto-graft trunk init \"My Docs\" --template /path/to/template\n\n# Template structure\nmy-trunk-template/\n├── _quarto.yaml          # Jinja2 template\n├── docs/\n│   └── index.qmd         # Jinja2 template\n└── grafts.yaml           # Jinja2 template\nTemplates use Jinja2 variables: - { project_name } - Project name - { project_slug } - URL-safe slug - Custom variables you define\n\n\n\nEdit _quarto.yaml to add/remove collars:\nwebsite:\n  sidebar:\n    contents:\n      - section: Articles\n        contents:\n          - _GRAFT_COLLAR: articles\n      - section: Tutorials\n        contents:\n          - _GRAFT_COLLAR: tutorials\n      - section: Reference\n        contents:\n          - _GRAFT_COLLAR: reference\nGrafts will attach to these named sections.",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Getting Started",
+      "Trunk Setup"
+    ]
+  },
+  {
+    "objectID": "setup-trunk.html#publishing-to-github-pages",
+    "href": "setup-trunk.html#publishing-to-github-pages",
+    "title": "Trunk Setup",
+    "section": "",
+    "text": "Initialize git and push to GitHub:\ngit init\ngit add .\ngit commit -m \"Initial trunk\"\ngit remote add origin &lt;your-repo-url&gt;\ngit push -u origin main\nCreate gh-pages branch:\ngit checkout --orphan gh-pages\ngit rm -rf .\ngit commit --allow-empty -m \"Initial gh-pages\"\ngit push -u origin gh-pages\ngit checkout main\nConfigure GitHub Pages:\n\nSettings → Pages → Source: gh-pages branch\nSettings → Actions → Permissions: Enable read/write\n\nBuild and publish:\nquarto-graft build\nquarto publish gh-pages",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Getting Started",
+      "Trunk Setup"
+    ]
+  },
+  {
+    "objectID": "setup-trunk.html#how-it-works",
+    "href": "setup-trunk.html#how-it-works",
+    "title": "Trunk Setup",
+    "section": "",
+    "text": "Grafts attach to collars: Each graft specifies a collar in grafts.yaml\nBuild process: quarto-graft build renders each graft in isolation\nAuto-navigation: Built content is injected after the matching collar marker\nAtomic updates: The trunk’s _quarto.yaml is updated automatically",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Getting Started",
+      "Trunk Setup"
+    ]
+  },
+  {
+    "objectID": "setup-graft.html",
+    "href": "setup-graft.html",
+    "title": "Graft Setup",
+    "section": "",
+    "text": "Grafts are isolated git branches where individual authors work on content.\n\n\nFrom your trunk directory:\nquarto-graft graft create my-first-graft\nThis will: 1. Prompt you to select a collar (attachment point) 2. Create an orphan git branch graft/my-first-graft 3. Initialize the branch from a template 4. Update grafts.yaml with the new entry 5. Push the branch to remote (by default)\nExample interaction:\n? Enter graft branch name: my-first-graft\n? Select template: default\n? Select attachment point (collar): main\n? Use default branch name 'graft/my-first-graft'? Yes\n✓ New orphan graft branch created\nCollar: main\nBranch: graft/my-first-graft\n\n\nEach graft branch is a self-contained Quarto project:\ngraft/my-first-graft (branch)\n├── docs/\n│   ├── index.qmd         # Your content\n│   ├── _quarto.yaml      # Graft-specific config\n├── .gitignore\n├── pyproject.toml        # Optional: graft dependencies\n└── README.md\n\n\n\n\nWhen you create a graft, you must specify which collar it attaches to. Collars are defined in the trunk’s _quarto.yaml:\n# In trunk's _quarto.yaml\nsidebar:\n  contents:\n    - section: Articles\n      contents:\n        - _GRAFT_COLLAR: articles\n    - section: Tutorials\n      contents:\n        - _GRAFT_COLLAR: tutorials\nYour graft in grafts.yaml:\nbranches:\n  - name: my-tutorial\n    branch: graft/my-tutorial\n    collar: tutorials        # Attaches to \"Tutorials\" section\n\n\n\nCheck out your graft branch and work on it directly:\n# Switch to your graft branch\ngit checkout graft/my-first-graft\n\n# Edit your content\nvim docs/index.qmd\n\n# Preview locally\nquarto preview docs\n\n# Commit and push\ngit add .\ngit commit -m \"Add tutorial content\"\ngit push\n\n\n\nIsolated branches: Each graft is a separate git branch with its own history\nOwn dependencies: Each graft can have its own pyproject.toml, requirements.txt, or R packages\nExecute before commit: The trunk doesn’t execute code, only renders outputs\nCommit outputs: Jupyter notebook outputs must be saved to show on the trunk site\nIndependent preview: You can preview grafts standalone without the trunk\nNo merge conflicts: Grafts never merge back to main — the trunk pulls rendered content\n\n\n\n\n\nCreate grafts from custom templates:\n# Use a specific template\nquarto-graft graft create my-graft --template python-notebook\n\n# Use a template from a directory\nquarto-graft graft create my-graft --template /path/to/template\nExample graft template:\nmy-graft-template/\n├── docs/\n│   ├── index.qmd\n│   ├── _quarto.yaml\n├── pyproject.toml\n└── README.md\nTemplates support Jinja2 variables: - { graft_name } - Graft display name - { graft_branch } - Git branch name - { graft_slug } - URL-safe identifier\n\n\n\nAfter pushing graft changes, build from the trunk:\ncd /path/to/trunk\nquarto-graft build         # Builds all grafts\nquarto preview             # Preview the full site\nThe trunk will: 1. Fetch your latest graft commits 2. Render your graft’s content 3. Copy outputs to grafts__/my-first-graft/ 4. Update navigation to include your graft under the specified collar\n\n\n\n\n\nquarto-graft graft list\n\n\n\n# Destroy branch completely (removes from grafts.yaml, deletes local + remote)\nquarto-graft graft destroy my-first-graft\n\n# Keep remote branch\nquarto-graft graft destroy my-first-graft --keep-remote\n\n\n\n\nBuild failures: If your graft fails to build, the trunk will: - Use the last successful build (if available) - Display a warning banner on your graft’s pages - Log the error details\nBroken outputs: Remember to execute and save notebook outputs before committing:\nquarto render docs --execute\ngit add docs/\ngit commit -m \"Update outputs\"",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Getting Started",
+      "Graft Setup"
+    ]
+  },
+  {
+    "objectID": "setup-graft.html#create-a-new-graft",
+    "href": "setup-graft.html#create-a-new-graft",
+    "title": "Graft Setup",
+    "section": "",
+    "text": "From your trunk directory:\nquarto-graft graft create my-first-graft\nThis will: 1. Prompt you to select a collar (attachment point) 2. Create an orphan git branch graft/my-first-graft 3. Initialize the branch from a template 4. Update grafts.yaml with the new entry 5. Push the branch to remote (by default)\nExample interaction:\n? Enter graft branch name: my-first-graft\n? Select template: default\n? Select attachment point (collar): main\n? Use default branch name 'graft/my-first-graft'? Yes\n✓ New orphan graft branch created\nCollar: main\nBranch: graft/my-first-graft\n\n\nEach graft branch is a self-contained Quarto project:\ngraft/my-first-graft (branch)\n├── docs/\n│   ├── index.qmd         # Your content\n│   ├── _quarto.yaml      # Graft-specific config\n├── .gitignore\n├── pyproject.toml        # Optional: graft dependencies\n└── README.md",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Getting Started",
+      "Graft Setup"
+    ]
+  },
+  {
+    "objectID": "setup-graft.html#specifying-a-collar",
+    "href": "setup-graft.html#specifying-a-collar",
+    "title": "Graft Setup",
+    "section": "",
+    "text": "When you create a graft, you must specify which collar it attaches to. Collars are defined in the trunk’s _quarto.yaml:\n# In trunk's _quarto.yaml\nsidebar:\n  contents:\n    - section: Articles\n      contents:\n        - _GRAFT_COLLAR: articles\n    - section: Tutorials\n      contents:\n        - _GRAFT_COLLAR: tutorials\nYour graft in grafts.yaml:\nbranches:\n  - name: my-tutorial\n    branch: graft/my-tutorial\n    collar: tutorials        # Attaches to \"Tutorials\" section",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Getting Started",
+      "Graft Setup"
+    ]
+  },
+  {
+    "objectID": "setup-graft.html#working-in-a-graft",
+    "href": "setup-graft.html#working-in-a-graft",
+    "title": "Graft Setup",
+    "section": "",
+    "text": "Check out your graft branch and work on it directly:\n# Switch to your graft branch\ngit checkout graft/my-first-graft\n\n# Edit your content\nvim docs/index.qmd\n\n# Preview locally\nquarto preview docs\n\n# Commit and push\ngit add .\ngit commit -m \"Add tutorial content\"\ngit push\n\n\n\nIsolated branches: Each graft is a separate git branch with its own history\nOwn dependencies: Each graft can have its own pyproject.toml, requirements.txt, or R packages\nExecute before commit: The trunk doesn’t execute code, only renders outputs\nCommit outputs: Jupyter notebook outputs must be saved to show on the trunk site\nIndependent preview: You can preview grafts standalone without the trunk\nNo merge conflicts: Grafts never merge back to main — the trunk pulls rendered content",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Getting Started",
+      "Graft Setup"
+    ]
+  },
+  {
+    "objectID": "setup-graft.html#using-custom-graft-templates",
+    "href": "setup-graft.html#using-custom-graft-templates",
+    "title": "Graft Setup",
+    "section": "",
+    "text": "Create grafts from custom templates:\n# Use a specific template\nquarto-graft graft create my-graft --template python-notebook\n\n# Use a template from a directory\nquarto-graft graft create my-graft --template /path/to/template\nExample graft template:\nmy-graft-template/\n├── docs/\n│   ├── index.qmd\n│   ├── _quarto.yaml\n├── pyproject.toml\n└── README.md\nTemplates support Jinja2 variables: - { graft_name } - Graft display name - { graft_branch } - Git branch name - { graft_slug } - URL-safe identifier",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Getting Started",
+      "Graft Setup"
+    ]
+  },
+  {
+    "objectID": "setup-graft.html#building-from-the-trunk",
+    "href": "setup-graft.html#building-from-the-trunk",
+    "title": "Graft Setup",
+    "section": "",
+    "text": "After pushing graft changes, build from the trunk:\ncd /path/to/trunk\nquarto-graft build         # Builds all grafts\nquarto preview             # Preview the full site\nThe trunk will: 1. Fetch your latest graft commits 2. Render your graft’s content 3. Copy outputs to grafts__/my-first-graft/ 4. Update navigation to include your graft under the specified collar",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Getting Started",
+      "Graft Setup"
+    ]
+  },
+  {
+    "objectID": "setup-graft.html#managing-grafts",
+    "href": "setup-graft.html#managing-grafts",
+    "title": "Graft Setup",
+    "section": "",
+    "text": "quarto-graft graft list\n\n\n\n# Destroy branch completely (removes from grafts.yaml, deletes local + remote)\nquarto-graft graft destroy my-first-graft\n\n# Keep remote branch\nquarto-graft graft destroy my-first-graft --keep-remote",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Getting Started",
+      "Graft Setup"
+    ]
+  },
+  {
+    "objectID": "setup-graft.html#troubleshooting",
+    "href": "setup-graft.html#troubleshooting",
+    "title": "Graft Setup",
+    "section": "",
+    "text": "Build failures: If your graft fails to build, the trunk will: - Use the last successful build (if available) - Display a warning banner on your graft’s pages - Log the error details\nBroken outputs: Remember to execute and save notebook outputs before committing:\nquarto render docs --execute\ngit add docs/\ngit commit -m \"Update outputs\"",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Getting Started",
+      "Graft Setup"
+    ]
+  },
+  {
+    "objectID": "playbook.html",
+    "href": "playbook.html",
+    "title": "Playbook",
+    "section": "",
+    "text": "Quarto Graft separates concerns: contributors work in isolated graft branches, while the trunk maintainer orchestrates the unified site.\nThis page explains the roles and workflows in a quarto-graft project.\n\n\n\n\nResponsibility: Create and maintain content in an isolated graft branch.\nWorkflow: 1. Request a graft from the trunk maintainer (or create one yourself if you have access) 2. Check out your graft branch: git checkout graft/my-graft 3. Edit content in docs/ 4. Preview locally: quarto preview docs 5. Commit and push: git add . && git commit -m \"Update content\" && git push\nKey Points: - You never merge back to main — the trunk pulls your rendered content - Your graft has its own dependencies (Python packages, R libraries, etc.) - Execute notebooks before committing (trunk doesn’t run code) - Preview your graft standalone or wait for trunk maintainer to build the full site\nExample Session:\ngit checkout graft/my-tutorial\nvim docs/chapter1.qmd\nquarto preview docs           # Preview your graft\ngit add docs/chapter1.qmd\ngit commit -m \"Add chapter 1\"\ngit push\n\n\n\nResponsibility: Manage the overall site structure, collars, builds, and graft lifecycle.\nOwns: - The main branch and _quarto.yaml (collar definitions) - grafts.yaml configuration - Build and publish pipeline - Graft lifecycle management\nCommon Tasks:\nCreate a new graft for a contributor:\nquarto-graft graft create contributor-name --collar articles\nBuild all grafts and update navigation:\nquarto-graft build\nList and manage grafts:\nquarto-graft graft list\nquarto-graft graft destroy old-graft\nDefine new collars in _quarto.yaml:\nsidebar:\n  contents:\n    - section: New Section\n      contents:\n        - _GRAFT_COLLAR: new-collar\n\n\n\nResponsibility: Design and contribute reusable templates for trunks and grafts.\nTemplate Types:\nTrunk Templates: Define site structure, styling, collars - Located in src/quarto_graft/trunk-templates/ - Include _quarto.yaml, docs/, grafts.yaml - Use Jinja2 for customization\nGraft Templates: Provide starter content for different use cases - Located in src/quarto_graft/graft-templates/ - Examples: python-notebook, r-analysis, documentation - Include language-specific dependencies\nHow to Contribute: 1. Create a template directory with required structure 2. Test it: quarto-graft trunk init \"Test Project\" --template ./my-template 3. Submit PR with template in appropriate directory 4. Maintainers review and merge\nTemplate Best Practices: - Include clear README with template purpose - Provide working example content - Document required dependencies - Use Jinja2 variables for customization ({ project_name }, etc.)\n\n\n\n\n\n\nTrunk maintainer edits _quarto.yaml:\nsidebar:\n  contents:\n    - section: Case Studies\n      contents:\n        - _GRAFT_COLLAR: case-studies\nAuthors can now create grafts that attach to case-studies:\nquarto-graft graft create my-case-study --collar case-studies\n\n\n\n\nContent creator archives their work (optional)\nTrunk maintainer destroys the graft:\nquarto-graft graft destroy old-graft\nRebuild to update navigation:\nquarto-graft build\n\n\n\n\nOrganizations can create standard templates:\n# Organization's template repo\nmy-org-templates/\n├── trunk-templates/\n│   └── corporate/\n│       ├── _quarto.yaml     # Corporate branding\n│       ├── docs/\n│       └── grafts.yaml\n└── graft-templates/\n    ├── research-paper/\n    └── product-docs/\n\n# Use organizational templates\nquarto-graft trunk init \"My Project\" --template my-org-templates/trunk-templates/corporate\nquarto-graft graft create study --template my-org-templates/graft-templates/research-paper",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Playbook"
+    ]
+  },
+  {
+    "objectID": "playbook.html#roles",
+    "href": "playbook.html#roles",
+    "title": "Playbook",
+    "section": "",
+    "text": "Responsibility: Create and maintain content in an isolated graft branch.\nWorkflow: 1. Request a graft from the trunk maintainer (or create one yourself if you have access) 2. Check out your graft branch: git checkout graft/my-graft 3. Edit content in docs/ 4. Preview locally: quarto preview docs 5. Commit and push: git add . && git commit -m \"Update content\" && git push\nKey Points: - You never merge back to main — the trunk pulls your rendered content - Your graft has its own dependencies (Python packages, R libraries, etc.) - Execute notebooks before committing (trunk doesn’t run code) - Preview your graft standalone or wait for trunk maintainer to build the full site\nExample Session:\ngit checkout graft/my-tutorial\nvim docs/chapter1.qmd\nquarto preview docs           # Preview your graft\ngit add docs/chapter1.qmd\ngit commit -m \"Add chapter 1\"\ngit push\n\n\n\nResponsibility: Manage the overall site structure, collars, builds, and graft lifecycle.\nOwns: - The main branch and _quarto.yaml (collar definitions) - grafts.yaml configuration - Build and publish pipeline - Graft lifecycle management\nCommon Tasks:\nCreate a new graft for a contributor:\nquarto-graft graft create contributor-name --collar articles\nBuild all grafts and update navigation:\nquarto-graft build\nList and manage grafts:\nquarto-graft graft list\nquarto-graft graft destroy old-graft\nDefine new collars in _quarto.yaml:\nsidebar:\n  contents:\n    - section: New Section\n      contents:\n        - _GRAFT_COLLAR: new-collar\n\n\n\nResponsibility: Design and contribute reusable templates for trunks and grafts.\nTemplate Types:\nTrunk Templates: Define site structure, styling, collars - Located in src/quarto_graft/trunk-templates/ - Include _quarto.yaml, docs/, grafts.yaml - Use Jinja2 for customization\nGraft Templates: Provide starter content for different use cases - Located in src/quarto_graft/graft-templates/ - Examples: python-notebook, r-analysis, documentation - Include language-specific dependencies\nHow to Contribute: 1. Create a template directory with required structure 2. Test it: quarto-graft trunk init \"Test Project\" --template ./my-template 3. Submit PR with template in appropriate directory 4. Maintainers review and merge\nTemplate Best Practices: - Include clear README with template purpose - Provide working example content - Document required dependencies - Use Jinja2 variables for customization ({ project_name }, etc.)",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Playbook"
+    ]
+  },
+  {
+    "objectID": "playbook.html#workflows",
+    "href": "playbook.html#workflows",
+    "title": "Playbook",
+    "section": "",
+    "text": "Trunk maintainer edits _quarto.yaml:\nsidebar:\n  contents:\n    - section: Case Studies\n      contents:\n        - _GRAFT_COLLAR: case-studies\nAuthors can now create grafts that attach to case-studies:\nquarto-graft graft create my-case-study --collar case-studies\n\n\n\n\nContent creator archives their work (optional)\nTrunk maintainer destroys the graft:\nquarto-graft graft destroy old-graft\nRebuild to update navigation:\nquarto-graft build\n\n\n\n\nOrganizations can create standard templates:\n# Organization's template repo\nmy-org-templates/\n├── trunk-templates/\n│   └── corporate/\n│       ├── _quarto.yaml     # Corporate branding\n│       ├── docs/\n│       └── grafts.yaml\n└── graft-templates/\n    ├── research-paper/\n    └── product-docs/\n\n# Use organizational templates\nquarto-graft trunk init \"My Project\" --template my-org-templates/trunk-templates/corporate\nquarto-graft graft create study --template my-org-templates/graft-templates/research-paper",
+    "crumbs": [
+      "Overview",
+      "quarto-graft",
+      "Playbook"
     ]
   }
 ]
