@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 import shutil
 from datetime import UTC, datetime
-from pathlib import Path
 
 from .branches import ManifestEntry, branch_to_key, load_manifest, save_manifest
 from .constants import GRAFTS_ARCHIVE_DIR, GRAFTS_BUILD_DIR

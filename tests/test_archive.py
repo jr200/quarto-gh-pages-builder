@@ -196,9 +196,9 @@ class TestListArchivedGrafts:
         assert len(archived) == 0
 
     def test_excludes_archived_without_directory(self, mock_project):
-        from quarto_graft.archive import archive_graft, list_archived_grafts
-
         import shutil
+
+        from quarto_graft.archive import archive_graft, list_archived_grafts
 
         archive_graft("graft/my-graft", "my-graft")
 

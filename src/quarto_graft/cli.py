@@ -800,7 +800,7 @@ def graft_archive_cmd(
         success = archive_graft(branch, branch_key)
     except RuntimeError as e:
         console.print(f"[red]Error:[/red] {e}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from e
 
     if success:
         console.print(f"[green]Archived[/green] graft '{branch}' (branch_key: {branch_key})")
