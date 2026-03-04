@@ -10,6 +10,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from .archive import archive_graft, list_archived_grafts, restore_graft
 from .branches import branch_to_key, destroy_graft, init_trunk, load_manifest, new_graft_branch, read_branches_list
 from .build import build_branch, update_manifests
 from .constants import (
@@ -74,6 +75,8 @@ MAIN_MENU_COMMANDS = [
     {"name": "graft build - Build a single graft branch", "value": "graft build"},
     {"name": "graft list - List all graft branches", "value": "graft list"},
     {"name": "graft destroy - Remove a graft branch", "value": "graft destroy"},
+    {"name": "graft archive - Archive a graft's build output", "value": "graft archive"},
+    {"name": "graft restore - Restore an archived graft", "value": "graft restore"},
 ]
 
 
@@ -658,17 +661,23 @@ def graft_list() -> None:
     table.add_column("In Git", justify="center")
     table.add_column("In grafts.yaml", justify="center")
     table.add_column("In grafts.lock", justify="center")
+    table.add_column("Archived", justify="center")
 
     git_branches = found_branches.get("git", set())
     yaml_branches = found_branches.get("grafts.yaml", set())
     lock_branches = found_branches.get("grafts.lock", set())
+    manifest = load_manifest()
 
     for branch in all_branches:
+        entry = manifest.get(branch, {})
+        archived_at = entry.get("archived_at", "")
+        archived_display = archived_at[:10] if archived_at else "—"
         table.add_row(
             branch,
             "✓" if branch in git_branches else "—",
             "✓" if branch in yaml_branches else "—",
             "✓" if branch in lock_branches else "—",
+            archived_display,
         )
 
     console.print(table)
@@ -746,6 +755,105 @@ def graft_destroy(
         console.print("  [green]✓[/green] Attempted remote delete on origin")
 
     console.print("\n[yellow]Note:[/yellow] Please regenerate the main docs/navigation with: [bold]quarto-graft trunk build[/bold]")
+
+
+@graft_app.command("archive")
+def graft_archive_cmd(
+    branch: str | None = typer.Argument(
+        None,
+        help="Git branch name of the graft to archive",
+    ),
+) -> None:
+    """Archive a graft's exported content to save space."""
+    require_trunk()
+
+    manifest = load_manifest()
+
+    if branch is None:
+        archivable = sorted(
+            b for b, entry in manifest.items()
+            if not entry.get("archived")
+        )
+        if not archivable:
+            console.print("[dim]No grafts available to archive.[/dim]")
+            raise typer.Exit(code=0)
+
+        branch = questionary.select(
+            "Select graft to archive:",
+            choices=archivable,
+            use_shortcuts=True,
+            use_arrow_keys=True,
+        ).ask()
+
+        if not branch:
+            console.print("[yellow]Cancelled.[/yellow]")
+            raise typer.Exit(code=0)
+
+    entry = manifest.get(branch)
+    if not entry:
+        console.print(f"[red]Error:[/red] No manifest entry found for '{branch}'. Build it first.")
+        raise typer.Exit(code=1)
+
+    branch_key = entry.get("branch_key") or branch_to_key(branch)
+
+    try:
+        success = archive_graft(branch, branch_key)
+    except RuntimeError as e:
+        console.print(f"[red]Error:[/red] {e}")
+        raise typer.Exit(code=1)
+
+    if success:
+        console.print(f"[green]Archived[/green] graft '{branch}' (branch_key: {branch_key})")
+        console.print(f"[dim]Content moved to .grafts-archive/{branch_key}/[/dim]")
+        console.print("[yellow]Note:[/yellow] Run 'quarto-graft trunk lock' to update navigation.")
+    else:
+        console.print(f"[yellow]Nothing to archive[/yellow] for graft '{branch}'")
+
+
+@graft_app.command("restore")
+def graft_restore_cmd(
+    branch: str | None = typer.Argument(
+        None,
+        help="Git branch name of the graft to restore",
+    ),
+) -> None:
+    """Restore an archived graft's content."""
+    require_trunk()
+
+    if branch is None:
+        archived = list_archived_grafts()
+        if not archived:
+            console.print("[dim]No archived grafts found.[/dim]")
+            raise typer.Exit(code=0)
+
+        choices = sorted(b for b, _ in archived)
+        branch = questionary.select(
+            "Select archived graft to restore:",
+            choices=choices,
+            use_shortcuts=True,
+            use_arrow_keys=True,
+        ).ask()
+
+        if not branch:
+            console.print("[yellow]Cancelled.[/yellow]")
+            raise typer.Exit(code=0)
+
+    manifest = load_manifest()
+    entry = manifest.get(branch)
+    if not entry:
+        console.print(f"[red]Error:[/red] No manifest entry found for '{branch}'.")
+        raise typer.Exit(code=1)
+
+    branch_key = entry.get("branch_key") or branch_to_key(branch)
+
+    success = restore_graft(branch, branch_key)
+
+    if success:
+        console.print(f"[green]Restored[/green] graft '{branch}' (branch_key: {branch_key})")
+        console.print(f"[dim]Content moved back to grafts__/{branch_key}/[/dim]")
+        console.print("[yellow]Note:[/yellow] Run 'quarto-graft trunk lock' to update navigation.")
+    else:
+        console.print(f"[yellow]Nothing to restore[/yellow] for graft '{branch}'")
 
 
 # ============================================================================
@@ -830,6 +938,10 @@ def main_callback(
                 console.print("[red]Error:[/red] Branch name required")
                 raise typer.Exit(code=1)
             graft_destroy(branch=branch, keep_remote=False)
+        elif group == "graft" and command == "archive":
+            graft_archive_cmd(branch=None)
+        elif group == "graft" and command == "restore":
+            graft_restore_cmd(branch=None)
 
 
 def main() -> None:

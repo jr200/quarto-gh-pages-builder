@@ -11,6 +11,7 @@ import pygit2
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, TemplateSyntaxError
 
 from .constants import (
+    GRAFTS_ARCHIVE_DIR,
     GRAFTS_CONFIG_FILE,
     GRAFTS_MANIFEST_FILE,
     MAIN_DOCS,
@@ -138,6 +139,8 @@ class ManifestEntry(TypedDict, total=False):
     branch_key: str
     exported: list[str]
     structure: Any  # Original sidebar/chapter structure from graft's _quarto.yaml
+    archived: bool       # True if content has been moved to archive
+    archived_at: str     # ISO timestamp of when content was archived
 
 class BranchSpec(TypedDict):
     """Configuration for a single graft branch."""
@@ -641,6 +644,12 @@ def destroy_graft(branch: str, delete_remote: bool = True) -> dict[str, list[str
             logger.info(f"[destroy] Deleted remote branch '{branch}'")
         except Exception:
             logger.info(f"[destroy] Remote branch '{branch}' could not be deleted or not found")
+
+    # Clean up archived content if present
+    archive_dir = GRAFTS_ARCHIVE_DIR / branch_key
+    if archive_dir.exists():
+        shutil.rmtree(archive_dir)
+        logger.info(f"[destroy] Removed archived content: {archive_dir}")
 
     if branch in manifest:
         manifest.pop(branch, None)

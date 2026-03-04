@@ -402,6 +402,8 @@ def apply_manifest() -> None:
             entry = manifest.get(branch)
             if not entry:
                 continue
+            if entry.get("archived"):
+                continue
             title = entry.get("title") or spec["name"]
             branch_key = entry.get("branch_key") or branch_to_key(spec["name"])
             structure = entry.get("structure")

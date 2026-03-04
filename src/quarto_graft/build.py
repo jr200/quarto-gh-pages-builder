@@ -280,6 +280,20 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
     last_good_sha = entry.get("last_good")
 
     branch_key = branch_to_key(graft_name)
+
+    if entry.get("archived"):
+        logger.info(f"[{branch}] Skipping build: graft is archived")
+        return BuildResult(
+            branch=branch,
+            branch_key=branch_key,
+            title=entry.get("title", graft_name),
+            status="ok",
+            head_sha=None,
+            last_good_sha=entry.get("last_good"),
+            built_at=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            exported_relpaths=entry.get("exported", []),
+            exported_dest_paths=[],
+        )
     # Prefer remote ref if available, otherwise fall back to local
     head_ref = f"origin/{branch}" if _branch_exists(f"origin/{branch}") else branch
     head_sha: str | None = None

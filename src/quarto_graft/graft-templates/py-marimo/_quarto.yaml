@@ -9,6 +9,9 @@ project:
 filters:
 - marimo-team/marimo
 
+marimo:
+  external-env: true
+
 website:
   title: "{{ graft_name }}"
   # page-navigation: true
