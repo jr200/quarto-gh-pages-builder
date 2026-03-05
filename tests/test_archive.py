@@ -1,234 +1,267 @@
-"""Tests for archive module."""
+"""Tests for archive module (pre-render functionality)."""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
 
 @pytest.fixture
-def mock_project(tmp_path, monkeypatch):
-    """Set up a minimal project structure for archive tests."""
-    import quarto_graft.archive as archive_mod
-    import quarto_graft.branches as branches_mod
+def mock_graft_project(tmp_path):
+    """Set up a minimal graft project structure for archive tests."""
+    # Create _quarto.yaml
+    (tmp_path / "_quarto.yaml").write_text(
+        "project:\n  type: website\n  output-dir: _site\n\n"
+        "website:\n  title: Test Graft\n  sidebar:\n    contents:\n"
+        "      - docs/index.qmd\n      - docs/chapter1.qmd\n"
+    )
 
-    # Patch constants used by the archive and branches modules
-    monkeypatch.setattr(archive_mod, "GRAFTS_BUILD_DIR", tmp_path / "grafts__")
-    monkeypatch.setattr(archive_mod, "GRAFTS_ARCHIVE_DIR", tmp_path / ".grafts-archive")
-    monkeypatch.setattr(branches_mod, "GRAFTS_MANIFEST_FILE", tmp_path / "grafts.lock")
-
-    # Create build output
-    build_dir = tmp_path / "grafts__" / "my-graft"
-    build_dir.mkdir(parents=True)
-    (build_dir / "index.qmd").write_text("---\ntitle: Test\n---\nHello")
-    (build_dir / "chapter1.qmd").write_text("---\ntitle: Chapter 1\n---\nContent")
-
-    # Create manifest
-    manifest = {
-        "graft/my-graft": {
-            "last_good": "abc1234def5678",
-            "last_checked": "2025-01-01T00:00:00Z",
-            "title": "My Graft",
-            "branch_key": "my-graft",
-            "exported": ["index.qmd", "chapter1.qmd"],
-            "structure": [{"section": "My Graft", "contents": ["index.qmd", "chapter1.qmd"]}],
-        },
-        "graft/other": {
-            "last_good": "bbb2222",
-            "last_checked": "2025-01-01T00:00:00Z",
-            "title": "Other Graft",
-            "branch_key": "other",
-            "exported": ["index.qmd"],
-        },
-    }
-    (tmp_path / "grafts.lock").write_text(json.dumps(manifest))
+    # Create source files
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir()
+    (docs_dir / "index.qmd").write_text("---\ntitle: Index\n---\nHello")
+    (docs_dir / "chapter1.qmd").write_text("---\ntitle: Chapter 1\n---\nContent")
 
     return tmp_path
 
 
-def _load_manifest(tmp_path: Path) -> dict:
-    return json.loads((tmp_path / "grafts.lock").read_text())
+@pytest.fixture
+def mock_site_output(mock_graft_project):
+    """Create a mock _site/ output as if quarto render had run."""
+    site_dir = mock_graft_project / "_site"
+    site_dir.mkdir()
+    docs_out = site_dir / "docs"
+    docs_out.mkdir()
+    (docs_out / "index.html").write_text("<html><body>Index</body></html>")
+    (docs_out / "chapter1.html").write_text("<html><body>Chapter 1</body></html>")
+
+    # Create site_libs
+    libs_dir = site_dir / "site_libs"
+    libs_dir.mkdir()
+    (libs_dir / "bootstrap.min.css").write_text("/* bootstrap */")
+
+    return mock_graft_project
 
 
 class TestArchiveGraft:
-    def test_archives_build_output(self, mock_project):
+    def test_pre_renders_and_copies_site_output(self, mock_site_output):
         from quarto_graft.archive import archive_graft
 
-        result = archive_graft("graft/my-graft", "my-graft")
+        project = mock_site_output
 
-        assert result is True
-        assert (mock_project / ".grafts-archive" / "my-graft" / "index.qmd").exists()
-        assert (mock_project / ".grafts-archive" / "my-graft" / "chapter1.qmd").exists()
-        assert not (mock_project / "grafts__" / "my-graft").exists()
+        # Mock subprocess.run to simulate quarto render success
+        # (site output is already created by fixture)
+        with patch("quarto_graft.archive.subprocess.run") as mock_run:
+            mock_run.return_value = type("Result", (), {"returncode": 0, "stderr": "", "stdout": ""})()
+            result = archive_graft(project_dir=project)
 
-    def test_marks_manifest_as_archived(self, mock_project):
+        assert result == project / "_prerendered"
+        assert (project / "_prerendered" / "docs" / "index.html").exists()
+        assert (project / "_prerendered" / "docs" / "chapter1.html").exists()
+        assert (project / "_prerendered" / "site_libs" / "bootstrap.min.css").exists()
+
+    def test_creates_prerender_manifest(self, mock_site_output):
         from quarto_graft.archive import archive_graft
 
-        archive_graft("graft/my-graft", "my-graft")
-        manifest = _load_manifest(mock_project)
+        project = mock_site_output
 
-        assert manifest["graft/my-graft"]["archived"] is True
-        assert "archived_at" in manifest["graft/my-graft"]
+        with patch("quarto_graft.archive.subprocess.run") as mock_run:
+            mock_run.return_value = type("Result", (), {"returncode": 0, "stderr": "", "stdout": ""})()
+            archive_graft(project_dir=project)
 
-    def test_preserves_manifest_metadata(self, mock_project):
+        manifest_path = project / "_prerendered" / ".graft-prerender.json"
+        assert manifest_path.exists()
+
+        manifest = json.loads(manifest_path.read_text())
+        assert "prerendered_at" in manifest
+        assert "files" in manifest
+        assert isinstance(manifest["files"], list)
+        assert len(manifest["files"]) > 0
+        assert "docs/index.html" in manifest["files"]
+
+    def test_raises_if_no_quarto_yaml(self, tmp_path):
         from quarto_graft.archive import archive_graft
 
-        archive_graft("graft/my-graft", "my-graft")
-        manifest = _load_manifest(mock_project)
-        entry = manifest["graft/my-graft"]
+        with pytest.raises(RuntimeError, match="_quarto.yaml"):
+            archive_graft(project_dir=tmp_path)
 
-        assert entry["exported"] == ["index.qmd", "chapter1.qmd"]
-        assert entry["title"] == "My Graft"
-        assert entry["last_good"] == "abc1234def5678"
-        assert entry["structure"] == [{"section": "My Graft", "contents": ["index.qmd", "chapter1.qmd"]}]
-
-    def test_raises_if_already_archived(self, mock_project):
+    def test_raises_if_quarto_render_fails(self, mock_graft_project):
         from quarto_graft.archive import archive_graft
 
-        archive_graft("graft/my-graft", "my-graft")
-        with pytest.raises(RuntimeError, match="already archived"):
-            archive_graft("graft/my-graft", "my-graft")
+        with patch("quarto_graft.archive.subprocess.run") as mock_run:
+            mock_run.return_value = type("Result", (), {
+                "returncode": 1, "stderr": "render error", "stdout": ""
+            })()
+            with pytest.raises(RuntimeError, match="quarto render failed"):
+                archive_graft(project_dir=mock_graft_project)
 
-    def test_returns_false_if_no_content(self, mock_project):
+    def test_raises_if_output_empty(self, mock_graft_project):
         from quarto_graft.archive import archive_graft
 
-        # other has no build output directory
-        result = archive_graft("graft/other", "other")
-        assert result is False
+        # Create empty _site/
+        (mock_graft_project / "_site").mkdir()
 
-    def test_does_not_affect_other_entries(self, mock_project):
+        with patch("quarto_graft.archive.subprocess.run") as mock_run:
+            mock_run.return_value = type("Result", (), {"returncode": 0, "stderr": "", "stdout": ""})()
+            with pytest.raises(RuntimeError, match="empty"):
+                archive_graft(project_dir=mock_graft_project)
+
+    def test_replaces_stale_prerendered(self, mock_site_output):
         from quarto_graft.archive import archive_graft
 
-        archive_graft("graft/my-graft", "my-graft")
-        manifest = _load_manifest(mock_project)
+        project = mock_site_output
 
-        assert "archived" not in manifest["graft/other"]
-        assert manifest["graft/other"]["title"] == "Other Graft"
+        # Create stale _prerendered/
+        stale = project / "_prerendered"
+        stale.mkdir()
+        (stale / "old_file.html").write_text("stale")
 
-    def test_replaces_stale_archive(self, mock_project):
-        from quarto_graft.archive import archive_graft, restore_graft
+        with patch("quarto_graft.archive.subprocess.run") as mock_run:
+            mock_run.return_value = type("Result", (), {"returncode": 0, "stderr": "", "stdout": ""})()
+            archive_graft(project_dir=project)
 
-        archive_graft("graft/my-graft", "my-graft")
-        restore_graft("graft/my-graft", "my-graft")
+        # Stale file should be gone, new content present
+        assert not (project / "_prerendered" / "old_file.html").exists()
+        assert (project / "_prerendered" / "docs" / "index.html").exists()
 
-        # Modify content
-        (mock_project / "grafts__" / "my-graft" / "new.qmd").write_text("new content")
+    def test_reads_custom_output_dir(self, tmp_path):
+        from quarto_graft.archive import archive_graft
 
-        archive_graft("graft/my-graft", "my-graft")
+        # Create _quarto.yaml with custom output-dir
+        (tmp_path / "_quarto.yaml").write_text(
+            "project:\n  type: website\n  output-dir: _output\n"
+        )
 
-        # New content should be in archive
-        assert (mock_project / ".grafts-archive" / "my-graft" / "new.qmd").exists()
+        # Create output in custom location
+        output_dir = tmp_path / "_output"
+        output_dir.mkdir()
+        (output_dir / "index.html").write_text("<html>test</html>")
+
+        with patch("quarto_graft.archive.subprocess.run") as mock_run:
+            mock_run.return_value = type("Result", (), {"returncode": 0, "stderr": "", "stdout": ""})()
+            result = archive_graft(project_dir=tmp_path)
+
+        assert (result / "index.html").exists()
 
 
 class TestRestoreGraft:
-    def test_restores_archived_content(self, mock_project):
-        from quarto_graft.archive import archive_graft, restore_graft
-
-        archive_graft("graft/my-graft", "my-graft")
-        result = restore_graft("graft/my-graft", "my-graft")
-
-        assert result is True
-        assert (mock_project / "grafts__" / "my-graft" / "index.qmd").exists()
-        assert (mock_project / "grafts__" / "my-graft" / "chapter1.qmd").exists()
-        assert not (mock_project / ".grafts-archive" / "my-graft").exists()
-
-    def test_clears_archived_flag(self, mock_project):
-        from quarto_graft.archive import archive_graft, restore_graft
-
-        archive_graft("graft/my-graft", "my-graft")
-        restore_graft("graft/my-graft", "my-graft")
-        manifest = _load_manifest(mock_project)
-
-        assert "archived" not in manifest["graft/my-graft"]
-        assert "archived_at" not in manifest["graft/my-graft"]
-
-    def test_preserves_metadata_after_restore(self, mock_project):
-        from quarto_graft.archive import archive_graft, restore_graft
-
-        archive_graft("graft/my-graft", "my-graft")
-        restore_graft("graft/my-graft", "my-graft")
-        manifest = _load_manifest(mock_project)
-        entry = manifest["graft/my-graft"]
-
-        assert entry["exported"] == ["index.qmd", "chapter1.qmd"]
-        assert entry["title"] == "My Graft"
-
-    def test_returns_false_if_nothing_archived(self, mock_project):
+    def test_removes_prerendered_dir(self, mock_graft_project):
         from quarto_graft.archive import restore_graft
 
-        result = restore_graft("graft/my-graft", "my-graft")
+        # Create _prerendered/
+        prerender = mock_graft_project / "_prerendered"
+        prerender.mkdir()
+        (prerender / "index.html").write_text("<html>test</html>")
+
+        result = restore_graft(project_dir=mock_graft_project)
+
+        assert result is True
+        assert not prerender.exists()
+
+    def test_returns_false_if_nothing_to_remove(self, mock_graft_project):
+        from quarto_graft.archive import restore_graft
+
+        result = restore_graft(project_dir=mock_graft_project)
         assert result is False
 
-    def test_replaces_existing_build_output(self, mock_project):
-        from quarto_graft.archive import archive_graft, restore_graft
+    def test_raises_if_no_quarto_yaml(self, tmp_path):
+        from quarto_graft.archive import restore_graft
 
-        archive_graft("graft/my-graft", "my-graft")
-
-        # Create different content in the build dir
-        stale_dir = mock_project / "grafts__" / "my-graft"
-        stale_dir.mkdir(parents=True)
-        (stale_dir / "stale.qmd").write_text("stale")
-
-        restore_graft("graft/my-graft", "my-graft")
-
-        # Stale content should be gone, archived content restored
-        assert not (mock_project / "grafts__" / "my-graft" / "stale.qmd").exists()
-        assert (mock_project / "grafts__" / "my-graft" / "index.qmd").exists()
+        with pytest.raises(RuntimeError, match="_quarto.yaml"):
+            restore_graft(project_dir=tmp_path)
 
 
-class TestListArchivedGrafts:
-    def test_lists_archived(self, mock_project):
-        from quarto_graft.archive import archive_graft, list_archived_grafts
+class TestIsPrerendered:
+    def test_true_when_valid_manifest(self, tmp_path):
+        from quarto_graft.archive import is_prerendered
 
-        archive_graft("graft/my-graft", "my-graft")
-        archived = list_archived_grafts()
+        prerender = tmp_path / "_prerendered"
+        prerender.mkdir()
+        manifest = {"prerendered_at": "2025-01-01T00:00:00Z", "files": []}
+        (prerender / ".graft-prerender.json").write_text(json.dumps(manifest))
 
-        assert len(archived) == 1
-        assert archived[0][0] == "graft/my-graft"
-        assert archived[0][1]["title"] == "My Graft"
+        assert is_prerendered(tmp_path) is True
 
-    def test_empty_when_none_archived(self, mock_project):
-        from quarto_graft.archive import list_archived_grafts
+    def test_false_when_no_directory(self, tmp_path):
+        from quarto_graft.archive import is_prerendered
 
-        archived = list_archived_grafts()
-        assert len(archived) == 0
+        assert is_prerendered(tmp_path) is False
 
-    def test_excludes_archived_without_directory(self, mock_project):
-        import shutil
+    def test_false_when_no_manifest(self, tmp_path):
+        from quarto_graft.archive import is_prerendered
 
-        from quarto_graft.archive import archive_graft, list_archived_grafts
+        prerender = tmp_path / "_prerendered"
+        prerender.mkdir()
+        (prerender / "index.html").write_text("<html>test</html>")
 
-        archive_graft("graft/my-graft", "my-graft")
+        assert is_prerendered(tmp_path) is False
 
-        # Manually remove the archive directory (simulate external deletion)
-        shutil.rmtree(mock_project / ".grafts-archive" / "my-graft")
+    def test_false_when_invalid_json(self, tmp_path):
+        from quarto_graft.archive import is_prerendered
 
-        archived = list_archived_grafts()
-        assert len(archived) == 0
+        prerender = tmp_path / "_prerendered"
+        prerender.mkdir()
+        (prerender / ".graft-prerender.json").write_text("not json")
+
+        assert is_prerendered(tmp_path) is False
+
+    def test_false_when_missing_key(self, tmp_path):
+        from quarto_graft.archive import is_prerendered
+
+        prerender = tmp_path / "_prerendered"
+        prerender.mkdir()
+        (prerender / ".graft-prerender.json").write_text('{"files": []}')
+
+        assert is_prerendered(tmp_path) is False
+
+
+class TestLoadPrerenderManifest:
+    def test_loads_valid_manifest(self, tmp_path):
+        from quarto_graft.archive import load_prerender_manifest
+
+        prerender = tmp_path / "_prerendered"
+        prerender.mkdir()
+        manifest_data = {
+            "prerendered_at": "2025-01-01T00:00:00Z",
+            "source_commit": "abc1234",
+            "files": ["index.html"],
+        }
+        (prerender / ".graft-prerender.json").write_text(json.dumps(manifest_data))
+
+        result = load_prerender_manifest(tmp_path)
+        assert result == manifest_data
+
+    def test_returns_none_when_missing(self, tmp_path):
+        from quarto_graft.archive import load_prerender_manifest
+
+        assert load_prerender_manifest(tmp_path) is None
+
+    def test_returns_none_for_invalid_json(self, tmp_path):
+        from quarto_graft.archive import load_prerender_manifest
+
+        prerender = tmp_path / "_prerendered"
+        prerender.mkdir()
+        (prerender / ".graft-prerender.json").write_text("not json")
+
+        assert load_prerender_manifest(tmp_path) is None
 
 
 class TestArchiveRestoreRoundTrip:
-    def test_full_round_trip(self, mock_project):
-        from quarto_graft.archive import archive_graft, list_archived_grafts, restore_graft
+    def test_archive_then_restore(self, mock_site_output):
+        from quarto_graft.archive import archive_graft, is_prerendered, restore_graft
 
-        # Read original content
-        original_content = (mock_project / "grafts__" / "my-graft" / "index.qmd").read_text()
+        project = mock_site_output
 
-        # Archive
-        archive_graft("graft/my-graft", "my-graft")
-        assert len(list_archived_grafts()) == 1
-        assert not (mock_project / "grafts__" / "my-graft").exists()
+        with patch("quarto_graft.archive.subprocess.run") as mock_run:
+            mock_run.return_value = type("Result", (), {"returncode": 0, "stderr": "", "stdout": ""})()
+            archive_graft(project_dir=project)
 
-        # Restore
-        restore_graft("graft/my-graft", "my-graft")
-        assert len(list_archived_grafts()) == 0
+        assert is_prerendered(project) is True
 
-        # Verify content preserved
-        restored_content = (mock_project / "grafts__" / "my-graft" / "index.qmd").read_text()
-        assert restored_content == original_content
+        restore_graft(project_dir=project)
 
-        # Verify manifest clean
-        manifest = _load_manifest(mock_project)
-        assert "archived" not in manifest["graft/my-graft"]
+        assert is_prerendered(project) is False
+        assert not (project / "_prerendered").exists()

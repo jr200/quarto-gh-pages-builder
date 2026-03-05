@@ -55,4 +55,3 @@ _site/
 /.quarto/
 **/*.quarto_ipynb
 grafts__/
-.grafts-archive/

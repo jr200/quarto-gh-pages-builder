@@ -19,7 +19,10 @@ QUARTO_PROJECT_YAML = ROOT / "_quarto.yaml"
 # The trunk is rendered into the current working directory.
 MAIN_DOCS = ROOT
 GRAFTS_BUILD_DIR = MAIN_DOCS / "grafts__"
-GRAFTS_ARCHIVE_DIR = ROOT / ".grafts-archive"
+
+# Pre-render directory name (lives on graft branches, not trunk)
+PRERENDER_DIR_NAME = "_prerendered"
+PRERENDER_MANIFEST_NAME = ".graft-prerender.json"
 
 # Quarto config filenames
 QUARTO_CONFIG_YAML = "_quarto.yaml"

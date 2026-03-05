@@ -1,133 +1,203 @@
-"""Archive and restore graft build outputs."""
+"""Pre-render graft content for faster trunk builds."""
 
 from __future__ import annotations
 
+import json
 import logging
 import shutil
+import subprocess
 from datetime import UTC, datetime
+from pathlib import Path
 
-from .branches import ManifestEntry, branch_to_key, load_manifest, save_manifest
-from .constants import GRAFTS_ARCHIVE_DIR, GRAFTS_BUILD_DIR
+from .constants import PRERENDER_DIR_NAME, PRERENDER_MANIFEST_NAME, QUARTO_CONFIG_YAML
+from .yaml_utils import get_yaml_loader
 
 logger = logging.getLogger(__name__)
 
 
-def archive_graft(branch: str, branch_key: str) -> bool:
-    """
-    Archive a graft's exported content from grafts__/{branch_key}/ to
-    .grafts-archive/{branch_key}/.
+def _find_quarto_command() -> list[str]:
+    """Find the quarto command to use, checking for uv first, then falling back to quarto."""
+    try:
+        subprocess.run(
+            ["uv", "--version"],
+            check=True,
+            capture_output=True,
+        )
+        return ["uv", "run", "quarto"]
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return ["quarto"]
 
-    Moves the build output directory and marks the manifest entry as archived.
-    The manifest entry (exported list, structure, title) is preserved so that
-    restore can fully reconstruct the graft without rebuilding.
+
+def _find_project_root(project_dir: Path | None = None) -> Path:
+    """Find the graft project root by looking for _quarto.yaml."""
+    root = project_dir or Path.cwd()
+    if (root / QUARTO_CONFIG_YAML).exists():
+        return root
+    raise RuntimeError(
+        f"No {QUARTO_CONFIG_YAML} found in {root}. "
+        "Run this command from a graft project directory."
+    )
+
+
+def _get_output_dir(project_root: Path) -> Path:
+    """Read the Quarto output directory from _quarto.yaml (default: _site)."""
+    config_path = project_root / QUARTO_CONFIG_YAML
+    yaml_loader = get_yaml_loader()
+    cfg = yaml_loader.load(config_path.read_text(encoding="utf-8")) or {}
+    project = cfg.get("project") or {}
+    output_dir_name = project.get("output-dir", "_site")
+    return project_root / output_dir_name
+
+
+def _get_source_commit(project_root: Path) -> str | None:
+    """Get the current HEAD commit SHA, or None if not in a git repo."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=project_root,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout.strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+
+
+def archive_graft(project_dir: Path | None = None) -> Path:
+    """
+    Pre-render a graft by running quarto render and storing the output.
+
+    Runs from the graft branch. Does NOT require trunk context (grafts.yaml/grafts.lock).
+
+    1. Finds the graft project root (_quarto.yaml)
+    2. Runs `quarto render` to produce the output
+    3. Copies the rendered output to _prerendered/
+    4. Creates a manifest file (.graft-prerender.json)
 
     Args:
-        branch: The git branch name (manifest key in grafts.lock)
-        branch_key: The filesystem-safe key (directory name under grafts__/)
+        project_dir: Path to the graft project root (default: cwd)
 
     Returns:
-        True if content was archived, False if there was nothing to archive.
+        Path to the _prerendered/ directory
 
     Raises:
-        RuntimeError: If the graft is already archived.
+        RuntimeError: If no _quarto.yaml found or quarto render fails
     """
-    manifest = load_manifest()
-    entry = manifest.get(branch)
+    project_root = _find_project_root(project_dir)
+    output_dir = _get_output_dir(project_root)
+    prerender_dir = project_root / PRERENDER_DIR_NAME
 
-    if entry and entry.get("archived"):
+    # Run quarto render
+    quarto_cmd = _find_quarto_command()
+    logger.info(f"[archive] Running {' '.join(quarto_cmd)} render in {project_root}")
+
+    result = subprocess.run(
+        [*quarto_cmd, "render"],
+        cwd=project_root,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        stderr = result.stderr.strip() if result.stderr else "unknown error"
+        raise RuntimeError(f"quarto render failed (exit {result.returncode}): {stderr}")
+
+    # Verify output exists
+    if not output_dir.exists() or not any(output_dir.iterdir()):
         raise RuntimeError(
-            f"Graft '{branch}' is already archived. "
-            "Use 'graft restore' first if you need to re-archive."
+            f"quarto render completed but output directory is empty: {output_dir}"
         )
 
-    src_dir = GRAFTS_BUILD_DIR / branch_key
-    if not src_dir.exists() or not any(src_dir.iterdir()):
-        logger.warning(f"[archive] No exported content found at {src_dir}")
-        return False
+    # Remove stale pre-rendered content
+    if prerender_dir.exists():
+        shutil.rmtree(prerender_dir)
+        logger.info(f"[archive] Removed stale {PRERENDER_DIR_NAME}/")
 
-    dest_dir = GRAFTS_ARCHIVE_DIR / branch_key
-    GRAFTS_ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)
+    # Copy rendered output to _prerendered/
+    shutil.copytree(output_dir, prerender_dir)
+    logger.info(f"[archive] Copied {output_dir} -> {prerender_dir}")
 
-    # Remove any stale archive for this branch_key
-    if dest_dir.exists():
-        shutil.rmtree(dest_dir)
+    # Collect file list
+    files = [
+        p.relative_to(prerender_dir).as_posix()
+        for p in prerender_dir.rglob("*")
+        if p.is_file()
+    ]
 
-    # Move the build output to the archive location
-    shutil.move(str(src_dir), str(dest_dir))
-    logger.info(f"[archive] Moved {src_dir} -> {dest_dir}")
+    # Create manifest
+    manifest = {
+        "prerendered_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+        "source_commit": _get_source_commit(project_root),
+        "files": sorted(files),
+    }
+    manifest_path = prerender_dir / PRERENDER_MANIFEST_NAME
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    logger.info(f"[archive] Created {PRERENDER_MANIFEST_NAME} ({len(files)} files)")
 
-    # Update manifest to mark as archived
-    if entry is not None:
-        now = datetime.now(UTC).isoformat().replace("+00:00", "Z")
-        entry["archived"] = True
-        entry["archived_at"] = now
-        manifest[branch] = entry
-        save_manifest(manifest)
-        logger.info(f"[archive] Marked '{branch}' as archived in manifest")
-
-    return True
+    return prerender_dir
 
 
-def restore_graft(branch: str, branch_key: str) -> bool:
+def restore_graft(project_dir: Path | None = None) -> bool:
     """
-    Restore a graft's archived content from .grafts-archive/{branch_key}/
-    back to grafts__/{branch_key}/.
+    Remove pre-rendered content from a graft project.
 
-    Moves the archived directory back to the build output location and clears
-    the archived flag in the manifest.
+    Runs from the graft branch. Simply deletes the _prerendered/ directory.
 
     Args:
-        branch: The git branch name (manifest key in grafts.lock)
-        branch_key: The filesystem-safe key (directory name under grafts__/)
+        project_dir: Path to the graft project root (default: cwd)
 
     Returns:
-        True if content was restored, False if there was nothing to restore.
+        True if content was removed, False if nothing to remove
     """
-    archive_dir = GRAFTS_ARCHIVE_DIR / branch_key
-    if not archive_dir.exists():
-        logger.warning(f"[restore] No archived content found at {archive_dir}")
+    project_root = _find_project_root(project_dir)
+    prerender_dir = project_root / PRERENDER_DIR_NAME
+
+    if not prerender_dir.exists():
+        logger.info(f"[restore] No {PRERENDER_DIR_NAME}/ found, nothing to remove")
         return False
 
-    dest_dir = GRAFTS_BUILD_DIR / branch_key
-
-    # Remove any existing build output (e.g., broken stubs)
-    if dest_dir.exists():
-        shutil.rmtree(dest_dir)
-
-    GRAFTS_BUILD_DIR.mkdir(parents=True, exist_ok=True)
-
-    # Move archived content back to build location
-    shutil.move(str(archive_dir), str(dest_dir))
-    logger.info(f"[restore] Moved {archive_dir} -> {dest_dir}")
-
-    # Update manifest to clear archived flag
-    manifest = load_manifest()
-    entry = manifest.get(branch)
-    if entry is not None:
-        entry.pop("archived", None)
-        entry.pop("archived_at", None)
-        manifest[branch] = entry
-        save_manifest(manifest)
-        logger.info(f"[restore] Cleared archived flag for '{branch}' in manifest")
-
+    shutil.rmtree(prerender_dir)
+    logger.info(f"[restore] Removed {prerender_dir}")
     return True
 
 
-def list_archived_grafts() -> list[tuple[str, ManifestEntry]]:
+def is_prerendered(worktree_dir: Path) -> bool:
     """
-    Return a list of (branch_name, manifest_entry) tuples for all archived grafts.
+    Check if a graft worktree contains pre-rendered content.
 
-    Only returns grafts that are marked as archived in the manifest AND
-    have content in the archive directory.
+    Used by trunk build to detect whether to use pre-rendered HTML
+    instead of exporting source files.
+
+    Args:
+        worktree_dir: Path to the graft worktree
+
+    Returns:
+        True if valid pre-render manifest exists
     """
-    manifest = load_manifest()
-    archived: list[tuple[str, ManifestEntry]] = []
+    manifest_path = worktree_dir / PRERENDER_DIR_NAME / PRERENDER_MANIFEST_NAME
+    if not manifest_path.exists():
+        return False
+    try:
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+        return isinstance(data, dict) and "prerendered_at" in data
+    except (json.JSONDecodeError, OSError):
+        return False
 
-    for branch, entry in manifest.items():
-        if entry.get("archived"):
-            branch_key = entry.get("branch_key", branch_to_key(branch))
-            archive_dir = GRAFTS_ARCHIVE_DIR / branch_key
-            if archive_dir.exists():
-                archived.append((branch, entry))
 
-    return archived
+def load_prerender_manifest(worktree_dir: Path) -> dict | None:
+    """
+    Load the pre-render manifest from a graft worktree.
+
+    Args:
+        worktree_dir: Path to the graft worktree
+
+    Returns:
+        Manifest dict, or None if not found or invalid
+    """
+    manifest_path = worktree_dir / PRERENDER_DIR_NAME / PRERENDER_MANIFEST_NAME
+    if not manifest_path.exists():
+        return None
+    try:
+        return json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None

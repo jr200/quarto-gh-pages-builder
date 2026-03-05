@@ -361,18 +361,34 @@ def apply_manifest() -> None:
             manifest.pop(b, None)
         save_manifest(manifest)
 
+    # Source file extensions that map to .html when pre-rendered
+    _source_exts = {".qmd", ".md", ".ipynb", ".rmd", ".rmarkdown"}
+
     # Build auto-generated items grouped by collar
     def build_collar_items(item_type: str) -> dict[str, list[Any]]:
         """
         Build items grouped by collar, preserving the original structure from each graft.
         Rewrites all file paths to prepend grafts__/{branch_key}/.
+        For pre-rendered grafts, converts source file extensions to .html and uses href links.
         """
         collar_items: dict[str, list[Any]] = {}
         content_key = "chapters" if item_type == "part" else "contents"
 
-        def rewrite_paths(node: Any, branch_key: str) -> Any:
+        def _to_html_href(file_path: str, branch_key: str) -> str | dict[str, str]:
+            """Convert a source file path to a pre-rendered HTML href entry."""
+            p = Path(file_path)
+            if p.suffix.lower() in _source_exts:
+                html_path = f"grafts__/{branch_key}/{p.with_suffix('.html').as_posix()}"
+            else:
+                html_path = f"grafts__/{branch_key}/{file_path}"
+            text = p.stem.replace("-", " ").replace("_", " ").title()
+            return {"text": text, "href": html_path}
+
+        def rewrite_paths(node: Any, branch_key: str, prerendered: bool = False) -> Any:
             """Recursively rewrite file paths in a structure to prepend grafts__/{branch_key}/."""
             if isinstance(node, str):
+                if prerendered:
+                    return _to_html_href(node, branch_key)
                 # It's a file path - prepend the graft path
                 return f"grafts__/{branch_key}/{node}"
             elif isinstance(node, dict):
@@ -381,17 +397,25 @@ def apply_manifest() -> None:
                 for key, value in node.items():
                     if key in (content_key, "chapters", "contents"):
                         # Recursively process contents/chapters
-                        result[key] = rewrite_paths(value, branch_key)
+                        result[key] = rewrite_paths(value, branch_key, prerendered)
                     elif key in ("file", "href"):
-                        # These are file references
-                        result[key] = f"grafts__/{branch_key}/{value}"
+                        if prerendered:
+                            # Convert file refs to href with .html extension
+                            p = Path(value)
+                            if p.suffix.lower() in _source_exts:
+                                result["href"] = f"grafts__/{branch_key}/{p.with_suffix('.html').as_posix()}"
+                            else:
+                                result["href"] = f"grafts__/{branch_key}/{value}"
+                        else:
+                            # These are file references
+                            result[key] = f"grafts__/{branch_key}/{value}"
                     else:
                         # Keep other keys as-is
                         result[key] = value
                 return result
             elif isinstance(node, list):
                 # Recursively process list items
-                return [rewrite_paths(item, branch_key) for item in node]
+                return [rewrite_paths(item, branch_key, prerendered) for item in node]
             else:
                 # Return as-is for other types
                 return node
@@ -402,11 +426,10 @@ def apply_manifest() -> None:
             entry = manifest.get(branch)
             if not entry:
                 continue
-            if entry.get("archived"):
-                continue
             title = entry.get("title") or spec["name"]
             branch_key = entry.get("branch_key") or branch_to_key(spec["name"])
             structure = entry.get("structure")
+            is_prerendered = bool(entry.get("prerendered"))
 
             # If no structure is preserved, skip this graft
             if not structure:
@@ -414,7 +437,7 @@ def apply_manifest() -> None:
                 continue
 
             # Rewrite all paths in the structure
-            rewritten_structure = rewrite_paths(structure, branch_key)
+            rewritten_structure = rewrite_paths(structure, branch_key, prerendered=is_prerendered)
 
             # Wrap in a section/part with the graft title
             item = {
@@ -476,6 +499,35 @@ def apply_manifest() -> None:
             "Neither book.chapters nor website.sidebar.contents found; "
             "cannot apply auto-generated chapter updates."
         )
+
+    # Add project resources for pre-rendered grafts so Quarto copies HTML as-is
+    prerender_resources = []
+    for spec in branches:
+        entry = manifest.get(spec["branch"])
+        if entry and entry.get("prerendered"):
+            bk = entry.get("branch_key") or branch_to_key(spec["name"])
+            prerender_resources.append(f"grafts__/{bk}/**")
+
+    if prerender_resources:
+        project_cfg = data.setdefault("project", {})
+        resources = project_cfg.get("resources", [])
+        for r in prerender_resources:
+            if r not in resources:
+                resources.append(r)
+        project_cfg["resources"] = resources
+
+    # Clean up stale resource entries for grafts no longer pre-rendered
+    existing_resources = data.get("project", {}).get("resources", [])
+    if existing_resources:
+        active_prerender_set = set(prerender_resources)
+        cleaned = [
+            r for r in existing_resources
+            if not r.startswith("grafts__/") or r in active_prerender_set
+        ]
+        if cleaned != existing_resources:
+            data.setdefault("project", {})["resources"] = cleaned
+            if not cleaned:
+                data["project"].pop("resources", None)
 
     # Write YAML back atomically
     atomic_write_yaml(quarto_file, data)

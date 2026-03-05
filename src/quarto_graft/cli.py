@@ -10,7 +10,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from .archive import archive_graft, list_archived_grafts, restore_graft
+from .archive import archive_graft, restore_graft
 from .branches import branch_to_key, destroy_graft, init_trunk, load_manifest, new_graft_branch, read_branches_list
 from .build import build_branch, update_manifests
 from .constants import (
@@ -75,8 +75,8 @@ MAIN_MENU_COMMANDS = [
     {"name": "graft build - Build a single graft branch", "value": "graft build"},
     {"name": "graft list - List all graft branches", "value": "graft list"},
     {"name": "graft destroy - Remove a graft branch", "value": "graft destroy"},
-    {"name": "graft archive - Archive a graft's build output", "value": "graft archive"},
-    {"name": "graft restore - Restore an archived graft", "value": "graft restore"},
+    {"name": "graft archive - Pre-render graft for faster trunk builds", "value": "graft archive"},
+    {"name": "graft restore - Remove pre-rendered content", "value": "graft restore"},
 ]
 
 
@@ -661,7 +661,7 @@ def graft_list() -> None:
     table.add_column("In Git", justify="center")
     table.add_column("In grafts.yaml", justify="center")
     table.add_column("In grafts.lock", justify="center")
-    table.add_column("Archived", justify="center")
+    table.add_column("Pre-rendered", justify="center")
 
     git_branches = found_branches.get("git", set())
     yaml_branches = found_branches.get("grafts.yaml", set())
@@ -670,14 +670,13 @@ def graft_list() -> None:
 
     for branch in all_branches:
         entry = manifest.get(branch, {})
-        archived_at = entry.get("archived_at", "")
-        archived_display = archived_at[:10] if archived_at else "—"
+        prerendered = "Yes" if entry.get("prerendered") else "—"
         table.add_row(
             branch,
             "✓" if branch in git_branches else "—",
             "✓" if branch in yaml_branches else "—",
             "✓" if branch in lock_branches else "—",
-            archived_display,
+            prerendered,
         )
 
     console.print(table)
@@ -759,101 +758,71 @@ def graft_destroy(
 
 @graft_app.command("archive")
 def graft_archive_cmd(
-    branch: str | None = typer.Argument(
+    project_dir: str | None = typer.Argument(
         None,
-        help="Git branch name of the graft to archive",
+        help="Path to graft project directory (default: current directory)",
     ),
 ) -> None:
-    """Archive a graft's exported content to save space."""
-    require_trunk()
+    """Pre-render graft content for faster trunk builds.
 
-    manifest = load_manifest()
-
-    if branch is None:
-        archivable = sorted(
-            b for b, entry in manifest.items()
-            if not entry.get("archived")
-        )
-        if not archivable:
-            console.print("[dim]No grafts available to archive.[/dim]")
-            raise typer.Exit(code=0)
-
-        branch = questionary.select(
-            "Select graft to archive:",
-            choices=archivable,
-            use_shortcuts=True,
-            use_arrow_keys=True,
-        ).ask()
-
-        if not branch:
-            console.print("[yellow]Cancelled.[/yellow]")
-            raise typer.Exit(code=0)
-
-    entry = manifest.get(branch)
-    if not entry:
-        console.print(f"[red]Error:[/red] No manifest entry found for '{branch}'. Build it first.")
-        raise typer.Exit(code=1)
-
-    branch_key = entry.get("branch_key") or branch_to_key(branch)
+    Run this from your graft branch. It runs 'quarto render' and stores the
+    output in _prerendered/ for the trunk to use directly.
+    """
+    dir_path = Path(project_dir) if project_dir else None
 
     try:
-        success = archive_graft(branch, branch_key)
+        prerender_path = archive_graft(project_dir=dir_path)
+    except RuntimeError as e:
+        console.print(f"[red]Error:[/red] {e}")
+        raise typer.Exit(code=1) from e
+
+    # Count files and compute total size
+    files = list(prerender_path.rglob("*"))
+    file_count = sum(1 for f in files if f.is_file())
+    total_size = sum(f.stat().st_size for f in files if f.is_file())
+
+    if total_size > 1024 * 1024:
+        size_str = f"{total_size / (1024 * 1024):.1f} MB"
+    elif total_size > 1024:
+        size_str = f"{total_size / 1024:.1f} KB"
+    else:
+        size_str = f"{total_size} bytes"
+
+    console.print(f"[green]Pre-rendered[/green] graft content ({file_count} files, {size_str})")
+    console.print(f"[dim]Output stored in:[/dim] {prerender_path}")
+    console.print()
+    console.print("[yellow]Next steps:[/yellow]")
+    console.print("  1. You may need to update your .gitignore to track _prerendered/")
+    console.print("  2. Commit _prerendered/ to your graft branch:")
+    console.print("     [dim]git add _prerendered/ && git commit -m 'Pre-render graft'[/dim]")
+    console.print("  3. Trunk builds will automatically use pre-rendered content")
+
+
+@graft_app.command("restore")
+def graft_restore_cmd(
+    project_dir: str | None = typer.Argument(
+        None,
+        help="Path to graft project directory (default: current directory)",
+    ),
+) -> None:
+    """Remove pre-rendered content from a graft.
+
+    Run this from your graft branch. Removes the _prerendered/ directory
+    so trunk builds will render from source again.
+    """
+    dir_path = Path(project_dir) if project_dir else None
+
+    try:
+        success = restore_graft(project_dir=dir_path)
     except RuntimeError as e:
         console.print(f"[red]Error:[/red] {e}")
         raise typer.Exit(code=1) from e
 
     if success:
-        console.print(f"[green]Archived[/green] graft '{branch}' (branch_key: {branch_key})")
-        console.print(f"[dim]Content moved to .grafts-archive/{branch_key}/[/dim]")
-        console.print("[yellow]Note:[/yellow] Run 'quarto-graft trunk lock' to update navigation.")
+        console.print("[green]Removed[/green] pre-rendered content")
+        console.print("[dim]Trunk builds will now render this graft from source.[/dim]")
     else:
-        console.print(f"[yellow]Nothing to archive[/yellow] for graft '{branch}'")
-
-
-@graft_app.command("restore")
-def graft_restore_cmd(
-    branch: str | None = typer.Argument(
-        None,
-        help="Git branch name of the graft to restore",
-    ),
-) -> None:
-    """Restore an archived graft's content."""
-    require_trunk()
-
-    if branch is None:
-        archived = list_archived_grafts()
-        if not archived:
-            console.print("[dim]No archived grafts found.[/dim]")
-            raise typer.Exit(code=0)
-
-        choices = sorted(b for b, _ in archived)
-        branch = questionary.select(
-            "Select archived graft to restore:",
-            choices=choices,
-            use_shortcuts=True,
-            use_arrow_keys=True,
-        ).ask()
-
-        if not branch:
-            console.print("[yellow]Cancelled.[/yellow]")
-            raise typer.Exit(code=0)
-
-    manifest = load_manifest()
-    entry = manifest.get(branch)
-    if not entry:
-        console.print(f"[red]Error:[/red] No manifest entry found for '{branch}'.")
-        raise typer.Exit(code=1)
-
-    branch_key = entry.get("branch_key") or branch_to_key(branch)
-
-    success = restore_graft(branch, branch_key)
-
-    if success:
-        console.print(f"[green]Restored[/green] graft '{branch}' (branch_key: {branch_key})")
-        console.print(f"[dim]Content moved back to grafts__/{branch_key}/[/dim]")
-        console.print("[yellow]Note:[/yellow] Run 'quarto-graft trunk lock' to update navigation.")
-    else:
-        console.print(f"[yellow]Nothing to restore[/yellow] for graft '{branch}'")
+        console.print("[yellow]No pre-rendered content found.[/yellow] Nothing to remove.")
 
 
 # ============================================================================
@@ -939,9 +908,9 @@ def main_callback(
                 raise typer.Exit(code=1)
             graft_destroy(branch=branch, keep_remote=False)
         elif group == "graft" and command == "archive":
-            graft_archive_cmd(branch=None)
+            graft_archive_cmd(project_dir=None)
         elif group == "graft" and command == "restore":
-            graft_restore_cmd(branch=None)
+            graft_restore_cmd(project_dir=None)
 
 
 def main() -> None:

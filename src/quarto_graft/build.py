@@ -17,7 +17,8 @@ from .branches import (
     read_branches_list,
     save_manifest,
 )
-from .constants import GRAFTS_BUILD_DIR
+from .archive import is_prerendered
+from .constants import GRAFTS_BUILD_DIR, PRERENDER_DIR_NAME, PRERENDER_MANIFEST_NAME
 from .git_utils import (
     fetch_origin,
     managed_worktree,
@@ -151,10 +152,10 @@ def _export_from_worktree(
     inject_warning: bool = False,
     warn_head_sha: str | None = None,
     warn_last_good_sha: str | None = None,
-) -> tuple[str, str, list[str], list[Path], Any]:
+) -> tuple[str, str, list[str], list[Path], Any, bool]:
     """
     Export content from a worktree for the given ref.
-    Returns: (sha, section_title, exported_relpaths, exported_dest_paths, nav_structure)
+    Returns: (sha, section_title, exported_relpaths, exported_dest_paths, nav_structure, prerendered)
     """
     try:
         with managed_worktree(ref, worktree_name) as wt_dir:
@@ -163,9 +164,32 @@ def _export_from_worktree(
             project_dir = wt_dir
             cfg = load_quarto_config(project_dir)
             section_title = derive_section_title(cfg, branch)
-
-            src_relpaths = collect_exported_relpaths(project_dir, cfg)
             nav_structure = extract_nav_structure(cfg)
+
+            # Check for pre-rendered content
+            prerender_dir = wt_dir / PRERENDER_DIR_NAME
+            if is_prerendered(wt_dir):
+                logger.info(f"[{branch}] Using pre-rendered content from {PRERENDER_DIR_NAME}/")
+                dest_dir = GRAFTS_BUILD_DIR / branch_key
+                if dest_dir.exists():
+                    shutil.rmtree(dest_dir)
+                # Copy pre-rendered content (exclude the manifest JSON)
+                shutil.copytree(
+                    prerender_dir, dest_dir,
+                    ignore=shutil.ignore_patterns(PRERENDER_MANIFEST_NAME),
+                )
+
+                # Collect all exported files
+                exported_relpaths = [
+                    p.relative_to(dest_dir).as_posix()
+                    for p in dest_dir.rglob("*") if p.is_file()
+                ]
+                exported_dest_paths = [dest_dir / r for r in exported_relpaths]
+
+                return sha, section_title, exported_relpaths, exported_dest_paths, nav_structure, True
+
+            # Normal source file export
+            src_relpaths = collect_exported_relpaths(project_dir, cfg)
 
             dest_dir = GRAFTS_BUILD_DIR / branch_key
             dest_dir.mkdir(parents=True, exist_ok=True)
@@ -202,7 +226,7 @@ def _export_from_worktree(
                 exported_dest_paths.append(dest)
                 exported_relpaths_for_main.append(dest_rel)
 
-            return sha, section_title, exported_relpaths_for_main, exported_dest_paths, nav_structure
+            return sha, section_title, exported_relpaths_for_main, exported_dest_paths, nav_structure, False
     except Exception as e:
         logger.error(f"[{branch}] Export from worktree failed: {e}", exc_info=True)
         raise
@@ -217,6 +241,7 @@ def _update_manifest_entry(
     nav_structure: Any = None,
     last_good: str | None = None,
     now: str | None = None,
+    prerendered: bool = False,
 ) -> None:
     """Update a manifest entry for a branch."""
     if now is None:
@@ -232,6 +257,8 @@ def _update_manifest_entry(
         entry["structure"] = nav_structure
     if last_good:
         entry["last_good"] = last_good
+    if prerendered:
+        entry["prerendered"] = True
 
     manifest[branch] = entry
 
@@ -281,19 +308,6 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
 
     branch_key = branch_to_key(graft_name)
 
-    if entry.get("archived"):
-        logger.info(f"[{branch}] Skipping build: graft is archived")
-        return BuildResult(
-            branch=branch,
-            branch_key=branch_key,
-            title=entry.get("title", graft_name),
-            status="ok",
-            head_sha=None,
-            last_good_sha=entry.get("last_good"),
-            built_at=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
-            exported_relpaths=entry.get("exported", []),
-            exported_dest_paths=[],
-        )
     # Prefer remote ref if available, otherwise fall back to local
     head_ref = f"origin/{branch}" if _branch_exists(f"origin/{branch}") else branch
     head_sha: str | None = None
@@ -316,7 +330,7 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
             last_good_short = last_good_sha[:7] if len(last_good_sha) >= 7 else last_good_sha
             logger.info(f"Using last_good commit {last_good_short} for branch {branch}")
             try:
-                sha, title, exported_relpaths, exported_dest_paths, nav_structure = _export_from_worktree(
+                sha, title, exported_relpaths, exported_dest_paths, nav_structure, prerendered = _export_from_worktree(
                     branch=branch,
                     branch_key=branch_key,
                     ref=last_good_sha,
@@ -329,7 +343,8 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
                 if update_manifest:
                     _update_manifest_entry(
                         manifest, branch, branch_key, title, exported_relpaths,
-                        nav_structure=nav_structure, last_good=last_good_sha, now=now
+                        nav_structure=nav_structure, last_good=last_good_sha, now=now,
+                        prerendered=prerendered,
                     )
                     save_manifest(manifest)
             except Exception as e:
@@ -349,7 +364,7 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
     else:
         try:
             head_sha = run_git(["rev-parse", head_ref])
-            sha, title, exported_relpaths, exported_dest_paths, nav_structure = _export_from_worktree(
+            sha, title, exported_relpaths, exported_dest_paths, nav_structure, prerendered = _export_from_worktree(
                 branch=branch,
                 branch_key=branch_key,
                 ref=head_ref,
@@ -359,13 +374,14 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
             if update_manifest:
                 _update_manifest_entry(
                     manifest, branch, branch_key, title, exported_relpaths,
-                    nav_structure=nav_structure, last_good=sha, now=now
+                    nav_structure=nav_structure, last_good=sha, now=now,
+                    prerendered=prerendered,
                 )
                 save_manifest(manifest)
         except Exception as e:
             logger.warning(f"[{branch}] HEAD build failed: {e}", exc_info=True)
             if last_good_sha and _branch_exists(last_good_sha):
-                sha, title, exported_relpaths, exported_dest_paths, nav_structure = _export_from_worktree(
+                sha, title, exported_relpaths, exported_dest_paths, nav_structure, prerendered = _export_from_worktree(
                     branch=branch,
                     branch_key=branch_key,
                     ref=last_good_sha,
@@ -378,7 +394,8 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
                 if update_manifest:
                     _update_manifest_entry(
                         manifest, branch, branch_key, title, exported_relpaths,
-                        nav_structure=nav_structure, last_good=last_good_sha, now=now
+                        nav_structure=nav_structure, last_good=last_good_sha, now=now,
+                        prerendered=prerendered,
                     )
                     save_manifest(manifest)
             else:
