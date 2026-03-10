@@ -128,6 +128,7 @@ quarto-graft = "quarto_graft.cli:main"
 
 ```bash
 quarto-graft                        # interactive mode
+quarto-graft status                 # show build status dashboard for all grafts
 quarto-graft trunk init             # initialize trunk from template
 quarto-graft trunk build            # build all grafts + site
 quarto-graft trunk lock             # update _quarto.yaml from grafts.lock
@@ -139,6 +140,16 @@ quarto-graft graft list             # list grafts with status
 quarto-graft graft destroy <name>   # remove a graft branch
 quarto-graft graft archive          # pre-render for faster builds
 quarto-graft graft restore          # remove pre-rendered content
+```
+
+### Build Flags (`trunk build`)
+
+```bash
+quarto-graft trunk build --jobs 4         # parallel builds (4 workers)
+quarto-graft trunk build --changed        # only rebuild grafts with new commits
+quarto-graft trunk build --only ch1       # build only specific grafts (repeatable)
+quarto-graft trunk build --skip ch2       # skip specific grafts (repeatable)
+quarto-graft trunk build -j 4 --changed   # combine: parallel + incremental
 ```
 
 ## Important Files
@@ -162,3 +173,4 @@ quarto-graft graft restore          # remove pre-rendered content
 - Git operations always use `pygit2` — never shell out to `git`.
 - Protected branches (`main`, `master`, `gh-pages`) cannot be used as graft names.
 - Template variables use Jinja2 `{{ double_brace }}` syntax with `StrictUndefined`.
+- **Keep `agents.md` up to date.** After any change that adds, removes, or renames commands, flags, modules, conventions, or architectural patterns, update this file to reflect the current state of the project.

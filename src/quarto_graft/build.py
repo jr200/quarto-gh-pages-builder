@@ -3,12 +3,16 @@ from __future__ import annotations
 import logging
 import shutil
 import subprocess
+import time
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 from uuid import uuid4
 
+from .archive import is_prerendered
 from .branches import (
     BranchSpec,
     ManifestEntry,
@@ -17,7 +21,6 @@ from .branches import (
     read_branches_list,
     save_manifest,
 )
-from .archive import is_prerendered
 from .constants import GRAFTS_BUILD_DIR, PRERENDER_DIR_NAME, PRERENDER_MANIFEST_NAME
 from .git_utils import (
     fetch_origin,
@@ -39,12 +42,16 @@ class BuildResult:
     branch: str
     branch_key: str
     title: str
-    status: Literal["ok", "fallback", "broken"]
+    status: Literal["ok", "fallback", "broken", "skipped"]
     head_sha: str | None
     last_good_sha: str | None
     built_at: str
     exported_relpaths: list[str]
     exported_dest_paths: list[Path]
+    nav_structure: Any = None
+    prerendered: bool = False
+    duration_secs: float = 0.0
+    error_message: str | None = None
 
 
 def _temp_worktree_name(branch_key: str, label: str) -> str:
@@ -294,8 +301,10 @@ def _branch_exists(ref: str) -> bool:
 
 def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bool = True) -> BuildResult:
     """
-    Build a single branch into docs/grafts__/<branch_key>/... with fallback logic.
+    Build a single branch into grafts__/<branch_key>/... with fallback logic.
     """
+    t0 = time.monotonic()
+
     if isinstance(spec, str):
         spec = {"name": spec, "branch": spec, "collar": ""}  # type: ignore[assignment]
 
@@ -304,7 +313,7 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
 
     manifest = load_manifest()
     entry = manifest.get(branch, {})
-    last_good_sha = entry.get("last_good")
+    prev_last_good = entry.get("last_good")
 
     branch_key = branch_to_key(graft_name)
 
@@ -317,7 +326,11 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
     title: str = graft_name  # default
     exported_relpaths: list[str] = []
     exported_dest_paths: list[Path] = []
-    status: Literal["ok", "fallback", "broken"]
+    status: Literal["ok", "fallback", "broken", "skipped"]
+    nav_structure: Any = None
+    prerendered: bool = False
+    error_message: str | None = None
+    result_last_good: str | None = prev_last_good
 
     if fetch:
         fetch_origin()
@@ -325,31 +338,35 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
     # Validate branch exists before attempting build
     if not _branch_exists(head_ref):
         logger.error(f"Branch '{head_ref}' does not exist after fetch")
+        error_message = f"Branch '{head_ref}' does not exist"
         # Check if we have a last_good to fall back to
-        if last_good_sha and _branch_exists(last_good_sha):
-            last_good_short = last_good_sha[:7] if len(last_good_sha) >= 7 else last_good_sha
+        if prev_last_good and _branch_exists(prev_last_good):
+            last_good_short = prev_last_good[:7] if len(prev_last_good) >= 7 else prev_last_good
             logger.info(f"Using last_good commit {last_good_short} for branch {branch}")
             try:
                 sha, title, exported_relpaths, exported_dest_paths, nav_structure, prerendered = _export_from_worktree(
                     branch=branch,
                     branch_key=branch_key,
-                    ref=last_good_sha,
+                    ref=prev_last_good,
                     worktree_name=_temp_worktree_name(branch_key, "lastgood"),
                     inject_warning=True,
                     warn_head_sha=None,
-                    warn_last_good_sha=last_good_sha,
+                    warn_last_good_sha=prev_last_good,
                 )
                 status = "fallback"
+                result_last_good = prev_last_good
                 if update_manifest:
                     _update_manifest_entry(
                         manifest, branch, branch_key, title, exported_relpaths,
-                        nav_structure=nav_structure, last_good=last_good_sha, now=now,
+                        nav_structure=nav_structure, last_good=prev_last_good, now=now,
                         prerendered=prerendered,
                     )
                     save_manifest(manifest)
             except Exception as e:
                 logger.error(f"[{branch}] Fallback build also failed: {e}", exc_info=True)
+                error_message = f"Branch missing; fallback also failed: {e}"
                 status = "broken"
+                result_last_good = None
                 exported_dest_paths, exported_relpaths = _create_broken_stub_and_update_manifest(
                     manifest, branch, branch_key, None, update_manifest, now
                 )
@@ -357,6 +374,7 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
         else:
             # No branch and no fallback
             status = "broken"
+            result_last_good = None
             exported_dest_paths, exported_relpaths = _create_broken_stub_and_update_manifest(
                 manifest, branch, branch_key, None, update_manifest, now
             )
@@ -371,6 +389,7 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
                 worktree_name=_temp_worktree_name(branch_key, "head"),
             )
             status = "ok"
+            result_last_good = sha
             if update_manifest:
                 _update_manifest_entry(
                     manifest, branch, branch_key, title, exported_relpaths,
@@ -380,34 +399,46 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
                 save_manifest(manifest)
         except Exception as e:
             logger.warning(f"[{branch}] HEAD build failed: {e}", exc_info=True)
-            if last_good_sha and _branch_exists(last_good_sha):
-                sha, title, exported_relpaths, exported_dest_paths, nav_structure, prerendered = _export_from_worktree(
-                    branch=branch,
-                    branch_key=branch_key,
-                    ref=last_good_sha,
-                    worktree_name=_temp_worktree_name(branch_key, "lastgood"),
-                    inject_warning=True,
-                    warn_head_sha=head_sha or last_good_sha,
-                    warn_last_good_sha=last_good_sha,
-                )
-                status = "fallback"
-                if update_manifest:
-                    _update_manifest_entry(
-                        manifest, branch, branch_key, title, exported_relpaths,
-                        nav_structure=nav_structure, last_good=last_good_sha, now=now,
-                        prerendered=prerendered,
+            error_message = str(e)
+            if prev_last_good and _branch_exists(prev_last_good):
+                try:
+                    sha, title, exported_relpaths, exported_dest_paths, nav_structure, prerendered = _export_from_worktree(
+                        branch=branch,
+                        branch_key=branch_key,
+                        ref=prev_last_good,
+                        worktree_name=_temp_worktree_name(branch_key, "lastgood"),
+                        inject_warning=True,
+                        warn_head_sha=head_sha or prev_last_good,
+                        warn_last_good_sha=prev_last_good,
                     )
-                    save_manifest(manifest)
+                    status = "fallback"
+                    result_last_good = prev_last_good
+                    if update_manifest:
+                        _update_manifest_entry(
+                            manifest, branch, branch_key, title, exported_relpaths,
+                            nav_structure=nav_structure, last_good=prev_last_good, now=now,
+                            prerendered=prerendered,
+                        )
+                        save_manifest(manifest)
+                except Exception as fallback_err:
+                    logger.error(f"[{branch}] Fallback build also failed: {fallback_err}", exc_info=True)
+                    error_message = f"{e} (fallback also failed: {fallback_err})"
+                    status = "broken"
+                    result_last_good = None
+                    exported_dest_paths, exported_relpaths = _create_broken_stub_and_update_manifest(
+                        manifest, branch, branch_key, head_sha, update_manifest, now
+                    )
+                    title = branch
             else:
                 # No fallback available – stub page
                 status = "broken"
+                result_last_good = None
                 exported_dest_paths, exported_relpaths = _create_broken_stub_and_update_manifest(
                     manifest, branch, branch_key, head_sha, update_manifest, now
                 )
                 title = branch
 
-    # Get last_good_sha from the already-loaded manifest (not reloading)
-    last_good_sha = manifest.get(branch, {}).get("last_good")
+    duration = time.monotonic() - t0
 
     return BuildResult(
         branch=branch,
@@ -415,17 +446,66 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
         title=title,
         status=status,
         head_sha=head_sha,
-        last_good_sha=last_good_sha,
+        last_good_sha=result_last_good,
         built_at=now,
         exported_relpaths=exported_relpaths,
         exported_dest_paths=exported_dest_paths,
+        nav_structure=nav_structure,
+        prerendered=prerendered,
+        duration_secs=duration,
+        error_message=error_message,
     )
+
+
+def resolve_head_sha(branch: str) -> str | None:
+    """Get the current HEAD SHA for a branch, preferring the remote ref."""
+    head_ref = f"origin/{branch}" if _branch_exists(f"origin/{branch}") else branch
+    if not _branch_exists(head_ref):
+        return None
+    try:
+        return run_git(["rev-parse", head_ref])
+    except Exception:
+        return None
+
+
+def _manifest_entry_from_result(result: BuildResult) -> ManifestEntry:
+    """Create a manifest entry from a build result."""
+    entry: ManifestEntry = {
+        "last_checked": result.built_at,
+        "title": result.title,
+        "branch_key": result.branch_key,
+        "exported": result.exported_relpaths,
+    }
+    if result.nav_structure is not None:
+        entry["structure"] = result.nav_structure
+    if result.last_good_sha:
+        entry["last_good"] = result.last_good_sha
+    if result.prerendered:
+        entry["prerendered"] = True
+    return entry
 
 
 def update_manifests(
     branches: list[BranchSpec | str] | None = None,
     update_manifest: bool = True,
+    jobs: int = 1,
+    only: set[str] | None = None,
+    skip: set[str] | None = None,
+    changed_only: bool = False,
+    on_complete: Callable[[BuildResult], None] | None = None,
 ) -> dict[str, BuildResult]:
+    """
+    Build grafts and update the manifest.
+
+    Args:
+        branches: List of branch specs to build (default: from grafts.yaml)
+        update_manifest: Whether to update grafts.lock
+        jobs: Number of parallel workers (1 = sequential)
+        only: If provided, only build grafts with these names
+        skip: If provided, skip grafts with these names
+        changed_only: If True, skip grafts where HEAD matches last_good
+        on_complete: Callback invoked after each graft completes (thread-safe)
+    """
     fetch_origin()
     if branches is None:
         branches = read_branches_list()
@@ -439,12 +519,104 @@ def update_manifests(
             manifest.pop(b, None)
         save_manifest(manifest)
 
-    results: dict[str, BuildResult] = {}
+    # Apply --only / --skip filters
+    filtered: list[BranchSpec | str] = []
     for spec in branches:
+        graft_name = spec if isinstance(spec, str) else spec["name"]
+        if only and graft_name not in only:
+            continue
+        if skip and graft_name in skip:
+            continue
+        filtered.append(spec)
+
+    # Detect unchanged grafts for --changed and build the rest
+    results: dict[str, BuildResult] = {}
+    to_build: list[BranchSpec | str] = []
+
+    for spec in filtered:
         branch_name = spec if isinstance(spec, str) else spec["branch"]
         graft_name = spec if isinstance(spec, str) else spec["name"]
-        logger.info(f"=== Building branch {branch_name} (graft '{graft_name}') ===")
-        res = build_branch(spec, update_manifest=update_manifest, fetch=False)
-        logger.info(f"  -> {res.status} ({len(res.exported_dest_paths)} files exported)")
-        results[branch_name] = res
+
+        if changed_only:
+            entry = manifest.get(branch_name, {})
+            last_good = entry.get("last_good")
+            if last_good:
+                current_sha = resolve_head_sha(branch_name)
+                if current_sha and current_sha == last_good:
+                    now = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+                    result = BuildResult(
+                        branch=branch_name,
+                        branch_key=branch_to_key(graft_name),
+                        title=entry.get("title", graft_name),
+                        status="skipped",
+                        head_sha=current_sha,
+                        last_good_sha=last_good,
+                        built_at=now,
+                        exported_relpaths=entry.get("exported", []),
+                        exported_dest_paths=[],
+                        nav_structure=entry.get("structure"),
+                        prerendered=entry.get("prerendered", False),
+                    )
+                    results[branch_name] = result
+                    if on_complete:
+                        on_complete(result)
+                    continue
+        to_build.append(spec)
+
+    # Build grafts — parallel or sequential
+    parallel = jobs > 1 and len(to_build) > 1
+
+    if parallel:
+        # In parallel mode, defer manifest updates to consolidation step
+        with ThreadPoolExecutor(max_workers=jobs) as pool:
+            futures = {}
+            for spec in to_build:
+                branch_name = spec if isinstance(spec, str) else spec["branch"]
+                graft_name = spec if isinstance(spec, str) else spec["name"]
+                future = pool.submit(build_branch, spec, update_manifest=False, fetch=False)
+                futures[future] = (branch_name, graft_name)
+
+            for future in as_completed(futures):
+                branch_name, graft_name = futures[future]
+                try:
+                    res = future.result()
+                except Exception as e:
+                    now = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+                    res = BuildResult(
+                        branch=branch_name,
+                        branch_key=branch_to_key(graft_name),
+                        title=graft_name,
+                        status="broken",
+                        head_sha=None,
+                        last_good_sha=None,
+                        built_at=now,
+                        exported_relpaths=[],
+                        exported_dest_paths=[],
+                        error_message=str(e),
+                    )
+                results[branch_name] = res
+                if on_complete:
+                    on_complete(res)
+
+        # Consolidate manifest from parallel results
+        if update_manifest:
+            manifest = load_manifest()
+            for b in removed:
+                manifest.pop(b, None)
+            for branch_name, res in results.items():
+                if res.status == "skipped":
+                    continue
+                manifest[branch_name] = _manifest_entry_from_result(res)
+            save_manifest(manifest)
+    else:
+        for spec in to_build:
+            branch_name = spec if isinstance(spec, str) else spec["branch"]
+            graft_name = spec if isinstance(spec, str) else spec["name"]
+            logger.info(f"=== Building branch {branch_name} (graft '{graft_name}') ===")
+            res = build_branch(spec, update_manifest=update_manifest, fetch=False)
+            logger.info(f"  -> {res.status} ({len(res.exported_dest_paths)} files exported)")
+            results[branch_name] = res
+            if on_complete:
+                on_complete(res)
+
     return results

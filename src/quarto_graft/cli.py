@@ -3,16 +3,18 @@ from __future__ import annotations
 import logging
 import os
 import subprocess
+from datetime import datetime
 from pathlib import Path
 
 import questionary
 import typer
 from rich.console import Console
+from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.table import Table
 
 from .archive import archive_graft, restore_graft
 from .branches import branch_to_key, destroy_graft, init_trunk, load_manifest, new_graft_branch, read_branches_list
-from .build import build_branch, update_manifests
+from .build import BuildResult, build_branch, resolve_head_sha, update_manifests
 from .constants import (
     GRAFT_TEMPLATES_DIR,
     GRAFTS_CONFIG_FILE,
@@ -22,7 +24,7 @@ from .constants import (
     TRUNK_ADDONS_DIR,
     TRUNK_TEMPLATES_DIR,
 )
-from .git_utils import has_commits, remove_worktree, run_git
+from .git_utils import fetch_origin, has_commits, remove_worktree, run_git
 from .quarto_config import apply_manifest
 from .template_sources import TemplateSource, load_template_sources_from_config
 
@@ -66,6 +68,8 @@ def require_trunk() -> None:
 
 
 MAIN_MENU_COMMANDS = [
+    questionary.Separator("=== General ==="),
+    {"name": "status - Show build status of all grafts", "value": "status"},
     questionary.Separator("=== Trunk Commands ==="),
     {"name": "trunk init - Initialize trunk (docs/) from a template", "value": "trunk init"},
     {"name": "trunk build - Build all graft branches and update trunk", "value": "trunk build"},
@@ -443,6 +447,48 @@ def trunk_init(
         _display_trunk_instructions(instructions, title=f"TRUNK OWNER INSTRUCTIONS - {addon_name.upper()} ADDON")
 
 
+def _print_build_summary(results: dict[str, BuildResult], branch_specs: list) -> None:
+    """Print a formatted build summary table."""
+    if not results:
+        return
+
+    table = Table()
+    table.add_column("Graft", style="cyan")
+    table.add_column("Status", justify="center")
+    table.add_column("Files", justify="right")
+    table.add_column("Time", justify="right")
+    table.add_column("Details", style="dim")
+
+    status_colors = {"ok": "green", "skipped": "blue", "fallback": "yellow", "broken": "red"}
+
+    for spec in branch_specs:
+        b = spec["branch"] if isinstance(spec, dict) else spec
+        r = results.get(b)
+        if not r:
+            continue
+
+        color = status_colors.get(r.status, "white")
+        status_str = f"[{color}]{r.status}[/{color}]"
+        files_str = str(len(r.exported_relpaths)) if r.status != "skipped" else "—"
+        time_str = f"{r.duration_secs:.1f}s" if r.duration_secs > 0 else "—"
+
+        details = ""
+        if r.status == "skipped":
+            details = "unchanged"
+        elif r.error_message:
+            msg = r.error_message
+            if len(msg) > 60:
+                msg = msg[:57] + "..."
+            details = msg
+        elif r.prerendered:
+            details = "pre-rendered"
+
+        name = spec["name"] if isinstance(spec, dict) else spec
+        table.add_row(name, status_str, files_str, time_str, details)
+
+    console.print(table)
+
+
 @trunk_app.command("build")
 def trunk_build(
     no_update_manifest: bool = typer.Option(
@@ -450,22 +496,88 @@ def trunk_build(
         "--no-update-manifest",
         help="Do not update grafts.lock",
     ),
+    jobs: int = typer.Option(
+        1,
+        "--jobs",
+        "-j",
+        help="Number of parallel build workers",
+    ),
+    only: list[str] | None = typer.Option(  # noqa: B008
+        None,
+        "--only",
+        help="Only build these grafts (by name, repeatable)",
+    ),
+    skip: list[str] | None = typer.Option(  # noqa: B008
+        None,
+        "--skip",
+        help="Skip these grafts (by name, repeatable)",
+    ),
+    changed: bool = typer.Option(
+        False,
+        "--changed",
+        help="Only rebuild grafts with new commits since last build",
+    ),
 ) -> None:
     """Build all graft branches and update trunk."""
-    results = update_manifests(update_manifest=not no_update_manifest)
-    branch_specs = read_branches_list()
+    require_trunk()
 
-    console.print("\n[bold]Manifest summary:[/bold]")
-    for spec in branch_specs:
-        b = spec["branch"]
-        r = results.get(b)
-        if not r:
-            continue
-        status_color = "green" if r.status == "success" else "yellow"
-        console.print(f"  [bold]{b}:[/bold] [{status_color}]{r.status}[/{status_color}] ({len(r.exported_dest_paths)} files)")
+    branch_specs = read_branches_list()
+    only_set = set(only) if only else None
+    skip_set = set(skip) if skip else None
+
+    # Count grafts that will be processed (after --only/--skip filtering)
+    filtered_count = sum(
+        1 for spec in branch_specs
+        if (not only_set or spec["name"] in only_set)
+        and (not skip_set or spec["name"] not in skip_set)
+    )
+
+    if filtered_count == 0:
+        console.print("[yellow]No grafts to build after filtering.[/yellow]")
+        return
+
+    # Display build configuration
+    build_info = []
+    if only:
+        build_info.append(f"only: {', '.join(only)}")
+    if skip:
+        build_info.append(f"skip: {', '.join(skip)}")
+    if changed:
+        build_info.append("changed only")
+    if jobs > 1:
+        build_info.append(f"{jobs} workers")
+
+    desc = f"Building {filtered_count} graft(s)"
+    if build_info:
+        desc += f" ({', '.join(build_info)})"
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        MofNCompleteColumn(),
+        TimeElapsedColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task(desc, total=filtered_count)
+
+        def on_complete(result: BuildResult) -> None:
+            progress.advance(task)
+
+        results = update_manifests(
+            update_manifest=not no_update_manifest,
+            jobs=jobs,
+            only=only_set,
+            skip=skip_set,
+            changed_only=changed,
+            on_complete=on_complete,
+        )
+
+    console.print()
+    _print_build_summary(results, branch_specs)
 
     apply_manifest()
-    console.print("\n[green]✓[/green] Trunk build complete")
+    console.print("[green]✓[/green] Trunk build complete")
 
 
 @trunk_app.command("lock")
@@ -634,14 +746,20 @@ def graft_build(
             console.print("[red]Error:[/red] Branch name required")
             raise typer.Exit(code=1)
 
-    res = build_branch(branch, update_manifest=not no_update_manifest)
+    with console.status(f"Building {branch}..."):
+        res = build_branch(branch, update_manifest=not no_update_manifest)
 
-    status_color = "green" if res.status == "success" else "yellow"
-    console.print(f"[bold]{res.branch}[/bold]")
-    console.print(f"  Status: [{status_color}]{res.status}[/{status_color}]")
-    console.print(f"  Files exported: {len(res.exported_dest_paths)}")
-    console.print(f"  HEAD SHA: {res.head_sha}")
-    console.print(f"  Last good SHA: {res.last_good_sha}")
+    status_colors = {"ok": "green", "skipped": "blue", "fallback": "yellow", "broken": "red"}
+    color = status_colors.get(res.status, "white")
+
+    console.print(f"\n[bold]{res.branch}[/bold]")
+    console.print(f"  Status:     [{color}]{res.status}[/{color}]")
+    console.print(f"  Files:      {len(res.exported_dest_paths)}")
+    console.print(f"  Duration:   {res.duration_secs:.1f}s")
+    console.print(f"  HEAD SHA:   {res.head_sha or '—'}")
+    console.print(f"  Built SHA:  {res.last_good_sha or '—'}")
+    if res.error_message:
+        console.print(f"  [red]Error:[/red]    {res.error_message}")
 
 
 @graft_app.command("list")
@@ -826,6 +944,103 @@ def graft_restore_cmd(
 
 
 # ============================================================================
+# STATUS COMMAND
+# ============================================================================
+
+@app.command("status")
+def status_cmd(
+    no_fetch: bool = typer.Option(
+        False,
+        "--no-fetch",
+        help="Skip fetching origin before checking status",
+    ),
+) -> None:
+    """Show build status of all grafts."""
+    require_trunk()
+
+    branch_specs = read_branches_list()
+    manifest = load_manifest()
+
+    if not branch_specs:
+        console.print("[dim]No grafts configured in grafts.yaml.[/dim]")
+        return
+
+    if not no_fetch:
+        with console.status("Fetching origin..."):
+            fetch_origin()
+
+    table = Table(title="Graft Status")
+    table.add_column("Graft", style="cyan")
+    table.add_column("Collar")
+    table.add_column("Status", justify="center")
+    table.add_column("Last Built")
+    table.add_column("Files", justify="right")
+    table.add_column("HEAD", justify="center")
+    table.add_column("Built", justify="center")
+
+    for spec in branch_specs:
+        name = spec["name"]
+        branch = spec["branch"]
+        collar = spec["collar"]
+        entry = manifest.get(branch, {})
+
+        last_good = entry.get("last_good")
+        last_checked = entry.get("last_checked", "")
+        exported = entry.get("exported", [])
+        is_prerendered = entry.get("prerendered", False)
+
+        head_sha = resolve_head_sha(branch)
+
+        # Determine status
+        if not entry:
+            status = "never built"
+            color = "dim"
+        elif not last_good:
+            status = "broken"
+            color = "red"
+        elif head_sha and head_sha != last_good:
+            status = "stale"
+            color = "yellow"
+        elif head_sha is None:
+            status = "missing"
+            color = "red"
+        else:
+            status = "current"
+            color = "green"
+
+        if is_prerendered and status in ("current", "stale"):
+            status += " (pre-rendered)"
+
+        # Format last-built timestamp
+        time_str = "—"
+        if last_checked:
+            try:
+                dt = datetime.fromisoformat(last_checked.replace("Z", "+00:00"))
+                time_str = dt.strftime("%Y-%m-%d %H:%M")
+            except Exception:
+                time_str = last_checked[:16]
+
+        head_short = head_sha[:7] if head_sha else "—"
+        built_short = last_good[:7] if last_good else "—"
+
+        # Highlight SHA mismatch
+        if head_sha and last_good and head_sha != last_good:
+            head_short = f"[yellow]{head_short}[/yellow]"
+
+        table.add_row(
+            name,
+            collar,
+            f"[{color}]{status}[/{color}]",
+            time_str,
+            str(len(exported)),
+            head_short,
+            built_short,
+        )
+
+    console.print(table)
+
+
+# ============================================================================
 # MAIN ENTRY POINT
 # ============================================================================
 
@@ -855,6 +1070,10 @@ def main_callback(
         raise typer.Exit(code=0)
 
     # Parse and execute the selected command
+    if selected_command == "status":
+        status_cmd(no_fetch=False)
+        return
+
     parts = selected_command.split()
     if len(parts) == 2:
         group, command = parts
@@ -863,7 +1082,7 @@ def main_callback(
         if group == "trunk" and command == "init":
             trunk_init(name=None, template=None, overwrite=None, with_addons=None)
         elif group == "trunk" and command == "build":
-            trunk_build(no_update_manifest=False)
+            trunk_build(no_update_manifest=False, jobs=1, only=None, skip=None, changed=False)
         elif group == "trunk" and command == "lock":
             trunk_lock()
         elif group == "graft" and command == "create":
