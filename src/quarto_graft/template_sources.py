@@ -162,10 +162,11 @@ class TemplateSource:
         return cache_subdir
 
     def _extract_zip(self, content: bytes, dest: Path) -> None:
-        """Extract a zip archive to destination."""
+        """Extract a zip archive to destination, rejecting unsafe members."""
         import io
 
         dest.mkdir(parents=True, exist_ok=True)
+        resolved_dest = dest.resolve()
 
         with zipfile.ZipFile(io.BytesIO(content)) as zf:
             # Find the root directory in the archive
@@ -175,21 +176,34 @@ class TemplateSource:
 
             # Check if all files are in a single root directory
             root_dirs = {Path(m).parts[0] for m in members if m and not m.startswith(".")}
-            if len(root_dirs) == 1:
-                # Strip the root directory
-                root_dir = root_dirs.pop()
-                for member in members:
-                    if member.startswith(root_dir + "/"):
-                        target_path = dest / Path(member).relative_to(root_dir)
-                        if member.endswith("/"):
-                            target_path.mkdir(parents=True, exist_ok=True)
-                        else:
-                            target_path.parent.mkdir(parents=True, exist_ok=True)
-                            with zf.open(member) as source, open(target_path, "wb") as target:
-                                shutil.copyfileobj(source, target)
-            else:
-                # Extract directly
-                zf.extractall(dest)
+            strip_root = root_dirs.pop() if len(root_dirs) == 1 else ""
+
+            for member in members:
+                if not member or member.endswith("/"):
+                    continue
+
+                # Strip single root directory if applicable
+                if strip_root:
+                    if not member.startswith(strip_root + "/"):
+                        continue
+                    rel = str(Path(member).relative_to(strip_root))
+                else:
+                    rel = member
+
+                # Reject absolute paths and path traversal
+                if rel.startswith("/") or ".." in Path(rel).parts:
+                    logger.warning(f"[template-source] Skipping unsafe zip member: {member}")
+                    continue
+
+                # Final check: resolved target must be inside dest
+                target_path = (resolved_dest / rel).resolve()
+                if not target_path.is_relative_to(resolved_dest):
+                    logger.warning(f"[template-source] Skipping zip member escaping destination: {member}")
+                    continue
+
+                target_path.parent.mkdir(parents=True, exist_ok=True)
+                with zf.open(member) as source, open(target_path, "wb") as target:
+                    shutil.copyfileobj(source, target)
 
     def _extract_tar(self, content: bytes, dest: Path) -> None:
         """Extract a tar.gz archive to destination, rejecting unsafe members."""

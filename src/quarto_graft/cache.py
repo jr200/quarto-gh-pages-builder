@@ -47,20 +47,19 @@ def content_hash_bytes(data: bytes) -> str:
 # Low-level git helpers for the _cache branch
 # ---------------------------------------------------------------------------
 
-_repo_lock = threading.Lock()
-_repo_instance: pygit2.Repository | None = None
+_thread_local = threading.local()
 
 
 def _get_repo() -> pygit2.Repository:
-    global _repo_instance
-    if _repo_instance is None:
-        with _repo_lock:
-            if _repo_instance is None:
-                git_dir = pygit2.discover_repository(str(constants.ROOT))
-                if git_dir is None:
-                    raise RuntimeError(f"No git repository found at {constants.ROOT}")
-                _repo_instance = pygit2.Repository(git_dir)
-    return _repo_instance
+    """Return a per-thread cached pygit2.Repository for the project root."""
+    repo = getattr(_thread_local, "repo", None)
+    if repo is None:
+        git_dir = pygit2.discover_repository(str(constants.ROOT))
+        if git_dir is None:
+            raise RuntimeError(f"No git repository found at {constants.ROOT}")
+        repo = pygit2.Repository(git_dir)
+        _thread_local.repo = repo
+    return repo
 
 
 def cache_branch_exists() -> bool:

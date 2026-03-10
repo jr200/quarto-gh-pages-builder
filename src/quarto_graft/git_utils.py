@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 import subprocess
+import threading
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -14,14 +15,22 @@ from .constants import TRUNK_BRANCHES
 
 logger = logging.getLogger(__name__)
 
+_thread_local = threading.local()
+
 
 def _get_repo(cwd: Path | None = None) -> pygit2.Repository:
-    """Open the git repository at cwd (or ROOT)."""
+    """Open the git repository at cwd (or ROOT), caching per thread."""
     base = cwd or constants.ROOT
-    git_dir = pygit2.discover_repository(str(base))
-    if git_dir is None:
-        raise RuntimeError(f"No git repository found at {base}")
-    return pygit2.Repository(git_dir)
+    key = str(base)
+    repos = getattr(_thread_local, "repos", None)
+    if repos is None:
+        _thread_local.repos = repos = {}
+    if key not in repos:
+        git_dir = pygit2.discover_repository(key)
+        if git_dir is None:
+            raise RuntimeError(f"No git repository found at {base}")
+        repos[key] = pygit2.Repository(git_dir)
+    return repos[key]
 
 
 def _list_worktree_objects(repo: pygit2.Repository):
