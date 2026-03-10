@@ -1235,13 +1235,13 @@ def main_callback(
 
         # Route to appropriate command handler
         if group == "trunk" and command == "init":
-            trunk_init(name=None, template=None, overwrite=None, with_addons=None)
+            trunk_init()
         elif group == "trunk" and command == "build":
-            trunk_build(no_update_manifest=False, jobs=1, only=None, skip=None, changed=False, no_cache=False)
+            trunk_build()
         elif group == "trunk" and command == "lock":
             trunk_lock()
         elif group == "graft" and command == "create":
-            graft_create(name=None, template=None, collar=None, branch_name=None, push=True)
+            graft_create()
         elif group == "graft" and command == "build":
             # Prompt for branch - use select if branches exist, otherwise text input
             found_branches = _discover_grafts()
@@ -1259,7 +1259,7 @@ def main_callback(
             if not branch:
                 console.print("[red]Error:[/red] Branch name required")
                 raise typer.Exit(code=1)
-            graft_build(branch=branch, no_update_manifest=False)
+            graft_build(branch=branch)
         elif group == "graft" and command == "list":
             graft_list()
         elif group == "graft" and command == "destroy":
@@ -1280,18 +1280,18 @@ def main_callback(
             if not branch:
                 console.print("[red]Error:[/red] Branch name required")
                 raise typer.Exit(code=1)
-            graft_destroy(branch=branch, keep_remote=False)
+            graft_destroy(branch=branch)
         elif group == "graft" and command == "archive":
-            graft_archive_cmd(project_dir=None)
+            graft_archive_cmd()
         elif group == "graft" and command == "restore":
-            graft_restore_cmd(project_dir=None)
+            graft_restore_cmd()
     elif len(parts) == 3:
         group, sub, command = parts
         if group == "trunk" and sub == "cache":
             if command == "update":
                 trunk_cache_update()
             elif command == "clear":
-                trunk_cache_clear(graft=None, no_remote=False)
+                trunk_cache_clear()
             elif command == "status":
                 trunk_cache_status()
 
