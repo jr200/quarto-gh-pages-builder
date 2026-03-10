@@ -13,12 +13,14 @@ from urllib.request import urlopen
 
 import pygit2
 
-from .constants import ROOT
+from . import constants
 
 logger = logging.getLogger(__name__)
 
-# Cache directory for remote templates
-TEMPLATE_CACHE_DIR = ROOT / ".quarto-graft" / ".template-cache"
+
+def _template_cache_dir() -> Path:
+    """Return the cache directory for remote templates (lazy, respects ROOT override)."""
+    return constants.ROOT / ".quarto-graft" / ".template-cache"
 
 
 class TemplateSource:
@@ -81,7 +83,7 @@ class TemplateSource:
             return path
 
         # If relative, resolve relative to project root
-        resolved = (ROOT / path).resolve()
+        resolved = (constants.ROOT / path).resolve()
         logger.debug(f"[template-source] Resolved relative path '{path_str}' to: {resolved}")
         return resolved
 
@@ -99,7 +101,7 @@ class TemplateSource:
         - Size validation before full download
         """
         # Create cache directory
-        TEMPLATE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        _template_cache_dir().mkdir(parents=True, exist_ok=True)
 
         # Generate cache key from URL
         url_hash = hashlib.sha256(url.encode()).hexdigest()[:16]
@@ -107,7 +109,7 @@ class TemplateSource:
         filename = Path(parsed.path).name or "templates"
 
         # Determine cache subdirectory
-        cache_subdir = TEMPLATE_CACHE_DIR / f"{url_hash}-{filename}"
+        cache_subdir = _template_cache_dir() / f"{url_hash}-{filename}"
 
         # Check if already cached
         if cache_subdir.exists() and any(cache_subdir.iterdir()):
@@ -339,11 +341,11 @@ class TemplateSource:
 
         Cloned repos are cached under .quarto-graft/.template-cache/.
         """
-        TEMPLATE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        _template_cache_dir().mkdir(parents=True, exist_ok=True)
 
         ref_display = ref or "default"
         cache_key = hashlib.sha256(f"{repo}@{ref_display}".encode()).hexdigest()[:16]
-        cache_dir = TEMPLATE_CACHE_DIR / f"github-{cache_key}-{repo.replace('/', '-')}"
+        cache_dir = _template_cache_dir() / f"github-{cache_key}-{repo.replace('/', '-')}"
 
         if cache_dir.exists() and any(cache_dir.iterdir()):
             logger.info(f"[template-source] Using cached GitHub repo {repo}@{ref_display}")

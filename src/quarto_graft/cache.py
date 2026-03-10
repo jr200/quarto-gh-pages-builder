@@ -19,7 +19,8 @@ from typing import Any
 
 import pygit2
 
-from .constants import CACHE_BRANCH, ROOT
+from . import constants
+from .constants import CACHE_BRANCH
 
 logger = logging.getLogger(__name__)
 
@@ -55,9 +56,9 @@ def _get_repo() -> pygit2.Repository:
     if _repo_instance is None:
         with _repo_lock:
             if _repo_instance is None:
-                git_dir = pygit2.discover_repository(str(ROOT))
+                git_dir = pygit2.discover_repository(str(constants.ROOT))
                 if git_dir is None:
-                    raise RuntimeError(f"No git repository found at {ROOT}")
+                    raise RuntimeError(f"No git repository found at {constants.ROOT}")
                 _repo_instance = pygit2.Repository(git_dir)
     return _repo_instance
 

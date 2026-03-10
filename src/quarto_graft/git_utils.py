@@ -9,14 +9,15 @@ from pathlib import Path
 
 import pygit2
 
-from .constants import ROOT, TRUNK_BRANCHES, WORKTREES_CACHE
+from . import constants
+from .constants import TRUNK_BRANCHES
 
 logger = logging.getLogger(__name__)
 
 
 def _get_repo(cwd: Path | None = None) -> pygit2.Repository:
     """Open the git repository at cwd (or ROOT)."""
-    base = cwd or ROOT
+    base = cwd or constants.ROOT
     git_dir = pygit2.discover_repository(str(base))
     if git_dir is None:
         raise RuntimeError(f"No git repository found at {base}")
@@ -258,8 +259,8 @@ def create_worktree(ref: str, name: str) -> Path:
     """
     Create (or reuse) a git worktree for the given reference.
     """
-    WORKTREES_CACHE.mkdir(exist_ok=True)
-    wt_dir = WORKTREES_CACHE / name
+    constants.WORKTREES_CACHE.mkdir(exist_ok=True)
+    wt_dir = constants.WORKTREES_CACHE / name
 
     # Always recreate to ensure clean state
     if wt_dir.exists():
@@ -316,7 +317,7 @@ def remove_worktree(worktree_name: str | Path, force: bool = False) -> None:
     """
     wt_dir = Path(worktree_name)
     if not wt_dir.is_absolute():
-        wt_dir = WORKTREES_CACHE / wt_dir
+        wt_dir = constants.WORKTREES_CACHE / wt_dir
 
     repo = _get_repo()
     name = wt_dir.name
@@ -330,7 +331,7 @@ def remove_worktree(worktree_name: str | Path, force: bool = False) -> None:
     try:
         # Attempt removal via git CLI first (cleans admin dir)
         try:
-            run_git(["worktree", "remove", "-f", wt_dir.as_posix()], cwd=ROOT)
+            run_git(["worktree", "remove", "-f", wt_dir.as_posix()], cwd=constants.ROOT)
         except Exception:
             # Fallback to pygit2 prune if CLI removal failed
             try:
@@ -387,7 +388,7 @@ def ensure_worktree(branch: str) -> Path:
     if branch in TRUNK_BRANCHES:
         raise ValueError(f"{branch} is not a graft git-branch")
 
-    wt_dir = WORKTREES_CACHE / branch
+    wt_dir = constants.WORKTREES_CACHE / branch
 
     if wt_dir.exists():
         logger.info(f"[get-worktree] Worktree directory already exists: {wt_dir}")
@@ -406,7 +407,7 @@ def ensure_worktree(branch: str) -> Path:
     else:
         raise RuntimeError(f"Branch '{branch}' does not exist locally or on origin")
 
-    WORKTREES_CACHE.mkdir(exist_ok=True)
+    constants.WORKTREES_CACHE.mkdir(exist_ok=True)
     create_worktree(ref, branch)
 
     logger.info(f"[get-worktree] Worktree created: {wt_dir}")
@@ -427,12 +428,12 @@ def cleanup_orphan_worktrees() -> list[Path]:
         List of successfully removed worktree paths.
         Failed removals are logged but don't stop the cleanup process.
     """
-    WORKTREES_CACHE.mkdir(exist_ok=True)
+    constants.WORKTREES_CACHE.mkdir(exist_ok=True)
     registered = set(list_worktree_paths())
     removed: list[Path] = []
     failures: list[tuple[Path, Exception]] = []
 
-    for path in WORKTREES_CACHE.iterdir():
+    for path in constants.WORKTREES_CACHE.iterdir():
         if not path.is_dir():
             continue
         if path.resolve() in registered:

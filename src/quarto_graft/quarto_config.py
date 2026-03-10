@@ -5,11 +5,11 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from . import constants
 from .branches import BranchSpec, branch_to_key, load_manifest, read_branches_list, save_manifest
 from .constants import (
     GRAFT_COLLAR_MARKER,
     QUARTO_CONFIG_YAML,
-    QUARTO_PROJECT_YAML,
     YAML_AUTOGEN_MARKER,
 )
 from .file_utils import atomic_write_yaml
@@ -44,7 +44,7 @@ def list_available_collars(config_path: Path | None = None) -> list[str]:
     Searches for _GRAFT_COLLAR markers in the sidebar/chapters structure.
     Returns a list of collar names (e.g., ['main', 'notes', 'bugs']).
     """
-    config_path = config_path or QUARTO_PROJECT_YAML
+    config_path = config_path or constants.QUARTO_PROJECT_YAML
     if not config_path.exists():
         raise RuntimeError(f"No {QUARTO_CONFIG_YAML} found at {config_path}")
 
@@ -338,7 +338,7 @@ def apply_manifest() -> None:
     Update _quarto.yaml to match docs/grafts__ content, using
     grafts.lock and grafts.yaml.
     """
-    quarto_file = QUARTO_PROJECT_YAML
+    quarto_file = constants.QUARTO_PROJECT_YAML
     # text = quarto_file.read_text(encoding="utf-8")
 
     with open(quarto_file) as fp:

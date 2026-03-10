@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Literal
 from uuid import uuid4
 
+from . import constants
 from .archive import is_prerendered
 from .branches import (
     BranchSpec,
@@ -27,7 +28,7 @@ from .cache import (
     load_cache_manifest,
     restore_cached_files,
 )
-from .constants import GRAFTS_BUILD_DIR, PRERENDER_DIR_NAME, PRERENDER_MANIFEST_NAME
+from .constants import PRERENDER_DIR_NAME, PRERENDER_MANIFEST_NAME
 from .git_utils import (
     fetch_origin,
     managed_worktree,
@@ -189,7 +190,7 @@ def _export_from_worktree(
             prerender_dir = wt_dir / PRERENDER_DIR_NAME
             if is_prerendered(wt_dir):
                 logger.info(f"[{branch}] Using pre-rendered content from {PRERENDER_DIR_NAME}/")
-                dest_dir = GRAFTS_BUILD_DIR / branch_key
+                dest_dir = constants.GRAFTS_BUILD_DIR / branch_key
                 if dest_dir.exists():
                     shutil.rmtree(dest_dir)
                 # Copy pre-rendered content (exclude the manifest JSON)
@@ -210,7 +211,7 @@ def _export_from_worktree(
             # Normal source file export
             src_relpaths = collect_exported_relpaths(project_dir, cfg)
 
-            dest_dir = GRAFTS_BUILD_DIR / branch_key
+            dest_dir = constants.GRAFTS_BUILD_DIR / branch_key
             dest_dir.mkdir(parents=True, exist_ok=True)
 
             exported_dest_paths: list[Path] = []
@@ -328,7 +329,7 @@ def _create_broken_stub_and_update_manifest(
     now: str,
 ) -> tuple[list[Path], list[str]]:
     """Create a broken stub and optionally update the manifest."""
-    dest_dir = GRAFTS_BUILD_DIR / branch_key
+    dest_dir = constants.GRAFTS_BUILD_DIR / branch_key
     exported_dest_paths = create_broken_stub(branch_key, branch, head_sha, dest_dir)
     exported_relpaths = [p.relative_to(dest_dir).as_posix() for p in exported_dest_paths]
 

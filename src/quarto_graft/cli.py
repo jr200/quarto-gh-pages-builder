@@ -13,16 +13,14 @@ from rich.console import Console
 from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.table import Table
 
+from . import constants
 from .archive import archive_graft, restore_graft
 from .branches import branch_to_key, destroy_graft, init_trunk, load_manifest, new_graft_branch, read_branches_list
 from .build import BuildResult, build_branch, resolve_head_sha, update_manifests
 from .cache import cache_status, clear_cache, fix_navigation, update_cache_after_render
 from .constants import (
-    BUILD_STATE_FILE,
     GRAFT_TEMPLATES_DIR,
-    GRAFTS_CONFIG_FILE,
     PROTECTED_BRANCHES,
-    ROOT,
     TEMPLATE_SOURCE_BUILTIN,
     TRUNK_ADDONS_DIR,
     TRUNK_TEMPLATES_DIR,
@@ -62,7 +60,7 @@ def require_trunk() -> None:
     Check if the current directory is a quarto-graft trunk.
     Raises typer.Exit if grafts.yaml is not found.
     """
-    if not GRAFTS_CONFIG_FILE.exists():
+    if not constants.GRAFTS_CONFIG_FILE.exists():
         console.print("[red]Error:[/red] grafts.yaml not found in current directory.")
         console.print("[yellow]Graft commands can only be run from within a quarto-graft trunk.[/yellow]")
         console.print(f"[dim]Current directory: {Path.cwd()}[/dim]")
@@ -319,7 +317,7 @@ def _git_local_branches() -> set[str]:
         RuntimeError: If git operations fail unexpectedly
     """
     try:
-        out = run_git(["for-each-ref", "refs/heads", "--format", "%(refname:short)"], cwd=ROOT)
+        out = run_git(["for-each-ref", "refs/heads", "--format", "%(refname:short)"], cwd=constants.ROOT)
         return {line.strip() for line in out.splitlines() if line.strip()}
     except subprocess.CalledProcessError as e:
         # Not in a git repo or no branches yet
@@ -395,8 +393,7 @@ def trunk_init(
     template_name, template_path = trunk_validator.validate_template(template)
 
     # Check for conflicts in the current directory (files that template will write)
-    from .constants import MAIN_DOCS
-    top_level_targets = [MAIN_DOCS / entry.name for entry in template_path.iterdir()]
+    top_level_targets = [constants.MAIN_DOCS / entry.name for entry in template_path.iterdir()]
     conflicts = [p for p in top_level_targets if p.exists()]
 
     if conflicts:
@@ -514,18 +511,18 @@ def _write_build_state(
                 "page_hashes": res.page_hashes,
                 "cached_pages": res.cached_pages or [],
             }
-    BUILD_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    BUILD_STATE_FILE.write_text(
+    constants.BUILD_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    constants.BUILD_STATE_FILE.write_text(
         json.dumps(state, indent=2, sort_keys=True), encoding="utf-8",
     )
 
 
 def _load_build_state() -> dict[str, dict]:
     """Load the transient build state written by ``trunk build``."""
-    if not BUILD_STATE_FILE.exists():
+    if not constants.BUILD_STATE_FILE.exists():
         return {}
     try:
-        return json.loads(BUILD_STATE_FILE.read_text(encoding="utf-8"))
+        return json.loads(constants.BUILD_STATE_FILE.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return {}
 
@@ -879,7 +876,7 @@ def graft_create(
         branch_key = branch_to_key(name)
         remove_worktree(branch_key, force=True)
         # Prune any stale worktree references from git
-        run_git(["worktree", "prune"], cwd=ROOT)
+        run_git(["worktree", "prune"], cwd=constants.ROOT)
         logger.debug(f"Cleaned up temporary worktree for {branch_key}")
     except Exception as e:
         logger.debug(f"Failed to clean up worktree: {e}")
