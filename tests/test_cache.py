@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-from pathlib import Path
 from unittest.mock import patch
 
 import pygit2
@@ -29,7 +28,6 @@ from quarto_graft.cache import (
     restore_cached_files,
     update_cache_after_render,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -686,18 +684,18 @@ class TestCacheStatus:
 
 
 class TestUpdateManifestEntry:
-    def test_includes_cache_fields(self):
+    def test_includes_cached_pages(self):
         from quarto_graft.build import _update_manifest_entry
 
         manifest = {}
         _update_manifest_entry(
             manifest, "branch1", "branch1", "Title",
             ["page.qmd"], now="2026-01-01T00:00:00Z",
-            page_hashes={"page.qmd": "abc123"},
             cached_pages=["page.qmd"],
         )
         entry = manifest["branch1"]
-        assert entry["page_hashes"] == {"page.qmd": "abc123"}
+        # page_hashes is NOT stored in manifest (lives in build-state.json)
+        assert "page_hashes" not in entry
         assert entry["cached_pages"] == ["page.qmd"]
 
     def test_omits_cache_fields_when_none(self):
@@ -712,24 +710,21 @@ class TestUpdateManifestEntry:
         assert "page_hashes" not in entry
         assert "cached_pages" not in entry
 
-    def test_omits_cache_fields_when_empty(self):
+    def test_omits_cached_pages_when_empty(self):
         from quarto_graft.build import _update_manifest_entry
 
         manifest = {}
         _update_manifest_entry(
             manifest, "branch1", "branch1", "Title",
             ["page.qmd"], now="2026-01-01T00:00:00Z",
-            page_hashes={},
             cached_pages=[],
         )
         entry = manifest["branch1"]
-        # Empty dict/list are falsy → should be omitted
-        assert "page_hashes" not in entry
         assert "cached_pages" not in entry
 
 
 class TestManifestEntryFromResult:
-    def test_includes_cache_fields(self):
+    def test_includes_cached_pages(self):
         from quarto_graft.build import BuildResult, _manifest_entry_from_result
 
         result = BuildResult(
@@ -739,7 +734,8 @@ class TestManifestEntryFromResult:
             page_hashes={"p.qmd": "h1"}, cached_pages=["p.qmd"],
         )
         entry = _manifest_entry_from_result(result)
-        assert entry["page_hashes"] == {"p.qmd": "h1"}
+        # page_hashes stays on BuildResult but is NOT persisted to manifest
+        assert "page_hashes" not in entry
         assert entry["cached_pages"] == ["p.qmd"]
 
     def test_omits_cache_fields_when_none(self):

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
 import subprocess
@@ -17,6 +18,7 @@ from .branches import branch_to_key, destroy_graft, init_trunk, load_manifest, n
 from .build import BuildResult, build_branch, resolve_head_sha, update_manifests
 from .cache import cache_status, clear_cache, fix_navigation, update_cache_after_render
 from .constants import (
+    BUILD_STATE_FILE,
     GRAFT_TEMPLATES_DIR,
     GRAFTS_CONFIG_FILE,
     PROTECTED_BRANCHES,
@@ -496,6 +498,38 @@ def _print_build_summary(results: dict[str, BuildResult], branch_specs: list) ->
     console.print(table)
 
 
+def _write_build_state(
+    results: dict[str, BuildResult],
+    branch_specs: list,
+) -> None:
+    """Persist per-page hashes to a transient file for ``trunk cache update``.
+
+    Only grafts with page_hashes (non-archived, non-broken) are included.
+    The file lives under .grafts-cache/ and is overwritten each build.
+    """
+    state: dict[str, dict] = {}
+    for _branch_name, res in results.items():
+        if res.page_hashes:
+            state[res.branch_key] = {
+                "page_hashes": res.page_hashes,
+                "cached_pages": res.cached_pages or [],
+            }
+    BUILD_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    BUILD_STATE_FILE.write_text(
+        json.dumps(state, indent=2, sort_keys=True), encoding="utf-8",
+    )
+
+
+def _load_build_state() -> dict[str, dict]:
+    """Load the transient build state written by ``trunk build``."""
+    if not BUILD_STATE_FILE.exists():
+        return {}
+    try:
+        return json.loads(BUILD_STATE_FILE.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
 @trunk_app.command("build")
 def trunk_build(
     no_update_manifest: bool = typer.Option(
@@ -589,6 +623,10 @@ def trunk_build(
     console.print()
     _print_build_summary(results, branch_specs)
 
+    # Persist per-page hashes to a transient build state file for `trunk cache update`.
+    # This keeps the large page_hashes out of grafts.lock.
+    _write_build_state(results, branch_specs)
+
     apply_manifest()
     console.print("[green]✓[/green] Trunk build complete")
 
@@ -630,36 +668,24 @@ def trunk_cache_update(
         console.print("[dim]Run 'quarto render' first, then 'quarto-graft trunk cache update'.[/dim]")
         raise typer.Exit(code=1)
 
+    # Read per-page hashes from the transient build state file (written by trunk build).
+    graft_build_states = _load_build_state()
+    if not graft_build_states:
+        console.print("[yellow]No build state found.[/yellow]")
+        console.print("[dim]Run 'quarto-graft trunk build' first.[/dim]")
+        raise typer.Exit(code=1)
+
+    # Identify grafts with cached pages (from manifest) for nav post-processing.
     manifest = load_manifest()
     branch_specs = read_branches_list()
-
-    # Collect build state from manifest for each graft
-    graft_build_states: dict[str, dict] = {}
     cached_graft_keys: list[str] = []
-
     for spec in branch_specs:
         entry = manifest.get(spec["branch"])
         if not entry:
             continue
-        if entry.get("prerendered"):
-            continue  # Archived grafts don't participate in caching
-
         bk = entry.get("branch_key") or branch_to_key(spec["name"])
-        page_hashes = entry.get("page_hashes", {})
-        cached_pages = entry.get("cached_pages", [])
-
-        if page_hashes:
-            graft_build_states[bk] = {
-                "page_hashes": page_hashes,
-                "cached_pages": cached_pages,
-            }
-        if cached_pages:
+        if entry.get("cached_pages"):
             cached_graft_keys.append(bk)
-
-    if not graft_build_states:
-        console.print("[yellow]No graft build data found in manifest.[/yellow]")
-        console.print("[dim]Run 'quarto-graft trunk build' first.[/dim]")
-        raise typer.Exit(code=1)
 
     # Capture newly rendered pages
     with console.status("Updating render cache..."):

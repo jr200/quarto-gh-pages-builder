@@ -15,6 +15,7 @@ GRAFT_TEMPLATES_DIR = PACKAGE_ROOT / "graft-templates"
 GRAFTS_MANIFEST_FILE = ROOT / "grafts.lock"
 GRAFTS_CONFIG_FILE = ROOT / "grafts.yaml"
 WORKTREES_CACHE = ROOT / ".grafts-cache"  # Internal cache for build process
+BUILD_STATE_FILE = WORKTREES_CACHE / "build-state.json"  # Transient per-page hashes for cache update
 QUARTO_PROJECT_YAML = ROOT / "_quarto.yaml"
 # The trunk is rendered into the current working directory.
 MAIN_DOCS = ROOT

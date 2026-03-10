@@ -295,7 +295,6 @@ def _update_manifest_entry(
     last_good: str | None = None,
     now: str | None = None,
     prerendered: bool = False,
-    page_hashes: dict[str, str] | None = None,
     cached_pages: list[str] | None = None,
 ) -> None:
     """Update a manifest entry for a branch."""
@@ -314,8 +313,6 @@ def _update_manifest_entry(
         entry["last_good"] = last_good
     if prerendered:
         entry["prerendered"] = True
-    if page_hashes:
-        entry["page_hashes"] = page_hashes
     if cached_pages:
         entry["cached_pages"] = cached_pages
 
@@ -414,8 +411,7 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
                     _update_manifest_entry(
                         manifest, branch, branch_key, title, exported_relpaths,
                         nav_structure=nav_structure, last_good=prev_last_good, now=now,
-                        prerendered=prerendered,
-                        page_hashes=page_hashes, cached_pages=cached_pages,
+                        prerendered=prerendered, cached_pages=cached_pages,
                     )
                     save_manifest(manifest)
             except Exception as e:
@@ -451,8 +447,7 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
                 _update_manifest_entry(
                     manifest, branch, branch_key, title, exported_relpaths,
                     nav_structure=nav_structure, last_good=sha, now=now,
-                    prerendered=prerendered,
-                    page_hashes=page_hashes, cached_pages=cached_pages,
+                    prerendered=prerendered, cached_pages=cached_pages,
                 )
                 save_manifest(manifest)
         except Exception as e:
@@ -476,8 +471,7 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
                         _update_manifest_entry(
                             manifest, branch, branch_key, title, exported_relpaths,
                             nav_structure=nav_structure, last_good=prev_last_good, now=now,
-                            prerendered=prerendered,
-                            page_hashes=page_hashes, cached_pages=cached_pages,
+                            prerendered=prerendered, cached_pages=cached_pages,
                         )
                         save_manifest(manifest)
                 except Exception as fallback_err:
@@ -544,8 +538,6 @@ def _manifest_entry_from_result(result: BuildResult) -> ManifestEntry:
         entry["last_good"] = result.last_good_sha
     if result.prerendered:
         entry["prerendered"] = True
-    if result.page_hashes:
-        entry["page_hashes"] = result.page_hashes
     if result.cached_pages:
         entry["cached_pages"] = result.cached_pages
     return entry
