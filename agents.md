@@ -19,26 +19,31 @@
 | **Graft** | An isolated git branch where one author writes content independently |
 | **Collar** | A named attachment point in the trunk's `_quarto.yaml` sidebar where grafts connect (marked with `_GRAFT_COLLAR`) |
 | **Manifest** | `grafts.lock` — tracks the build state of each graft branch |
+| **Render cache** | `_cache` orphan branch — stores per-page rendered HTML to skip re-rendering unchanged pages |
 | **Worktree cache** | `.grafts-cache/` — temporary git worktrees used during builds |
 
 ### How a Build Works
 
 1. `trunk build` iterates over graft branches listed in `grafts.yaml`
 2. Each graft is checked out into a worktree under `.grafts-cache/`
-3. Quarto renders each graft into `grafts__/<graft-key>/`
-4. The trunk's `_quarto.yaml` sidebar is updated to incorporate graft navigation at the appropriate collars
-5. The full site is rendered from the trunk
-6. Broken grafts fall back to the last-good-build and produce a warning header — they never block the site
+3. For each page, a content hash (`sha256`) is computed and checked against the `_cache` branch
+4. **Cache hit:** pre-rendered `.html` is restored from cache into `grafts__/<graft-key>/` (skips quarto render)
+5. **Cache miss:** source `.qmd` is exported for quarto to render
+6. The trunk's `_quarto.yaml` sidebar is updated — cached pages use `href:` links, uncached use `file:` refs
+7. The full site is rendered from the trunk (only uncached pages go through quarto→pandoc)
+8. `trunk cache update` captures newly rendered HTML back to the `_cache` branch for next time
+9. Broken grafts fall back to the last-good-build and produce a warning header — they never block the site
 
 ### Module Map
 
 ```
 src/quarto_graft/
-├── cli.py              # Typer-based CLI entry point; trunk and graft sub-commands
-├── build.py            # Build orchestration — worktree checkout, quarto render, manifest update
+├── cli.py              # Typer-based CLI entry point; trunk, graft, and cache sub-commands
+├── build.py            # Build orchestration — worktree checkout, per-page cache lookup, manifest update
+├── cache.py            # Per-page render cache — content hashing, _cache branch I/O, nav post-processing
 ├── branches.py         # Branch creation, manifest/lock handling, Jinja2 template rendering
 ├── git_utils.py        # pygit2-based git operations — worktrees, auth, ref parsing
-├── quarto_config.py    # _quarto.yaml parsing, collar discovery, navigation assembly
+├── quarto_config.py    # _quarto.yaml parsing, collar discovery, navigation assembly (mixed cached/uncached)
 ├── archive.py          # Pre-rendering (archive/restore) for faster trunk builds
 ├── template_sources.py # Template resolution — builtin, local path, URL, GitHub repo
 ├── file_utils.py       # Atomic file writes (JSON/YAML)
@@ -55,6 +60,8 @@ src/quarto_graft/
 - **Jinja2 templates with `StrictUndefined`** — missing variables fail loudly at init time.
 - **Path traversal protection** — branch-to-filesystem-key conversion rejects `..` segments.
 - **Last-good-build fallback** — a broken graft never blocks site publication.
+- **Per-page render cache** — `_cache` branch stores rendered HTML keyed by `sha256(content)`. Uses rootless commits (no parent chain) to avoid history accumulation. Cached and uncached pages coexist within a single graft. Navigation sidebar in cached pages is fixed via HTML post-processing after render.
+- **Archive vs. cache** — archive (`graft archive`) is graft-owner-driven and stores pre-rendered HTML on the graft branch itself. Cache (`trunk cache`) is trunk-owner-driven and stores rendered HTML on a separate `_cache` orphan branch. Archived grafts skip caching entirely.
 
 ## Development Setup
 
@@ -130,9 +137,12 @@ quarto-graft = "quarto_graft.cli:main"
 quarto-graft                        # interactive mode
 quarto-graft status                 # show build status dashboard for all grafts
 quarto-graft trunk init             # initialize trunk from template
-quarto-graft trunk build            # build all grafts + site
+quarto-graft trunk build            # build all grafts + site (with cache)
 quarto-graft trunk lock             # update _quarto.yaml from grafts.lock
 quarto-graft trunk list             # list trunk templates
+quarto-graft trunk cache update     # capture rendered pages into _cache branch
+quarto-graft trunk cache clear      # delete and recreate _cache branch
+quarto-graft trunk cache status     # show per-page cache state
 
 quarto-graft graft create <name>    # create a new graft branch
 quarto-graft graft build -b <name>  # build a single graft
@@ -149,6 +159,7 @@ quarto-graft trunk build --jobs 4         # parallel builds (4 workers)
 quarto-graft trunk build --changed        # only rebuild grafts with new commits
 quarto-graft trunk build --only ch1       # build only specific grafts (repeatable)
 quarto-graft trunk build --skip ch2       # skip specific grafts (repeatable)
+quarto-graft trunk build --no-cache       # bypass render cache, export all pages as .qmd
 quarto-graft trunk build -j 4 --changed   # combine: parallel + incremental
 ```
 

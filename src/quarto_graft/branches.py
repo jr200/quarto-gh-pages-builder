@@ -139,6 +139,8 @@ class ManifestEntry(TypedDict, total=False):
     exported: list[str]
     structure: Any  # Original sidebar/chapter structure from graft's _quarto.yaml
     prerendered: bool    # True if graft has pre-rendered HTML content
+    page_hashes: dict[str, str]  # source_relpath → content_hash (for cache update)
+    cached_pages: list[str]      # source relpaths served from cache
 
 class BranchSpec(TypedDict):
     """Configuration for a single graft branch."""

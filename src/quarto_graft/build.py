@@ -21,6 +21,12 @@ from .branches import (
     read_branches_list,
     save_manifest,
 )
+from .cache import (
+    cache_branch_exists,
+    content_hash,
+    load_cache_manifest,
+    restore_cached_files,
+)
 from .constants import GRAFTS_BUILD_DIR, PRERENDER_DIR_NAME, PRERENDER_MANIFEST_NAME
 from .git_utils import (
     fetch_origin,
@@ -52,6 +58,10 @@ class BuildResult:
     prerendered: bool = False
     duration_secs: float = 0.0
     error_message: str | None = None
+    # Per-page cache info: source_relpath → content_hash
+    page_hashes: dict[str, str] | None = None
+    # Source relpaths of pages served from cache (subset of exported_relpaths)
+    cached_pages: list[str] | None = None
 
 
 def _temp_worktree_name(branch_key: str, label: str) -> str:
@@ -159,10 +169,12 @@ def _export_from_worktree(
     inject_warning: bool = False,
     warn_head_sha: str | None = None,
     warn_last_good_sha: str | None = None,
-) -> tuple[str, str, list[str], list[Path], Any, bool]:
+    use_cache: bool = True,
+) -> tuple[str, str, list[str], list[Path], Any, bool, dict[str, str] | None, list[str] | None]:
     """
     Export content from a worktree for the given ref.
-    Returns: (sha, section_title, exported_relpaths, exported_dest_paths, nav_structure, prerendered)
+    Returns: (sha, section_title, exported_relpaths, exported_dest_paths,
+              nav_structure, prerendered, page_hashes, cached_pages)
     """
     try:
         with managed_worktree(ref, worktree_name) as wt_dir:
@@ -193,7 +205,7 @@ def _export_from_worktree(
                 ]
                 exported_dest_paths = [dest_dir / r for r in exported_relpaths]
 
-                return sha, section_title, exported_relpaths, exported_dest_paths, nav_structure, True
+                return sha, section_title, exported_relpaths, exported_dest_paths, nav_structure, True, None, None
 
             # Normal source file export
             src_relpaths = collect_exported_relpaths(project_dir, cfg)
@@ -204,12 +216,41 @@ def _export_from_worktree(
             exported_dest_paths: list[Path] = []
             exported_relpaths_for_main: list[str] = []
 
+            # Per-page cache tracking
+            page_hashes: dict[str, str] = {}
+            cached_pages_list: list[str] = []
+
+            # Load cache manifest once if caching is enabled
+            cache_manifest = None
+            if use_cache and cache_branch_exists():
+                cache_manifest = load_cache_manifest()
+
             for src_rel in src_relpaths:
                 src = project_dir / src_rel
                 if not src.exists():
                     logger.warning(f"[{branch}] source listed but missing: {src_rel}")
                     continue
 
+                # Compute content hash for every page
+                h = content_hash(src)
+                page_hashes[src_rel] = h
+
+                # Check cache for this page
+                if cache_manifest is not None:
+                    page_key = f"{branch_key}/{src_rel}"
+                    cached_entry = cache_manifest.get("pages", {}).get(page_key)
+                    if cached_entry and cached_entry.get("content_hash") == h:
+                        output_files = cached_entry.get("output_files", [])
+                        if restore_cached_files(branch_key, output_files, dest_dir):
+                            cached_pages_list.append(src_rel)
+                            for of in output_files:
+                                exported_dest_paths.append(dest_dir / of)
+                            exported_relpaths_for_main.append(src_rel)
+                            logger.info(f"[{branch}] cache hit: {src_rel}")
+                            continue
+                        logger.warning(f"[{branch}] cache restore failed for {src_rel}, falling back to export")
+
+                # Cache miss or no cache — export source as .qmd
                 ext = src.suffix.lower()
 
                 if ext == ".ipynb":
@@ -233,7 +274,12 @@ def _export_from_worktree(
                 exported_dest_paths.append(dest)
                 exported_relpaths_for_main.append(dest_rel)
 
-            return sha, section_title, exported_relpaths_for_main, exported_dest_paths, nav_structure, False
+            cache_hits = len(cached_pages_list)
+            cache_misses = len(page_hashes) - cache_hits
+            if cache_manifest is not None:
+                logger.info(f"[{branch}] cache: {cache_hits} hits, {cache_misses} misses")
+
+            return sha, section_title, exported_relpaths_for_main, exported_dest_paths, nav_structure, False, page_hashes, cached_pages_list
     except Exception as e:
         logger.error(f"[{branch}] Export from worktree failed: {e}", exc_info=True)
         raise
@@ -299,7 +345,7 @@ def _branch_exists(ref: str) -> bool:
         return False
 
 
-def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bool = True) -> BuildResult:
+def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bool = True, use_cache: bool = True) -> BuildResult:
     """
     Build a single branch into grafts__/<branch_key>/... with fallback logic.
     """
@@ -331,6 +377,8 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
     prerendered: bool = False
     error_message: str | None = None
     result_last_good: str | None = prev_last_good
+    page_hashes: dict[str, str] | None = None
+    cached_pages: list[str] | None = None
 
     if fetch:
         fetch_origin()
@@ -344,7 +392,7 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
             last_good_short = prev_last_good[:7] if len(prev_last_good) >= 7 else prev_last_good
             logger.info(f"Using last_good commit {last_good_short} for branch {branch}")
             try:
-                sha, title, exported_relpaths, exported_dest_paths, nav_structure, prerendered = _export_from_worktree(
+                sha, title, exported_relpaths, exported_dest_paths, nav_structure, prerendered, page_hashes, cached_pages = _export_from_worktree(
                     branch=branch,
                     branch_key=branch_key,
                     ref=prev_last_good,
@@ -352,6 +400,7 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
                     inject_warning=True,
                     warn_head_sha=None,
                     warn_last_good_sha=prev_last_good,
+                    use_cache=use_cache,
                 )
                 status = "fallback"
                 result_last_good = prev_last_good
@@ -382,11 +431,12 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
     else:
         try:
             head_sha = run_git(["rev-parse", head_ref])
-            sha, title, exported_relpaths, exported_dest_paths, nav_structure, prerendered = _export_from_worktree(
+            sha, title, exported_relpaths, exported_dest_paths, nav_structure, prerendered, page_hashes, cached_pages = _export_from_worktree(
                 branch=branch,
                 branch_key=branch_key,
                 ref=head_ref,
                 worktree_name=_temp_worktree_name(branch_key, "head"),
+                use_cache=use_cache,
             )
             status = "ok"
             result_last_good = sha
@@ -402,7 +452,7 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
             error_message = str(e)
             if prev_last_good and _branch_exists(prev_last_good):
                 try:
-                    sha, title, exported_relpaths, exported_dest_paths, nav_structure, prerendered = _export_from_worktree(
+                    sha, title, exported_relpaths, exported_dest_paths, nav_structure, prerendered, page_hashes, cached_pages = _export_from_worktree(
                         branch=branch,
                         branch_key=branch_key,
                         ref=prev_last_good,
@@ -410,6 +460,7 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
                         inject_warning=True,
                         warn_head_sha=head_sha or prev_last_good,
                         warn_last_good_sha=prev_last_good,
+                        use_cache=use_cache,
                     )
                     status = "fallback"
                     result_last_good = prev_last_good
@@ -454,6 +505,8 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
         prerendered=prerendered,
         duration_secs=duration,
         error_message=error_message,
+        page_hashes=page_hashes,
+        cached_pages=cached_pages,
     )
 
 
@@ -482,6 +535,10 @@ def _manifest_entry_from_result(result: BuildResult) -> ManifestEntry:
         entry["last_good"] = result.last_good_sha
     if result.prerendered:
         entry["prerendered"] = True
+    if result.page_hashes:
+        entry["page_hashes"] = result.page_hashes
+    if result.cached_pages:
+        entry["cached_pages"] = result.cached_pages
     return entry
 
 
@@ -493,6 +550,7 @@ def update_manifests(
     skip: set[str] | None = None,
     changed_only: bool = False,
     on_complete: Callable[[BuildResult], None] | None = None,
+    use_cache: bool = True,
 ) -> dict[str, BuildResult]:
     """
     Build grafts and update the manifest.
@@ -573,7 +631,7 @@ def update_manifests(
             for spec in to_build:
                 branch_name = spec if isinstance(spec, str) else spec["branch"]
                 graft_name = spec if isinstance(spec, str) else spec["name"]
-                future = pool.submit(build_branch, spec, update_manifest=False, fetch=False)
+                future = pool.submit(build_branch, spec, update_manifest=False, fetch=False, use_cache=use_cache)
                 futures[future] = (branch_name, graft_name)
 
             for future in as_completed(futures):
@@ -613,7 +671,7 @@ def update_manifests(
             branch_name = spec if isinstance(spec, str) else spec["branch"]
             graft_name = spec if isinstance(spec, str) else spec["name"]
             logger.info(f"=== Building branch {branch_name} (graft '{graft_name}') ===")
-            res = build_branch(spec, update_manifest=update_manifest, fetch=False)
+            res = build_branch(spec, update_manifest=update_manifest, fetch=False, use_cache=use_cache)
             logger.info(f"  -> {res.status} ({len(res.exported_dest_paths)} files exported)")
             results[branch_name] = res
             if on_complete:

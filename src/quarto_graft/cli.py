@@ -15,6 +15,7 @@ from rich.table import Table
 from .archive import archive_graft, restore_graft
 from .branches import branch_to_key, destroy_graft, init_trunk, load_manifest, new_graft_branch, read_branches_list
 from .build import BuildResult, build_branch, resolve_head_sha, update_manifests
+from .cache import cache_status, clear_cache, fix_navigation, update_cache_after_render
 from .constants import (
     GRAFT_TEMPLATES_DIR,
     GRAFTS_CONFIG_FILE,
@@ -74,6 +75,9 @@ MAIN_MENU_COMMANDS = [
     {"name": "trunk init - Initialize trunk (docs/) from a template", "value": "trunk init"},
     {"name": "trunk build - Build all graft branches and update trunk", "value": "trunk build"},
     {"name": "trunk lock - Update _quarto.yaml from grafts.lock", "value": "trunk lock"},
+    {"name": "trunk cache update - Capture rendered pages into cache", "value": "trunk cache update"},
+    {"name": "trunk cache clear - Clear the render cache", "value": "trunk cache clear"},
+    {"name": "trunk cache status - Show cache status", "value": "trunk cache status"},
     questionary.Separator("=== Graft Commands ==="),
     {"name": "graft create - Create a new graft branch from a template", "value": "graft create"},
     {"name": "graft build - Build a single graft branch", "value": "graft build"},
@@ -482,6 +486,9 @@ def _print_build_summary(results: dict[str, BuildResult], branch_specs: list) ->
             details = msg
         elif r.prerendered:
             details = "pre-rendered"
+        elif r.cached_pages:
+            total = len(r.page_hashes) if r.page_hashes else 0
+            details = f"cache: {len(r.cached_pages)}/{total} pages"
 
         name = spec["name"] if isinstance(spec, dict) else spec
         table.add_row(name, status_str, files_str, time_str, details)
@@ -516,6 +523,11 @@ def trunk_build(
         False,
         "--changed",
         help="Only rebuild grafts with new commits since last build",
+    ),
+    no_cache: bool = typer.Option(
+        False,
+        "--no-cache",
+        help="Bypass render cache and export all pages as .qmd",
     ),
 ) -> None:
     """Build all graft branches and update trunk."""
@@ -571,6 +583,7 @@ def trunk_build(
             skip=skip_set,
             changed_only=changed,
             on_complete=on_complete,
+            use_cache=not no_cache,
         )
 
     console.print()
@@ -585,6 +598,148 @@ def trunk_lock() -> None:
     """Update _quarto.yaml from grafts.lock."""
     apply_manifest()
     console.print("[green]✓[/green] Updated _quarto.yaml")
+
+
+# ============================================================================
+# TRUNK CACHE COMMANDS
+# ============================================================================
+
+cache_app = typer.Typer(help="Manage the per-page render cache", no_args_is_help=True)
+trunk_app.add_typer(cache_app, name="cache")
+
+
+@cache_app.command("update")
+def trunk_cache_update(
+    site_dir: str = typer.Option(
+        "_site",
+        "--site-dir",
+        "-s",
+        help="Path to the Quarto _site/ output directory",
+    ),
+) -> None:
+    """Capture newly rendered pages into the cache.
+
+    Run this after 'quarto render'. Stores rendered HTML on the _cache branch
+    and fixes navigation in cached pages.
+    """
+    require_trunk()
+
+    site_path = Path(site_dir)
+    if not site_path.exists():
+        console.print(f"[red]Error:[/red] Site directory '{site_dir}' not found.")
+        console.print("[dim]Run 'quarto render' first, then 'quarto-graft trunk cache update'.[/dim]")
+        raise typer.Exit(code=1)
+
+    manifest = load_manifest()
+    branch_specs = read_branches_list()
+
+    # Collect build state from manifest for each graft
+    graft_build_states: dict[str, dict] = {}
+    cached_graft_keys: list[str] = []
+
+    for spec in branch_specs:
+        entry = manifest.get(spec["branch"])
+        if not entry:
+            continue
+        if entry.get("prerendered"):
+            continue  # Archived grafts don't participate in caching
+
+        bk = entry.get("branch_key") or branch_to_key(spec["name"])
+        page_hashes = entry.get("page_hashes", {})
+        cached_pages = entry.get("cached_pages", [])
+
+        if page_hashes:
+            graft_build_states[bk] = {
+                "page_hashes": page_hashes,
+                "cached_pages": cached_pages,
+            }
+        if cached_pages:
+            cached_graft_keys.append(bk)
+
+    if not graft_build_states:
+        console.print("[yellow]No graft build data found in manifest.[/yellow]")
+        console.print("[dim]Run 'quarto-graft trunk build' first.[/dim]")
+        raise typer.Exit(code=1)
+
+    # Capture newly rendered pages
+    with console.status("Updating render cache..."):
+        new_count = update_cache_after_render(site_path, graft_build_states)
+
+    console.print(f"[green]✓[/green] Cached {new_count} newly rendered page(s)")
+
+    # Fix navigation in cached pages
+    if cached_graft_keys:
+        with console.status("Fixing navigation in cached pages..."):
+            nav_count = fix_navigation(site_path, cached_graft_keys)
+        if nav_count:
+            console.print(f"[green]✓[/green] Updated navigation in {nav_count} cached page(s)")
+
+
+@cache_app.command("clear")
+def trunk_cache_clear(
+    graft: str | None = typer.Option(
+        None,
+        "--graft",
+        "-g",
+        help="Only clear cache for this graft (by name)",
+    ),
+    no_remote: bool = typer.Option(
+        False,
+        "--no-remote",
+        help="Do not delete the remote _cache branch",
+    ),
+) -> None:
+    """Clear the render cache.
+
+    Deletes the local (and optionally remote) _cache branch and recreates it empty.
+    Use --graft to clear only a specific graft's cached pages.
+    """
+    require_trunk()
+
+    with console.status("Clearing cache..."):
+        clear_cache(graft_name=graft, delete_remote=not no_remote)
+
+    if graft:
+        console.print(f"[green]✓[/green] Cleared cache for graft '{graft}'")
+    else:
+        console.print("[green]✓[/green] Cache cleared")
+        if not no_remote:
+            console.print("[dim]Remote _cache branch also deleted.[/dim]")
+
+
+@cache_app.command("status")
+def trunk_cache_status() -> None:
+    """Show per-page cache status."""
+    require_trunk()
+
+    entries = cache_status()
+    if not entries:
+        console.print("[dim]Cache is empty. Run 'trunk build' then 'quarto render' then 'trunk cache update' to populate.[/dim]")
+        return
+
+    table = Table(title="Render Cache")
+    table.add_column("Page", style="cyan")
+    table.add_column("Hash", style="dim")
+    table.add_column("Cached At")
+    table.add_column("Files", justify="right")
+
+    for e in entries:
+        cached_at = e["cached_at"]
+        if cached_at != "?":
+            try:
+                dt = datetime.fromisoformat(cached_at.replace("Z", "+00:00"))
+                cached_at = dt.strftime("%Y-%m-%d %H:%M")
+            except Exception:
+                cached_at = cached_at[:16]
+
+        table.add_row(
+            e["page_key"],
+            e["content_hash"],
+            cached_at,
+            str(e["output_files"]),
+        )
+
+    console.print(table)
 
 
 # ============================================================================
@@ -1082,7 +1237,7 @@ def main_callback(
         if group == "trunk" and command == "init":
             trunk_init(name=None, template=None, overwrite=None, with_addons=None)
         elif group == "trunk" and command == "build":
-            trunk_build(no_update_manifest=False, jobs=1, only=None, skip=None, changed=False)
+            trunk_build(no_update_manifest=False, jobs=1, only=None, skip=None, changed=False, no_cache=False)
         elif group == "trunk" and command == "lock":
             trunk_lock()
         elif group == "graft" and command == "create":
@@ -1130,6 +1285,15 @@ def main_callback(
             graft_archive_cmd(project_dir=None)
         elif group == "graft" and command == "restore":
             graft_restore_cmd(project_dir=None)
+    elif len(parts) == 3:
+        group, sub, command = parts
+        if group == "trunk" and sub == "cache":
+            if command == "update":
+                trunk_cache_update()
+            elif command == "clear":
+                trunk_cache_clear(graft=None, no_remote=False)
+            elif command == "status":
+                trunk_cache_status()
 
 
 def main() -> None:
