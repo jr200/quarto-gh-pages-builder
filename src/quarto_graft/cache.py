@@ -185,13 +185,15 @@ def _write_rootless_commit(
     tree_id = index.write_tree(repo)
     sig = pygit2.Signature("quarto-graft-cache", "cache@quarto-graft.local")
     commit_id = repo.create_commit(
-        f"refs/heads/{CACHE_BRANCH}",
+        None,  # don't auto-update ref (fails if branch already exists with no parents)
         sig,
         sig,
         message,
         tree_id,
         [],  # no parents → rootless commit
     )
+    # Force-update the branch ref to point at the new rootless commit
+    repo.references.create(f"refs/heads/{CACHE_BRANCH}", commit_id, force=True)
     return commit_id
 
 
