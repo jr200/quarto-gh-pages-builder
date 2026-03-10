@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
@@ -10,17 +9,24 @@ import pygit2
 import pytest
 
 from quarto_graft.git_utils import (
+    GitError,
+    GitRefNotFoundError,
+    GitRemoteError,
     _get_repo,
     _list_worktree_objects,
     _resolve_ref,
     cleanup_orphan_worktrees,
     create_worktree,
+    delete_branch,
     has_commits,
     is_worktree,
+    list_local_branches,
     list_worktree_paths,
     managed_worktree,
+    prune_worktrees,
+    ref_exists,
     remove_worktree,
-    run_git,
+    rev_parse,
     worktrees_for_branch,
 )
 
@@ -56,6 +62,26 @@ def git_repo_with_branch(git_repo):
 
 
 # ---------------------------------------------------------------------------
+# Exception hierarchy
+# ---------------------------------------------------------------------------
+
+
+class TestExceptionHierarchy:
+    def test_git_error_extends_runtime_error(self):
+        assert issubclass(GitError, RuntimeError)
+
+    def test_ref_not_found_extends_git_error(self):
+        assert issubclass(GitRefNotFoundError, GitError)
+
+    def test_remote_error_extends_git_error(self):
+        assert issubclass(GitRemoteError, GitError)
+
+    def test_git_error_catchable_as_runtime_error(self):
+        with pytest.raises(RuntimeError):
+            raise GitRefNotFoundError("test")
+
+
+# ---------------------------------------------------------------------------
 # _get_repo
 # ---------------------------------------------------------------------------
 
@@ -82,129 +108,114 @@ class TestListWorktreeObjects:
 
 
 # ---------------------------------------------------------------------------
-# run_git: for-each-ref
+# rev_parse
 # ---------------------------------------------------------------------------
 
 
-class TestRunGitForEachRef:
-    def test_lists_local_branches(self, git_repo_with_branch):
+class TestRevParse:
+    def test_resolves_head(self, git_repo):
+        expected = str(git_repo.head.target)
+        with patch("quarto_graft.git_utils._get_repo", return_value=git_repo):
+            result = rev_parse("HEAD")
+        assert result == expected
+
+    def test_resolves_branch_name(self, git_repo_with_branch):
+        expected = str(git_repo_with_branch.branches["feature"].target)
         with patch("quarto_graft.git_utils._get_repo", return_value=git_repo_with_branch):
-            result = run_git(["for-each-ref", "refs/heads", "--format", "%(refname:short)"])
-        branches = result.strip().split("\n")
+            result = rev_parse("feature")
+        assert result == expected
+
+    def test_resolves_full_sha(self, git_repo):
+        sha = str(git_repo.head.target)
+        with patch("quarto_graft.git_utils._get_repo", return_value=git_repo):
+            result = rev_parse(sha)
+        assert result == sha
+
+    def test_nonexistent_raises_git_ref_not_found(self, git_repo):
+        with patch("quarto_graft.git_utils._get_repo", return_value=git_repo):
+            with pytest.raises(GitRefNotFoundError, match="nonexistent"):
+                rev_parse("nonexistent")
+
+    def test_with_cwd(self, git_repo):
+        """rev_parse passes cwd through to _get_repo."""
+        expected = str(git_repo.head.target)
+        result = rev_parse("HEAD", cwd=Path(git_repo.workdir))
+        assert result == expected
+
+
+# ---------------------------------------------------------------------------
+# ref_exists
+# ---------------------------------------------------------------------------
+
+
+class TestRefExists:
+    def test_returns_true_for_existing_ref(self, git_repo):
+        with patch("quarto_graft.git_utils._get_repo", return_value=git_repo):
+            assert ref_exists("HEAD") is True
+
+    def test_returns_true_for_branch(self, git_repo_with_branch):
+        with patch("quarto_graft.git_utils._get_repo", return_value=git_repo_with_branch):
+            assert ref_exists("feature") is True
+
+    def test_returns_false_for_nonexistent(self, git_repo):
+        with patch("quarto_graft.git_utils._get_repo", return_value=git_repo):
+            assert ref_exists("nonexistent") is False
+
+
+# ---------------------------------------------------------------------------
+# list_local_branches
+# ---------------------------------------------------------------------------
+
+
+class TestListLocalBranches:
+    def test_lists_branches(self, git_repo_with_branch):
+        with patch("quarto_graft.git_utils._get_repo", return_value=git_repo_with_branch):
+            branches = list_local_branches()
         assert "main" in branches
         assert "feature" in branches
 
     def test_sorted_output(self, git_repo_with_branch):
         with patch("quarto_graft.git_utils._get_repo", return_value=git_repo_with_branch):
-            result = run_git(["for-each-ref", "refs/heads", "--format", "%(refname:short)"])
-        branches = result.strip().split("\n")
+            branches = list_local_branches()
         assert branches == sorted(branches)
 
-
-# ---------------------------------------------------------------------------
-# run_git: show-ref
-# ---------------------------------------------------------------------------
-
-
-class TestRunGitShowRef:
-    def test_found(self, git_repo):
+    def test_returns_list(self, git_repo):
         with patch("quarto_graft.git_utils._get_repo", return_value=git_repo):
-            result = run_git(["show-ref", "--verify", "refs/heads/main"])
-        assert result == "refs/heads/main"
-
-    def test_not_found(self, git_repo):
-        with patch("quarto_graft.git_utils._get_repo", return_value=git_repo):
-            with pytest.raises(subprocess.CalledProcessError):
-                run_git(["show-ref", "--verify", "refs/heads/nonexistent"])
+            result = list_local_branches()
+        assert isinstance(result, list)
 
 
 # ---------------------------------------------------------------------------
-# run_git: rev-parse
+# delete_branch
 # ---------------------------------------------------------------------------
 
 
-class TestRunGitRevParse:
-    def test_rev_parse_head(self, git_repo):
-        expected = str(git_repo.head.target)
-        with patch("quarto_graft.git_utils._get_repo", return_value=git_repo):
-            result = run_git(["rev-parse", "HEAD"])
-        assert result == expected
-
-    def test_rev_parse_verify(self, git_repo):
-        expected = str(git_repo.head.target)
-        with patch("quarto_graft.git_utils._get_repo", return_value=git_repo):
-            result = run_git(["rev-parse", "--verify", "HEAD"])
-        assert result == expected
-
-    def test_rev_parse_branch(self, git_repo_with_branch):
-        expected = str(git_repo_with_branch.branches["feature"].target)
-        with patch("quarto_graft.git_utils._get_repo", return_value=git_repo_with_branch):
-            result = run_git(["rev-parse", "feature"])
-        assert result == expected
-
-    def test_rev_parse_nonexistent_raises(self, git_repo):
-        with patch("quarto_graft.git_utils._get_repo", return_value=git_repo):
-            with pytest.raises(subprocess.CalledProcessError):
-                run_git(["rev-parse", "--verify", "nonexistent"])
-
-
-# ---------------------------------------------------------------------------
-# run_git: branch -D
-# ---------------------------------------------------------------------------
-
-
-class TestRunGitBranchDelete:
-    def test_deletes_branch(self, git_repo_with_branch):
+class TestDeleteBranch:
+    def test_deletes_existing_branch(self, git_repo_with_branch):
         assert "feature" in git_repo_with_branch.branches.local
         with patch("quarto_graft.git_utils._get_repo", return_value=git_repo_with_branch):
-            run_git(["branch", "-D", "feature"])
+            delete_branch("feature")
         assert "feature" not in git_repo_with_branch.branches.local
 
     def test_nonexistent_branch_no_error(self, git_repo):
         with patch("quarto_graft.git_utils._get_repo", return_value=git_repo):
-            run_git(["branch", "-D", "nonexistent"])  # should not raise
+            delete_branch("nonexistent")  # should not raise
 
 
 # ---------------------------------------------------------------------------
-# run_git: worktree prune
+# prune_worktrees
 # ---------------------------------------------------------------------------
 
 
-class TestRunGitWorktreePrune:
-    def test_worktree_prune(self, git_repo, tmp_path):
+class TestPruneWorktrees:
+    def test_delegates_to_cleanup(self, git_repo):
         import quarto_graft.constants as constants
         try:
             constants._root_override = Path(git_repo.workdir)
             with patch("quarto_graft.git_utils._get_repo", return_value=git_repo):
-                # Should not raise
-                run_git(["worktree", "prune"])
+                prune_worktrees()  # should not raise
         finally:
             constants._root_override = None
-
-
-# ---------------------------------------------------------------------------
-# run_git: fetch
-# ---------------------------------------------------------------------------
-
-
-class TestRunGitFetch:
-    def test_fetch_no_remote(self, git_repo):
-        """Fetch when there's no remote should return empty string."""
-        with patch("quarto_graft.git_utils._get_repo", return_value=git_repo):
-            result = run_git(["fetch", "--prune", "origin"])
-        assert result == ""
-
-
-# ---------------------------------------------------------------------------
-# run_git: unsupported command
-# ---------------------------------------------------------------------------
-
-
-class TestRunGitUnsupported:
-    def test_unsupported_raises(self, git_repo):
-        with patch("quarto_graft.git_utils._get_repo", return_value=git_repo):
-            with pytest.raises(NotImplementedError, match="not supported"):
-                run_git(["stash"])
 
 
 # ---------------------------------------------------------------------------

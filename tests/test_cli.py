@@ -282,7 +282,7 @@ class TestDiscoverGrafts:
 class TestGitLocalBranches:
     def test_returns_branches(self):
         from quarto_graft.cli import _git_local_branches
-        with patch("quarto_graft.cli.run_git", return_value="main\nfeature\n"):
+        with patch("quarto_graft.cli.list_local_branches", return_value=["feature", "main"]):
             with patch("quarto_graft.cli.constants") as mock_constants:
                 mock_constants.ROOT = Path("/tmp")
                 result = _git_local_branches()
@@ -290,7 +290,7 @@ class TestGitLocalBranches:
 
     def test_handles_error(self):
         from quarto_graft.cli import _git_local_branches
-        with patch("quarto_graft.cli.run_git", side_effect=Exception("fail")):
+        with patch("quarto_graft.cli.list_local_branches", side_effect=Exception("fail")):
             with patch("quarto_graft.cli.constants") as mock_constants:
                 mock_constants.ROOT = Path("/tmp")
                 result = _git_local_branches()

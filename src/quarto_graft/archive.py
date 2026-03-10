@@ -51,16 +51,11 @@ def _get_output_dir(project_root: Path) -> Path:
 
 def _get_source_commit(project_root: Path) -> str | None:
     """Get the current HEAD commit SHA, or None if not in a git repo."""
+    from .git_utils import GitRefNotFoundError, rev_parse
+
     try:
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=project_root,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        return result.stdout.strip()
-    except (subprocess.CalledProcessError, FileNotFoundError):
+        return rev_parse("HEAD", cwd=project_root)
+    except (GitRefNotFoundError, RuntimeError):
         return None
 
 

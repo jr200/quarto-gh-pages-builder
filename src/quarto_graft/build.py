@@ -32,7 +32,8 @@ from .constants import PRERENDER_DIR_NAME, PRERENDER_MANIFEST_NAME
 from .git_utils import (
     fetch_origin,
     managed_worktree,
-    run_git,
+    ref_exists,
+    rev_parse,
 )
 from .quarto_config import (
     collect_exported_relpaths,
@@ -166,7 +167,7 @@ def _export_from_worktree(
     """
     try:
         with managed_worktree(ref, worktree_name) as wt_dir:
-            sha = run_git(["rev-parse", "HEAD"], cwd=wt_dir)
+            sha = rev_parse("HEAD", cwd=wt_dir)
 
             project_dir = wt_dir
             cfg = load_quarto_config(project_dir)
@@ -329,11 +330,7 @@ def _create_broken_stub_and_update_manifest(
 
 def _branch_exists(ref: str) -> bool:
     """Check if a git reference exists."""
-    try:
-        run_git(["rev-parse", "--verify", ref])
-        return True
-    except subprocess.CalledProcessError:
-        return False
+    return ref_exists(ref)
 
 
 def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bool = True, use_cache: bool = True) -> BuildResult:
@@ -421,7 +418,7 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
             title = branch
     else:
         try:
-            head_sha = run_git(["rev-parse", head_ref])
+            head_sha = rev_parse(head_ref)
             sha, title, exported_relpaths, exported_dest_paths, nav_structure, prerendered, page_hashes, cached_pages = _export_from_worktree(
                 branch=branch,
                 branch_key=branch_key,
@@ -507,7 +504,7 @@ def resolve_head_sha(branch: str) -> str | None:
     if not _branch_exists(head_ref):
         return None
     try:
-        return run_git(["rev-parse", head_ref])
+        return rev_parse(head_ref)
     except Exception:
         return None
 

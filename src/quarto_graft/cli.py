@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import subprocess
 from datetime import datetime
 from pathlib import Path
 
@@ -25,7 +24,7 @@ from .constants import (
     TRUNK_ADDONS_DIR,
     TRUNK_TEMPLATES_DIR,
 )
-from .git_utils import fetch_origin, has_commits, remove_worktree, run_git
+from .git_utils import fetch_origin, has_commits, list_local_branches, prune_worktrees, remove_worktree
 from .quarto_config import apply_manifest
 from .template_sources import TemplateSource, load_template_sources_from_config
 
@@ -317,12 +316,8 @@ def _git_local_branches() -> set[str]:
         RuntimeError: If git operations fail unexpectedly
     """
     try:
-        out = run_git(["for-each-ref", "refs/heads", "--format", "%(refname:short)"], cwd=constants.ROOT)
-        return {line.strip() for line in out.splitlines() if line.strip()}
-    except subprocess.CalledProcessError as e:
-        # Not in a git repo or no branches yet
-        logger.debug(f"Could not list git branches: {e}")
-        return set()
+        branches = list_local_branches(cwd=constants.ROOT)
+        return set(branches)
     except Exception as e:
         logger.error(f"Unexpected error listing git branches: {e}")
         console.print(f"[yellow]Warning:[/yellow] Could not list git branches: {e}")
@@ -876,7 +871,7 @@ def graft_create(
         branch_key = branch_to_key(name)
         remove_worktree(branch_key, force=True)
         # Prune any stale worktree references from git
-        run_git(["worktree", "prune"], cwd=constants.ROOT)
+        prune_worktrees()
         logger.debug(f"Cleaned up temporary worktree for {branch_key}")
     except Exception as e:
         logger.debug(f"Failed to clean up worktree: {e}")

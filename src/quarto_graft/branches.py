@@ -13,7 +13,7 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined, TemplateSynta
 from . import constants
 from .constants import PROTECTED_BRANCHES, TRUNK_TEMPLATES_DIR
 from .file_utils import atomic_write_json, atomic_write_yaml
-from .git_utils import remove_worktree, run_git, worktrees_for_branch
+from .git_utils import prune_worktrees, push_to_origin, remove_worktree, worktrees_for_branch
 from .yaml_utils import get_yaml_loader
 
 logger = logging.getLogger(__name__)
@@ -536,7 +536,7 @@ def new_graft_branch(
         if push:
             logger.info(f"[new-graft] Pushing new branch '{branch}' to origin...")
             try:
-                run_git(["push", "origin", f"refs/heads/{branch}:refs/heads/{branch}"], cwd=wt_dir)
+                push_to_origin(f"refs/heads/{branch}:refs/heads/{branch}", cwd=wt_dir)
             except Exception as e:
                 logger.warning(f"[new-graft] Push failed: {e}")
     else:
@@ -616,7 +616,7 @@ def destroy_graft(branch: str, delete_remote: bool = True) -> dict[str, list[str
 
     # Ensure git forgets any stale worktree entries
     try:
-        run_git(["worktree", "prune"], cwd=constants.ROOT)
+        prune_worktrees()
     except Exception:
         logger.info("[destroy] worktree prune failed; continuing")
 
@@ -632,7 +632,7 @@ def destroy_graft(branch: str, delete_remote: bool = True) -> dict[str, list[str
 
     if delete_remote:
         try:
-            run_git(["push", "origin", f":refs/heads/{branch}"], cwd=constants.ROOT)
+            push_to_origin(f":refs/heads/{branch}")
             logger.info(f"[destroy] Deleted remote branch '{branch}'")
         except Exception:
             logger.info(f"[destroy] Remote branch '{branch}' could not be deleted or not found")

@@ -266,28 +266,28 @@ class TestManifestEntryFromResult:
 
 class TestResolveHeadSha:
     def test_returns_sha_when_remote_exists(self):
-        with patch("quarto_graft.build._branch_exists", side_effect=lambda ref: ref == "origin/feature"):
-            with patch("quarto_graft.build.run_git", return_value="abc123def456"):
+        with patch("quarto_graft.build.ref_exists", side_effect=lambda ref: ref == "origin/feature"):
+            with patch("quarto_graft.build.rev_parse", return_value="abc123def456"):
                 result = resolve_head_sha("feature")
         assert result == "abc123def456"
 
     def test_falls_back_to_local(self):
-        def branch_exists(ref):
+        def _ref_exists(ref):
             return ref == "feature"
 
-        with patch("quarto_graft.build._branch_exists", side_effect=branch_exists):
-            with patch("quarto_graft.build.run_git", return_value="local123"):
+        with patch("quarto_graft.build.ref_exists", side_effect=_ref_exists):
+            with patch("quarto_graft.build.rev_parse", return_value="local123"):
                 result = resolve_head_sha("feature")
         assert result == "local123"
 
     def test_returns_none_when_branch_missing(self):
-        with patch("quarto_graft.build._branch_exists", return_value=False):
+        with patch("quarto_graft.build.ref_exists", return_value=False):
             result = resolve_head_sha("nonexistent")
         assert result is None
 
     def test_returns_none_on_exception(self):
-        with patch("quarto_graft.build._branch_exists", return_value=True):
-            with patch("quarto_graft.build.run_git", side_effect=Exception("fail")):
+        with patch("quarto_graft.build.ref_exists", return_value=True):
+            with patch("quarto_graft.build.rev_parse", side_effect=Exception("fail")):
                 result = resolve_head_sha("feature")
         assert result is None
 

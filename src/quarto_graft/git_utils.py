@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import os
 import shutil
-import subprocess
 import threading
 from contextlib import contextmanager
 from pathlib import Path
@@ -14,6 +13,19 @@ from . import constants
 from .constants import TRUNK_BRANCHES
 
 logger = logging.getLogger(__name__)
+
+
+class GitError(RuntimeError):
+    """Base error for git operations."""
+
+
+class GitRefNotFoundError(GitError):
+    """Raised when a git reference cannot be resolved."""
+
+
+class GitRemoteError(GitError):
+    """Raised when a remote operation (push/fetch) fails."""
+
 
 _thread_local = threading.local()
 
@@ -73,132 +85,88 @@ def _get_auth_callbacks() -> pygit2.RemoteCallbacks:
     return AuthCallbacks()
 
 
-def run_git(args: list[str], cwd: Path | None = None) -> str:
-    """
-    Execute git commands using pygit2 (pure Python implementation).
-
-    Supported commands:
-      - for-each-ref refs/heads --format %(refname:short)
-      - show-ref --verify <ref>
-      - worktree list --porcelain
-      - worktree prune
-      - worktree remove -f <path>
-      - branch -D <branch>
-      - rev-parse [--verify] <ref>
-      - push origin <refspec>
-      - fetch --prune origin
+def rev_parse(ref: str, cwd: Path | None = None) -> str:
+    """Resolve a git ref to its full SHA hex string.
 
     Raises:
-        subprocess.CalledProcessError: For git command errors (for API compatibility)
-        NotImplementedError: For unsupported git commands
+        GitRefNotFoundError: If the ref cannot be resolved.
     """
     repo = _get_repo(cwd)
+    try:
+        obj = repo.revparse_single(ref)
+        return str(obj.id)
+    except KeyError as e:
+        raise GitRefNotFoundError(f"Reference not found: {ref}") from e
 
-    # for-each-ref refs/heads --format %(refname:short)
-    if args[:2] == ["for-each-ref", "refs/heads"] and "--format" in args:
-        branches = sorted(repo.branches.local)
-        return "\n".join(branches)
 
-    # show-ref --verify <ref>
-    if args[:2] == ["show-ref", "--verify"] and len(args) >= 3:
-        ref = args[2]
-        if ref in repo.references:
-            return ref
-        raise subprocess.CalledProcessError(1, ["git", *args], "ref not found")
+def ref_exists(ref: str, cwd: Path | None = None) -> bool:
+    """Return True if *ref* can be resolved in the repository."""
+    try:
+        rev_parse(ref, cwd)
+        return True
+    except GitRefNotFoundError:
+        return False
 
-    # worktree list --porcelain
-    if args[:3] == ["worktree", "list", "--porcelain"]:
-        lines = []
-        for _, path, shorthand in _list_worktree_objects(repo):
-            lines.append(f"worktree {path}")
-            if shorthand:
-                lines.append(f"branch refs/heads/{shorthand}")
-        return "\n".join(lines)
 
-    # worktree prune
-    if args[:2] == ["worktree", "prune"]:
-        cleanup_orphan_worktrees()
-        return ""
+def list_local_branches(cwd: Path | None = None) -> list[str]:
+    """Return sorted list of local branch names."""
+    repo = _get_repo(cwd)
+    return sorted(repo.branches.local)
 
-    # worktree remove -f <path>
-    if args[:2] == ["worktree", "remove"] and "-f" in args:
-        # Extract path (last argument that's not a flag)
-        path_arg = [a for a in args if not a.startswith("-")][-1]
-        path = Path(path_arg)
-        name = path.name
-        try:
-            wt = repo.lookup_worktree(name)
-            wt.prune(force=True)
-        except (KeyError, Exception):
-            # Best effort - may not exist
-            pass
-        return ""
 
-    # branch -D <branch>
-    if args[:2] == ["branch", "-D"] and len(args) == 3:
-        branch = args[2]
-        try:
-            repo.branches.delete(branch)
-        except KeyError:
-            pass
-        return ""
+def push_to_origin(refspec: str, cwd: Path | None = None) -> None:
+    """Push *refspec* to the 'origin' remote.
 
-    # rev-parse [--verify] <ref>
-    if args[0] == "rev-parse":
-        if args[1] == "--verify" and len(args) > 2:
-            ref = args[2]
-        else:
-            ref = args[1] if len(args) > 1 else "HEAD"
-        try:
-            obj = repo.revparse_single(ref)
-            return str(obj.id)
-        except KeyError as e:
-            raise subprocess.CalledProcessError(1, ["git", *args], f"ref not found: {ref}") from e
+    Deletion refspecs (e.g. ':refs/heads/branch') are best-effort and
+    will not raise if the remote branch does not exist.
 
-    # push origin <refspec>
-    if args[0] == "push" and len(args) >= 2:
-        try:
-            origin = repo.remotes["origin"]
-        except KeyError as e:
-            raise subprocess.CalledProcessError(1, ["git", *args], "remote 'origin' not found") from e
+    Raises:
+        GitRemoteError: If the remote is missing or the push fails.
+    """
+    repo = _get_repo(cwd)
+    try:
+        origin = repo.remotes["origin"]
+    except KeyError as e:
+        raise GitRemoteError("remote 'origin' not found") from e
 
-        # Handle deletion (push origin :refs/heads/branch)
-        if args[-1].startswith(":"):
-            ref_to_delete = args[-1][1:]  # Remove leading :
-            try:
-                origin.push([f":{ref_to_delete}"], callbacks=_get_auth_callbacks())
-            except Exception as e:
-                logger.debug(f"Push delete failed: {e}")
-                # Not necessarily an error - branch may not exist on remote
-            return ""
-
-        # Handle normal push
-        refspec = args[-1]
+    if refspec.startswith(":"):
+        # Deletion push — best effort
         try:
             origin.push([refspec], callbacks=_get_auth_callbacks())
         except Exception as e:
-            raise subprocess.CalledProcessError(1, ["git", *args], f"push failed: {e}") from e
-        return ""
+            logger.debug(f"Push delete failed: {e}")
+        return
 
-    # fetch --prune origin
-    if args[0] == "fetch":
-        try:
-            origin = repo.remotes["origin"]
-        except KeyError:
-            # No origin remote
-            return ""
-        prune = "--prune" in args
-        try:
-            origin.fetch(prune=prune, callbacks=_get_auth_callbacks())
-        except Exception as e:
-            raise subprocess.CalledProcessError(1, ["git", *args], f"fetch failed: {e}") from e
-        return ""
+    try:
+        origin.push([refspec], callbacks=_get_auth_callbacks())
+    except Exception as e:
+        raise GitRemoteError(f"push failed: {e}") from e
 
-    # Unsupported command
-    raise NotImplementedError(
-        f"Git command not supported via pygit2: {' '.join(args)}. "
-        "Please file an issue at https://github.com/jr200/quarto-graft/issues"
-    )
+
+def prune_worktrees() -> None:
+    """Remove orphaned worktree directories (equivalent to ``git worktree prune``)."""
+    cleanup_orphan_worktrees()
+
+
+def delete_branch(name: str, cwd: Path | None = None) -> None:
+    """Force-delete a local branch. No-op if the branch does not exist."""
+    repo = _get_repo(cwd)
+    try:
+        repo.branches.delete(name)
+    except KeyError:
+        pass
+
+
+def _force_remove_worktree_ref(path: Path) -> None:
+    """Prune a worktree registration by path (best-effort, internal helper)."""
+    repo = _get_repo()
+    name = path.name
+    try:
+        wt = repo.lookup_worktree(name)
+        wt.prune(force=True)
+    except Exception:
+        pass
+
 
 
 def list_worktree_paths() -> list[Path]:
@@ -338,16 +306,8 @@ def remove_worktree(worktree_name: str | Path, force: bool = False) -> None:
         return
 
     try:
-        # Attempt removal via git CLI first (cleans admin dir)
-        try:
-            run_git(["worktree", "remove", "-f", wt_dir.as_posix()], cwd=constants.ROOT)
-        except Exception:
-            # Fallback to pygit2 prune if CLI removal failed
-            try:
-                wt = repo.lookup_worktree(name)
-                wt.prune(force=True)
-            except Exception:
-                logger.debug(f"git worktree remove failed for {wt_dir}, will remove admin dir manually")
+        # Prune the worktree registration (best-effort)
+        _force_remove_worktree_ref(wt_dir)
 
         # Ensure admin dir under .git/worktrees/<name> is gone
         admin_dir = Path(repo.path) / "worktrees" / name
