@@ -249,7 +249,7 @@ class TemplateSource:
 
                 safe_members.append(member)
 
-            tf.extractall(dest, members=safe_members)
+            tf.extractall(dest, members=safe_members, filter="data")
 
     def discover_templates(self, template_type: str) -> list[str]:
         """
