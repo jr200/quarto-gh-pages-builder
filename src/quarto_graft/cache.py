@@ -8,6 +8,7 @@ The _cache branch always has exactly one rootless commit (no history).
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import json
 import logging
@@ -46,6 +47,7 @@ def content_hash_bytes(data: bytes) -> str:
 # Low-level git helpers for the _cache branch
 # ---------------------------------------------------------------------------
 
+@functools.lru_cache(maxsize=1)
 def _get_repo() -> pygit2.Repository:
     git_dir = pygit2.discover_repository(str(ROOT))
     if git_dir is None:
