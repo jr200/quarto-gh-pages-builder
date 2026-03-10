@@ -241,11 +241,11 @@ def update_cache_after_render(
             if page_key.startswith(f"{branch_key}/") and page_key not in current_page_keys:
                 to_remove.append(page_key)
         for key in to_remove:
-            pages.pop(key, None)
-            # Remove output files from existing blobs
+            # Remove output files from existing blobs BEFORE popping
             entry = pages.get(key, {})
             for of in entry.get("output_files", []):
                 existing_blobs.pop(f"{branch_key}/{of}", None)
+            pages.pop(key, None)
 
         # Cache newly rendered pages
         for source_relpath, h in page_hashes.items():
