@@ -412,10 +412,15 @@ def _get_auth_callbacks() -> pygit2.RemoteCallbacks:
 # Navigation post-processing
 # ---------------------------------------------------------------------------
 
+# Quarto's sidebar does not nest <nav> elements — inner structure is ul/li/div/a.
+# Non-greedy .*? is safe here; if Quarto ever nests <nav>, switch to html.parser.
 _SIDEBAR_PATTERN = re.compile(
     r'(<nav\s[^>]*id=["\']quarto-sidebar["\'][^>]*>)(.*?)(</nav>)',
     re.DOTALL,
 )
+
+# Matches the word "active" inside a class="..." attribute value.
+_CLASS_ACTIVE_RE = re.compile(r'(class="[^"]*?)\bactive\b\s*', re.DOTALL)
 
 
 def _extract_sidebar(html: str) -> str | None:
@@ -428,20 +433,35 @@ def _extract_sidebar(html: str) -> str | None:
 
 def _replace_sidebar(html: str, fresh_sidebar: str, page_href: str) -> str:
     """Replace the sidebar in *html* with *fresh_sidebar* and set the active link."""
-    # Remove existing active classes from the fresh sidebar
-    sidebar = fresh_sidebar.replace(" active", "")
+    # 1. Strip "active" only from class attributes (not from page titles or text).
+    sidebar = _CLASS_ACTIVE_RE.sub(r'\1', fresh_sidebar)
+    # Clean up any trailing whitespace left inside the class value.
+    sidebar = re.sub(r'\s+"', '"', sidebar)
 
-    # Set active link for the current page
-    # Quarto uses class="sidebar-link active" on the matching href
+    # 2. Add "active" to the existing class attribute of the <a> matching page_href.
+    #    Quarto renders: <a href="page.html" class="sidebar-item-text sidebar-link">
+    #    We prepend "active " inside the class value to avoid a duplicate class attr.
     escaped_href = re.escape(page_href)
-    sidebar = re.sub(
-        rf'(href=["\'](?:\./)?{escaped_href}["\'])',
-        r'\1 class="sidebar-link active"',
+
+    # Try href-before-class attribute order (Quarto's default)
+    sidebar, n = re.subn(
+        rf'(<a\s[^>]*?href=["\'](?:\./)?{escaped_href}["\'][^>]*?class=")([^"]*")',
+        r'\1active \2',
         sidebar,
         count=1,
     )
+    if n == 0:
+        # Try class-before-href attribute order
+        sidebar = re.sub(
+            rf'(<a\s[^>]*?class=")([^"]*"[^>]*?href=["\'](?:\./)?{escaped_href}["\'])',
+            r'\1active \2',
+            sidebar,
+            count=1,
+        )
 
-    return _SIDEBAR_PATTERN.sub(sidebar, html, count=1)
+    # 3. Replace sidebar in original HTML.  Use a lambda to avoid re.sub
+    #    interpreting backslash sequences (\1, \n, etc.) in the sidebar content.
+    return _SIDEBAR_PATTERN.sub(lambda _: sidebar, html, count=1)
 
 
 def fix_navigation(

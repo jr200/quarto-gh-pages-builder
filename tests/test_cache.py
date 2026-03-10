@@ -152,14 +152,22 @@ class TestContentHashBytes:
 # Sidebar extraction / replacement
 # ---------------------------------------------------------------------------
 
-SAMPLE_HTML_WITH_SIDEBAR = """<!DOCTYPE html>
+# Realistic Quarto sidebar HTML — links have class="sidebar-item-text sidebar-link"
+SAMPLE_SIDEBAR = (
+    '<nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal sidebar-navigation floating overflow-auto">'
+    '<ul class="sidebar-section depth1">'
+    '<li class="sidebar-item"><div class="sidebar-item-container">'
+    '<a href="index.html" class="sidebar-item-text sidebar-link active">'
+    '<span class="menu-text">Home</span></a></div></li>'
+    '<li class="sidebar-item"><div class="sidebar-item-container">'
+    '<a href="grafts__/demo/page1.html" class="sidebar-item-text sidebar-link">'
+    '<span class="menu-text">Page 1</span></a></div></li>'
+    '</ul></nav>'
+)
+
+SAMPLE_HTML_WITH_SIDEBAR = f"""<!DOCTYPE html>
 <html><body>
-<nav id="quarto-sidebar" class="sidebar">
-  <ul>
-    <li><a href="index.html">Home</a></li>
-    <li><a href="page1.html">Page 1</a></li>
-  </ul>
-</nav>
+{SAMPLE_SIDEBAR}
 <div id="content">Hello</div>
 </body></html>"""
 
@@ -187,26 +195,83 @@ class TestExtractSidebar:
 
 
 class TestReplaceSidebar:
+    """Tests use realistic Quarto HTML where <a> tags already have class attributes."""
+
     def test_replaces_sidebar_content(self):
         fresh = '<nav id="quarto-sidebar"><ul><li>New nav</li></ul></nav>'
         result = _replace_sidebar(SAMPLE_HTML_WITH_SIDEBAR, fresh, "other.html")
         assert "New nav" in result
 
-    def test_sets_active_link(self):
-        fresh = '<nav id="quarto-sidebar"><a href="page1.html">P1</a></nav>'
-        result = _replace_sidebar(SAMPLE_HTML_WITH_SIDEBAR, fresh, "page1.html")
-        assert 'class="sidebar-link active"' in result
+    def test_sets_active_on_existing_class_attr(self):
+        """Bug C regression: active must be added to the existing class, not as a duplicate attr."""
+        result = _replace_sidebar(
+            SAMPLE_HTML_WITH_SIDEBAR, SAMPLE_SIDEBAR, "grafts__/demo/page1.html"
+        )
+        # "active" should appear in the class for page1
+        assert 'class="active sidebar-item-text sidebar-link"' in result
+        # Must NOT produce a duplicate class attribute
+        assert 'class="sidebar-link active" class=' not in result
+
+    def test_strips_active_only_from_class_attrs(self):
+        """Bug B regression: page titles containing 'active' must not be corrupted."""
+        sidebar_with_active_title = (
+            '<nav id="quarto-sidebar">'
+            '<a href="a.html" class="sidebar-item-text sidebar-link active">'
+            '<span class="menu-text">My active Projects</span></a>'
+            '<a href="b.html" class="sidebar-item-text sidebar-link">'
+            '<span class="menu-text">Other</span></a>'
+            '</nav>'
+        )
+        result = _replace_sidebar(SAMPLE_HTML_WITH_SIDEBAR, sidebar_with_active_title, "b.html")
+        # Title text must be preserved
+        assert "My active Projects" in result
+        # "active" stripped from a.html's class
+        assert 'href="a.html" class="active' not in result
+        # "active" added to b.html's class
+        assert 'class="active sidebar-item-text sidebar-link"' in result
 
     def test_no_change_when_no_sidebar_in_original(self):
         fresh = '<nav id="quarto-sidebar">fresh</nav>'
         result = _replace_sidebar(SAMPLE_HTML_NO_SIDEBAR, fresh, "x.html")
         assert result == SAMPLE_HTML_NO_SIDEBAR
 
-    def test_removes_existing_active_class(self):
-        fresh = '<nav id="quarto-sidebar"><a href="a.html" class="sidebar-link active">A</a><a href="b.html">B</a></nav>'
-        result = _replace_sidebar(SAMPLE_HTML_WITH_SIDEBAR, fresh, "b.html")
-        # "active" from original a.html link should be stripped
-        assert result.count("active") >= 1  # only the new active link
+    def test_removes_active_from_previously_active_link(self):
+        result = _replace_sidebar(
+            SAMPLE_HTML_WITH_SIDEBAR, SAMPLE_SIDEBAR, "grafts__/demo/page1.html"
+        )
+        # index.html was "active" in the fresh sidebar — should be stripped
+        # Find the <a> for index.html and confirm "active" is NOT in its class
+        import re
+        index_link = re.search(r'<a\s[^>]*href="index\.html"[^>]*>', result)
+        assert index_link is not None
+        assert "active" not in index_link.group(0)
+
+    def test_backslash_in_sidebar_content(self):
+        r"""Bug D regression: backslashes in sidebar must not be treated as regex escapes."""
+        sidebar_with_backslash = (
+            r'<nav id="quarto-sidebar">'
+            r'<a href="math.html" class="sidebar-item-text sidebar-link">'
+            r'<span class="menu-text">Section \(1\) — Intro</span></a>'
+            r'</nav>'
+        )
+        result = _replace_sidebar(SAMPLE_HTML_WITH_SIDEBAR, sidebar_with_backslash, "math.html")
+        # Backslash content must survive intact
+        assert r"Section \(1\)" in result
+
+    def test_preserves_other_classes(self):
+        """Active injection must not drop existing classes like sidebar-item-text."""
+        result = _replace_sidebar(
+            SAMPLE_HTML_WITH_SIDEBAR, SAMPLE_SIDEBAR, "grafts__/demo/page1.html"
+        )
+        import re
+        link = re.search(r'<a\s[^>]*href="grafts__/demo/page1\.html"[^>]*>', result)
+        assert link is not None
+        class_match = re.search(r'class="([^"]*)"', link.group(0))
+        assert class_match is not None
+        classes = class_match.group(1).split()
+        assert "active" in classes
+        assert "sidebar-item-text" in classes
+        assert "sidebar-link" in classes
 
 
 # ---------------------------------------------------------------------------
@@ -223,8 +288,10 @@ class TestFixNavigation:
         fresh_html = (
             '<!DOCTYPE html><html><body>'
             '<nav id="quarto-sidebar" class="sidebar">'
-            '<ul><li><a href="index.html">Home</a></li>'
-            '<li><a href="grafts__/demo/page.html">Demo</a></li></ul>'
+            '<ul><li><a href="index.html" class="sidebar-item-text sidebar-link active">'
+            '<span class="menu-text">Home</span></a></li>'
+            '<li><a href="grafts__/demo/page.html" class="sidebar-item-text sidebar-link">'
+            '<span class="menu-text">Demo Page</span></a></li></ul>'
             '</nav><div>Fresh</div></body></html>'
         )
         (site_dir / "index.html").write_text(fresh_html)
@@ -234,7 +301,8 @@ class TestFixNavigation:
         cached_html = (
             '<!DOCTYPE html><html><body>'
             '<nav id="quarto-sidebar" class="sidebar">'
-            '<ul><li><a href="index.html">Old nav</a></li></ul>'
+            '<ul><li><a href="index.html" class="sidebar-item-text sidebar-link">'
+            '<span class="menu-text">Old nav</span></a></li></ul>'
             '</nav><div>Cached</div></body></html>'
         )
         (graft_dir / "page.html").write_text(cached_html)
@@ -244,7 +312,7 @@ class TestFixNavigation:
         site_dir = self._setup_site(tmp_path)
         assert fix_navigation(site_dir, ["demo"]) == 1
         page = (site_dir / "grafts__" / "demo" / "page.html").read_text()
-        assert "Demo" in page  # fresh sidebar content injected
+        assert "Demo Page" in page  # fresh sidebar content injected
 
     def test_returns_zero_when_no_fresh_page(self, tmp_path):
         site_dir = tmp_path / "_site"
