@@ -190,30 +190,50 @@ class TemplateSource:
                 zf.extractall(dest)
 
     def _extract_tar(self, content: bytes, dest: Path) -> None:
-        """Extract a tar.gz archive to destination."""
+        """Extract a tar.gz archive to destination, rejecting unsafe members."""
         import io
 
         dest.mkdir(parents=True, exist_ok=True)
+        resolved_dest = dest.resolve()
 
         with tarfile.open(fileobj=io.BytesIO(content), mode="r:*") as tf:
-            # Find the root directory in the archive
             members = tf.getmembers()
             if not members:
                 raise RuntimeError("Empty tar archive")
 
             # Check if all files are in a single root directory
             root_dirs = {Path(m.name).parts[0] for m in members if m.name and not m.name.startswith(".")}
-            if len(root_dirs) == 1:
-                # Strip the root directory
-                root_dir = root_dirs.pop()
-                for member in members:
-                    if member.name.startswith(root_dir + "/"):
-                        member.name = str(Path(member.name).relative_to(root_dir))
-                        if member.name:  # Skip if empty after stripping
-                            tf.extract(member, dest)
-            else:
-                # Extract directly
-                tf.extractall(dest)
+            root_dir: str = root_dirs.pop() if len(root_dirs) == 1 else ""
+
+            safe_members: list[tarfile.TarInfo] = []
+            for member in members:
+                # Reject symlinks and hardlinks — they can point outside dest
+                if member.issym() or member.islnk():
+                    logger.warning(f"[template-source] Skipping symlink/hardlink in archive: {member.name}")
+                    continue
+
+                # Strip the single root directory if applicable
+                if root_dir:
+                    if not member.name.startswith(root_dir + "/"):
+                        continue
+                    member.name = str(Path(member.name).relative_to(root_dir))
+                    if not member.name:
+                        continue
+
+                # Reject absolute paths and path traversal
+                if member.name.startswith("/") or ".." in Path(member.name).parts:
+                    logger.warning(f"[template-source] Skipping unsafe archive member: {member.name}")
+                    continue
+
+                # Final check: resolved target must be inside dest
+                target = (resolved_dest / member.name).resolve()
+                if not target.is_relative_to(resolved_dest):
+                    logger.warning(f"[template-source] Skipping archive member escaping destination: {member.name}")
+                    continue
+
+                safe_members.append(member)
+
+            tf.extractall(dest, members=safe_members)
 
     def discover_templates(self, template_type: str) -> list[str]:
         """

@@ -8,22 +8,21 @@ The _cache branch always has exactly one rootless commit (no history).
 
 from __future__ import annotations
 
-import functools
 import hashlib
 import json
 import logging
 import re
+import threading
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import pygit2
 
-from .constants import ROOT
+from .constants import CACHE_BRANCH, ROOT
 
 logger = logging.getLogger(__name__)
 
-CACHE_BRANCH = "_cache"
 CACHE_MANIFEST_NAME = "cache-manifest.json"
 
 
@@ -47,12 +46,20 @@ def content_hash_bytes(data: bytes) -> str:
 # Low-level git helpers for the _cache branch
 # ---------------------------------------------------------------------------
 
-@functools.lru_cache(maxsize=1)
+_repo_lock = threading.Lock()
+_repo_instance: pygit2.Repository | None = None
+
+
 def _get_repo() -> pygit2.Repository:
-    git_dir = pygit2.discover_repository(str(ROOT))
-    if git_dir is None:
-        raise RuntimeError(f"No git repository found at {ROOT}")
-    return pygit2.Repository(git_dir)
+    global _repo_instance
+    if _repo_instance is None:
+        with _repo_lock:
+            if _repo_instance is None:
+                git_dir = pygit2.discover_repository(str(ROOT))
+                if git_dir is None:
+                    raise RuntimeError(f"No git repository found at {ROOT}")
+                _repo_instance = pygit2.Repository(git_dir)
+    return _repo_instance
 
 
 def cache_branch_exists() -> bool:
