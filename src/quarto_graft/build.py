@@ -13,7 +13,7 @@ from typing import Any, Literal
 from uuid import uuid4
 
 from . import constants
-from .archive import is_prerendered
+from .archive import find_quarto_command, is_prerendered
 from .branches import (
     BranchSpec,
     ManifestEntry,
@@ -127,19 +127,6 @@ Please fix the build for branch **`{branch}`**.
     return [target]
 
 
-def _find_quarto_command() -> list[str]:
-    """Find the quarto command to use, checking for uv first, then falling back to quarto."""
-    try:
-        subprocess.run(
-            ["uv", "--version"],
-            check=True,
-            capture_output=True,
-        )
-        return ["uv", "run", "quarto"]
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return ["quarto"]
-
-
 def _convert_source_to_qmd(src: Path, dest_qmd: Path) -> None:
     """
     Convert a branch source file (non-notebook) to a .qmd file for inclusion in the main book.
@@ -152,7 +139,7 @@ def _convert_source_to_qmd(src: Path, dest_qmd: Path) -> None:
         return
 
     if suffix in {".md", ".rmd", ".rmarkdown"}:
-        quarto_cmd = _find_quarto_command()
+        quarto_cmd = find_quarto_command()
         subprocess.run(
             [*quarto_cmd, "convert", str(src), "--output", str(dest_qmd)],
             check=True,
