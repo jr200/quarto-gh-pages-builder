@@ -176,13 +176,12 @@ def restore_cached_files(
 # Writing / updating the cache
 # ---------------------------------------------------------------------------
 
-def _write_rootless_commit(
+def _commit_rootless_tree(
     repo: pygit2.Repository,
-    index: pygit2.Index,
+    tree_id: pygit2.Oid,
     message: str = "cache update",
 ) -> pygit2.Oid:
-    """Write *index* as a rootless (parentless) commit on the _cache branch."""
-    tree_id = index.write_tree(repo)
+    """Create a rootless (parentless) commit on the _cache branch from *tree_id*."""
     sig = pygit2.Signature("quarto-graft-cache", "cache@quarto-graft.local")
     commit_id = repo.create_commit(
         None,  # don't auto-update ref (fails if branch already exists with no parents)
@@ -195,6 +194,16 @@ def _write_rootless_commit(
     # Force-update the branch ref to point at the new rootless commit
     repo.references.create(f"refs/heads/{CACHE_BRANCH}", commit_id, force=True)
     return commit_id
+
+
+def _write_rootless_commit(
+    repo: pygit2.Repository,
+    index: pygit2.Index,
+    message: str = "cache update",
+) -> pygit2.Oid:
+    """Write *index* as a rootless (parentless) commit on the _cache branch."""
+    tree_id = index.write_tree(repo)
+    return _commit_rootless_tree(repo, tree_id, message)
 
 
 def update_cache_after_render(
@@ -213,14 +222,26 @@ def update_cache_after_render(
     Returns the number of newly cached pages.
     """
     repo = _get_repo()
+    affected_keys = set(graft_build_states.keys())
 
-    # Load existing cache tree entries
-    existing_blobs: dict[str, tuple[pygit2.Oid, int]] = {}
+    # Partition the existing _cache tree: only walk subtrees for affected grafts.
+    # Unaffected graft subtrees are preserved by OID (no traversal needed).
+    unaffected_entries: list[tuple[str, pygit2.Oid, int]] = []
+    affected_blobs: dict[str, tuple[pygit2.Oid, int]] = {}
+
     result = _get_cache_tree()
     if result is not None:
         _, tree = result
-        for path, oid, mode in _iter_tree_blobs(repo, tree):
-            existing_blobs[path] = (oid, mode)
+        for te in tree:
+            if te.name == CACHE_MANIFEST_NAME:
+                continue
+            if te.name in affected_keys:
+                obj = repo.get(te.id)
+                if isinstance(obj, pygit2.Tree):
+                    for path, oid, mode in _iter_tree_blobs(repo, obj, te.name):
+                        affected_blobs[path] = (oid, mode)
+            else:
+                unaffected_entries.append((te.name, te.id, te.filemode))
 
     # Load existing manifest
     manifest = load_cache_manifest()
@@ -243,10 +264,10 @@ def update_cache_after_render(
             if page_key.startswith(f"{branch_key}/") and page_key not in current_page_keys:
                 to_remove.append(page_key)
         for key in to_remove:
-            # Remove output files from existing blobs BEFORE popping
+            # Remove output files from affected blobs BEFORE popping
             entry = pages.get(key, {})
             for of in entry.get("output_files", []):
-                existing_blobs.pop(f"{branch_key}/{of}", None)
+                affected_blobs.pop(f"{branch_key}/{of}", None)
             pages.pop(key, None)
 
         # Cache newly rendered pages
@@ -284,8 +305,7 @@ def update_cache_after_render(
                 full_path = site_graft_dir / of
                 if full_path.exists():
                     blob_id = repo.create_blob(full_path.read_bytes())
-                    blob_path = f"{branch_key}/{of}"
-                    existing_blobs[blob_path] = (blob_id, pygit2.GIT_FILEMODE_BLOB)
+                    affected_blobs[f"{branch_key}/{of}"] = (blob_id, pygit2.GIT_FILEMODE_BLOB)
 
             # Update manifest entry
             pages[page_key] = {
@@ -300,15 +320,29 @@ def update_cache_after_render(
     manifest["pages"] = pages
     manifest_json = json.dumps(manifest, indent=2, sort_keys=True).encode("utf-8")
     manifest_blob_id = repo.create_blob(manifest_json)
-    existing_blobs[CACHE_MANIFEST_NAME] = (manifest_blob_id, pygit2.GIT_FILEMODE_BLOB)
 
-    # Build index from all blobs and write rootless commit
-    index = pygit2.Index()
-    for path, (oid, mode) in sorted(existing_blobs.items()):
-        entry = pygit2.IndexEntry(path, oid, mode)
-        index.add(entry)
+    # Build root tree: unaffected subtrees (by OID) + rebuilt affected subtrees + manifest
+    root_builder = repo.TreeBuilder()
 
-    _write_rootless_commit(repo, index)
+    for name, oid, filemode in unaffected_entries:
+        root_builder.insert(name, oid, filemode)
+
+    for branch_key in affected_keys:
+        prefix = f"{branch_key}/"
+        graft_entries = {
+            path[len(prefix):]: v
+            for path, v in affected_blobs.items()
+            if path.startswith(prefix)
+        }
+        if graft_entries:
+            idx = pygit2.Index()
+            for path, (oid, mode) in sorted(graft_entries.items()):
+                idx.add(pygit2.IndexEntry(path, oid, mode))
+            root_builder.insert(branch_key, idx.write_tree(repo), pygit2.GIT_FILEMODE_TREE)
+
+    root_builder.insert(CACHE_MANIFEST_NAME, manifest_blob_id, pygit2.GIT_FILEMODE_BLOB)
+
+    _commit_rootless_tree(repo, root_builder.write())
     logger.info(f"[cache] Updated _cache branch ({new_count} new pages cached)")
     return new_count
 
@@ -361,7 +395,7 @@ def _clear_graft_from_cache(repo: pygit2.Repository, graft_name: str) -> None:
 
     _, tree = result
 
-    # Rebuild index without the graft's entries
+    # Update manifest: remove entries for this graft
     manifest = load_cache_manifest()
     pages = manifest.get("pages", {})
     to_remove = [k for k in pages if k.startswith(f"{branch_key}/")]
@@ -369,24 +403,21 @@ def _clear_graft_from_cache(repo: pygit2.Repository, graft_name: str) -> None:
         pages.pop(k, None)
     manifest["pages"] = pages
 
-    # Rebuild blobs without the graft's files
-    blobs: dict[str, tuple[pygit2.Oid, int]] = {}
-    for path, oid, mode in _iter_tree_blobs(repo, tree):
-        if path.startswith(f"{branch_key}/"):
-            continue
-        blobs[path] = (oid, mode)
-
-    # Update manifest blob
     manifest_json = json.dumps(manifest, indent=2, sort_keys=True).encode("utf-8")
     manifest_blob_id = repo.create_blob(manifest_json)
-    blobs[CACHE_MANIFEST_NAME] = (manifest_blob_id, pygit2.GIT_FILEMODE_BLOB)
 
-    # Write
-    index = pygit2.Index()
-    for path, (oid, mode) in sorted(blobs.items()):
-        entry = pygit2.IndexEntry(path, oid, mode)
-        index.add(entry)
-    _write_rootless_commit(repo, index, message=f"remove {branch_key} from cache")
+    # Rebuild root tree: copy all top-level entries except the graft being cleared.
+    # No subtree walking needed — we just skip the graft's entry entirely.
+    root_builder = repo.TreeBuilder()
+    for te in tree:
+        if te.name == branch_key:
+            continue  # drop this graft's subtree
+        if te.name == CACHE_MANIFEST_NAME:
+            continue  # replaced below
+        root_builder.insert(te.name, te.id, te.filemode)
+
+    root_builder.insert(CACHE_MANIFEST_NAME, manifest_blob_id, pygit2.GIT_FILEMODE_BLOB)
+    _commit_rootless_tree(repo, root_builder.write(), message=f"remove {branch_key} from cache")
     logger.info(f"[cache] Removed '{branch_key}' from cache")
 
 
