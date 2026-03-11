@@ -57,14 +57,16 @@ Everything is **template-based** and customizable:
 
 ## What You Get
 
-- 🚀 Python CLI (`quarto-graft`) for project management
-- 📦 Customizable trunk and graft templates
-- 🔧 Git branch-based isolation
-- 🎯 Multiple collar attachment points
-- 🔄 Automatic navigation updates
-- 💾 Last-good build fallbacks
-- 🔍 Full-site search across all grafts
-- ⚡ Fast trunk builds (no code execution)
+- Python CLI (`quarto-graft`) with interactive mode
+- Customizable trunk and graft templates (built-in, local, GitHub, URL sources)
+- Git branch-based isolation (zero merge conflicts)
+- Multiple collar attachment points for organizing content
+- Automatic navigation updates
+- Last-good build fallbacks (broken grafts never block the site)
+- Full-site search across all grafts
+- Per-page render cache for incremental builds
+- Parallel builds (`--jobs N`)
+- Pre-rendering support (`graft archive`) for faster trunk builds
 
 ## Who This Is For
 
@@ -217,13 +219,23 @@ quarto publish gh-pages
 
 | Command | Description |
 |---------|-------------|
+| `quarto-graft` | Launch interactive command menu |
+| `quarto-graft status` | Show build status dashboard for all grafts |
 | `quarto-graft trunk init` | Create trunk structure from template |
 | `quarto-graft trunk build` | Build all grafts and update trunk navigation |
 | `quarto-graft trunk lock` | Update `_quarto.yaml` from `grafts.lock` (no rebuild) |
+| `quarto-graft trunk list` | List available trunk templates |
+| `quarto-graft trunk cache update` | Capture rendered pages into cache |
+| `quarto-graft trunk cache clear` | Clear the render cache |
+| `quarto-graft trunk cache status` | Show per-page cache status |
 | `quarto-graft graft create <name>` | Create new graft branch |
 | `quarto-graft graft build --branch <name>` | Build single graft |
 | `quarto-graft graft list` | Show all graft branches and their status |
 | `quarto-graft graft destroy <name>` | Delete graft (branch, worktree, config) |
+| `quarto-graft graft archive` | Pre-render graft for faster trunk builds |
+| `quarto-graft graft restore` | Remove pre-rendered content |
+| `quarto-graft collars list` | List available collar attachment points |
+| `quarto-graft templates list` | List available templates |
 
 ### Need Help?
 

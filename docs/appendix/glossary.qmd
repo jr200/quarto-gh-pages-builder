@@ -50,8 +50,22 @@ branches:
 **Last-Good Build**
 : When a graft build fails, the trunk falls back to the last successful build (if available), displaying a warning banner. Prevents broken code from blocking the entire site.
 
+**Render Cache**
+: A per-page HTML cache stored on an orphan `_cache` branch. Pages whose source hasn't changed (same SHA256 hash) are served directly from cache, skipping re-rendering. Managed via `trunk cache update`, `trunk cache clear`, and `trunk cache status`.
+
+**Pre-rendering (Archive)**
+: A graft author can run `graft archive` to pre-render their content into `_prerendered/`. The trunk uses the pre-rendered HTML directly, skipping the render step entirely. Reverted with `graft restore`.
+
 **Autogen Marker**
 : The `_autogen_branch` metadata added to auto-generated navigation entries, allowing the system to track and update graft content without manual intervention.
 
 **Orphan Branch**
-: A git branch with no parent commits, used for grafts to ensure complete isolation from the trunk's history.
+: A git branch with no parent commits, used for grafts and the `_cache` branch to ensure complete isolation from the trunk's history.
+
+## Template Sources
+
+**Template Source**
+: An origin from which trunk and graft templates can be discovered. Quarto Graft supports four source types: built-in (bundled with the package), local file path, GitHub repository URL, and HTTP/HTTPS archive URL (`.tar.gz` or `.zip`). Custom sources are configured in `grafts.yaml` under `template_sources`.
+
+**Qualified Template Name**
+: When the same template name exists in multiple sources, a qualified name like `builtin:markdown` or `my-org:markdown` is used for disambiguation.

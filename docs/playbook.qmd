@@ -52,13 +52,25 @@ quarto-graft graft create contributor-name --collar articles
 
 Build all grafts and update navigation:
 ```bash
-quarto-graft build
+quarto-graft trunk build
+```
+
+Check the status dashboard:
+```bash
+quarto-graft status
 ```
 
 List and manage grafts:
 ```bash
 quarto-graft graft list
 quarto-graft graft destroy old-graft
+```
+
+Manage the render cache:
+```bash
+quarto-graft trunk cache update    # after quarto render
+quarto-graft trunk cache status    # inspect cached pages
+quarto-graft trunk cache clear     # reset cache
 ```
 
 Define new collars in `_quarto.yaml`:
@@ -127,8 +139,30 @@ quarto-graft graft create my-case-study --collar case-studies
    ```
 3. Rebuild to update navigation:
    ```bash
-   quarto-graft build
+   quarto-graft trunk build
    ```
+
+### Pre-rendering a Graft (Archive)
+
+Graft authors can pre-render their content to speed up trunk builds. This is useful for grafts with expensive computations:
+
+1. From the graft branch, archive the content:
+   ```bash
+   git checkout graft/my-analysis
+   quarto-graft graft archive
+   ```
+2. Commit and push the pre-rendered output:
+   ```bash
+   git add _prerendered/ .graft-prerender.json
+   git commit -m "Pre-render graft"
+   git push
+   ```
+3. Trunk builds will automatically use the pre-rendered content (no re-rendering needed).
+
+To revert to source-based rendering:
+```bash
+quarto-graft graft restore
+```
 
 ### Custom Organization Templates
 

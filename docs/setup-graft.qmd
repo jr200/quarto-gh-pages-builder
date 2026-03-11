@@ -125,13 +125,32 @@ Templates support Jinja2 variables:
 - `{{ graft_branch }}` - Git branch name
 - `{{ graft_slug }}` - URL-safe identifier
 
+## Pre-rendering (Archive)
+
+For grafts with expensive computations, you can pre-render the content so trunk builds skip rendering entirely:
+
+```bash
+# Pre-render your graft
+quarto-graft graft archive
+
+# Commit and push
+git add _prerendered/ .graft-prerender.json
+git commit -m "Pre-render graft"
+git push
+```
+
+To revert to source-based rendering:
+```bash
+quarto-graft graft restore
+```
+
 ## Building from the Trunk
 
 After pushing graft changes, build from the trunk:
 
 ```bash
 cd /path/to/trunk
-quarto-graft build         # Builds all grafts
+quarto-graft trunk build   # Builds all grafts
 quarto preview             # Preview the full site
 ```
 

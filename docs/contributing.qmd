@@ -14,19 +14,36 @@ Thank you for your interest in contributing to Quarto Graft! This project welcom
 - Test coverage
 
 **Process:**
+
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/my-feature`
 3. Make your changes with tests
-4. Run tests: `pytest`
+4. Run linter and tests: `make lint && make test`
 5. Submit a pull request
 
 **Development setup:**
 ```bash
 git clone https://github.com/jr200/quarto-graft
 cd quarto-graft
-pip install -e ".[dev]"
-pytest
+make env          # Create venv and install deps via uv
+make test         # Run test suite
+make lint         # Run ruff linter
 ```
+
+**Available make targets:**
+
+| Target | Description |
+|--------|-------------|
+| `make env` | Create venv and sync dependencies with `uv` |
+| `make lint` | Run `ruff` linter with auto-fix |
+| `make test` | Run `pytest` |
+| `make cov` | Run tests with coverage report |
+| `make render` | Render the documentation site |
+| `make preview` | Build and preview docs locally |
+| `make clean` | Remove Quarto build artifacts |
+| `make clean-all` | Full clean (venv, caches, coverage) |
+| `make bump v=patch` | Bump version (`patch`, `minor`, or `major`) |
+| `make release` | Lint, test, tag, push, and create GitHub release |
 
 ### Template Contributions
 
@@ -212,18 +229,20 @@ quarto preview
 
 ## Code Style
 
-- Follow PEP 8 for Python code
-- Use type hints
-- Write docstrings for public functions
+- Follow PEP 8 (enforced by `ruff` with line length 120, target Python 3.11)
+- Use type hints and `from __future__ import annotations`
+- Use `ruamel.yaml` for YAML (preserves formatting), never `PyYAML`
+- Use `pygit2` for git operations, never shell out to `git`
 - Keep functions focused and testable
 
 ## Testing
 
 Run the test suite:
 ```bash
-pytest                    # All tests
-pytest tests/test_cli.py  # Specific file
-pytest -v                 # Verbose output
+make test                          # All tests
+uv run pytest tests/test_cli.py    # Specific file
+uv run pytest -v                   # Verbose output
+make cov                           # With coverage
 ```
 
 ## Questions?
