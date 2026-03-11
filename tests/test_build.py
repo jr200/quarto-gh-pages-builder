@@ -14,6 +14,7 @@ from quarto_graft.build import (
     inject_failure_header,
     resolve_head_sha,
 )
+from quarto_graft.constants import GRAFTS_BUILD_RELPATH
 
 # ---------------------------------------------------------------------------
 # _temp_worktree_name
@@ -80,7 +81,7 @@ class TestInjectFailureHeader:
 
 class TestCreateBrokenStub:
     def test_creates_index_qmd(self, tmp_path):
-        out_dir = tmp_path / ".grafts-cache" / "build" / "demo"
+        out_dir = tmp_path / GRAFTS_BUILD_RELPATH / "demo"
         paths = create_broken_stub("demo", "graft/demo", "abcdef1234567", out_dir)
 
         assert len(paths) == 1

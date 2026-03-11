@@ -56,7 +56,7 @@ PROTECTED_BRANCHES = TRUNK_BRANCHES.union({"gh-pages", CACHE_BRANCH})
 
 # Relative path from project root to the graft build output directory.
 # Used in _quarto.yaml path entries and _site/ rendered output lookups.
-GRAFTS_BUILD_RELPATH = ".grafts-cache/build"
+GRAFTS_BUILD_RELPATH = "dist"
 
 
 # ---------------------------------------------------------------------------
