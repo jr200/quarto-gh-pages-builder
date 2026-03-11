@@ -49,10 +49,10 @@ TRUNK_ADDONS_DIR = "with-addons"
 
 # Protected branch names that cannot be used as grafts
 TRUNK_BRANCHES = {"main", "master"}
-PROTECTED_BRANCHES = TRUNK_BRANCHES.union({"gh-pages"})
-
 # Render cache branch name
 CACHE_BRANCH = "_cache"
+
+PROTECTED_BRANCHES = TRUNK_BRANCHES.union({"gh-pages", CACHE_BRANCH})
 
 # Relative path from project root to the graft build output directory.
 # Used in _quarto.yaml path entries and _site/ rendered output lookups.
