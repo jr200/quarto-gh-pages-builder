@@ -29,7 +29,7 @@ This creates files in your current directory:
 ├── grafts.yaml           # Graft configuration
 ├── grafts.lock           # Build manifest (auto-generated)
 ├── .gitignore
-├── .grafts-cache/        # Internal build cache (gitignored)
+├── dist/                 # Build output and worktree cache (gitignored)
 └── docs/                 # Website content
     ├── index.qmd
     ├── favicon.svg

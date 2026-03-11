@@ -571,7 +571,7 @@ def new_graft_branch(
 def destroy_graft(branch: str, delete_remote: bool = True) -> dict[str, list[str]]:
     """
     Remove all traces of a graft branch:
-    - delete worktrees under .grafts-cache/
+    - delete worktrees under dist/worktrees/
     - delete local branch (force)
     - delete remote branch (if requested)
     - remove from grafts.yaml and grafts.lock

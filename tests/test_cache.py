@@ -22,6 +22,7 @@ from quarto_graft.cache import (
     clear_cache,
     content_hash,
     content_hash_bytes,
+    ensure_local_cache_branch,
     fix_navigation,
     load_cache_manifest,
     lookup_cached_page,
@@ -353,6 +354,38 @@ class TestCacheBranchExists:
     def test_true_after_creation(self, repo_with_cache):
         with patch("quarto_graft.cache._get_repo", return_value=repo_with_cache):
             assert cache_branch_exists() is True
+
+
+class TestEnsureLocalCacheBranch:
+    def test_noop_when_local_exists(self, repo_with_cache):
+        """If local _cache already exists, return True without touching it."""
+        with patch("quarto_graft.cache._get_repo", return_value=repo_with_cache):
+            assert ensure_local_cache_branch() is True
+            assert CACHE_BRANCH in repo_with_cache.branches.local
+
+    def test_creates_from_remote(self, git_repo):
+        """Simulates CI: no local _cache, but origin/_cache remote ref exists."""
+        _create_empty_cache_branch(git_repo)
+        cache_commit_oid = git_repo.branches[CACHE_BRANCH].target
+
+        # Create a fake remote ref pointing at the same commit
+        git_repo.references.create(
+            f"refs/remotes/origin/{CACHE_BRANCH}", cache_commit_oid, force=True,
+        )
+        # Delete the local branch
+        git_repo.branches.delete(CACHE_BRANCH)
+        assert CACHE_BRANCH not in git_repo.branches.local
+
+        with patch("quarto_graft.cache._get_repo", return_value=git_repo):
+            assert ensure_local_cache_branch() is True
+            assert CACHE_BRANCH in git_repo.branches.local
+            assert git_repo.branches[CACHE_BRANCH].target == cache_commit_oid
+
+    def test_false_when_no_local_and_no_remote(self, git_repo):
+        """No _cache anywhere — return False."""
+        with patch("quarto_graft.cache._get_repo", return_value=git_repo):
+            assert ensure_local_cache_branch() is False
+            assert CACHE_BRANCH not in git_repo.branches.local
 
 
 class TestCreateEmptyCacheBranch:

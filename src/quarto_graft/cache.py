@@ -68,6 +68,28 @@ def cache_branch_exists() -> bool:
     return CACHE_BRANCH in repo.branches.local
 
 
+def ensure_local_cache_branch() -> bool:
+    """Ensure a local ``_cache`` branch exists, creating from ``origin/_cache`` if needed.
+
+    In CI (fresh checkout), ``git fetch`` populates ``origin/_cache`` but does
+    not create a local branch.  This helper bridges that gap so the build can
+    read cached pages.
+
+    Returns True if the local ``_cache`` branch exists after this call.
+    """
+    repo = _get_repo()
+    if CACHE_BRANCH in repo.branches.local:
+        return True
+    remote_ref = f"refs/remotes/origin/{CACHE_BRANCH}"
+    if remote_ref not in repo.references:
+        return False
+    target_oid = repo.references[remote_ref].resolve().target
+    commit = repo.get(target_oid)
+    repo.branches.create(CACHE_BRANCH, commit)
+    logger.info(f"[cache] Created local '{CACHE_BRANCH}' branch from origin/{CACHE_BRANCH}")
+    return True
+
+
 def _get_cache_tree() -> tuple[pygit2.Repository, pygit2.Tree] | None:
     """Return (repo, tree) for the _cache branch tip, or None."""
     repo = _get_repo()

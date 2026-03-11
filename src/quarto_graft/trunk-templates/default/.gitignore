@@ -47,7 +47,6 @@ venv.bak/
 .DS_Store?
 ._*
 Thumbs.db
-.grafts-cache/
 .history/
 
 # Quarto specific

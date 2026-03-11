@@ -1,5 +1,5 @@
 DOCS_DIR := .
-WORKTREES_DIR := .grafts-cache
+WORKTREES_DIR := dist
 
 .PHONY: all env build render preview clean clean-grafts clean-all
 

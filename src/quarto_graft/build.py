@@ -25,6 +25,7 @@ from .branches import (
 from .cache import (
     cache_branch_exists,
     content_hash,
+    ensure_local_cache_branch,
     load_cache_manifest,
     restore_cached_files,
 )
@@ -368,6 +369,8 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
 
     if fetch:
         fetch_origin()
+    if use_cache:
+        ensure_local_cache_branch()
 
     # Validate branch exists before attempting build
     if not _branch_exists(head_ref):
@@ -548,6 +551,8 @@ def update_manifests(
         on_complete: Callback invoked after each graft completes (thread-safe)
     """
     fetch_origin()
+    if use_cache:
+        ensure_local_cache_branch()
     if branches is None:
         branches = read_branches_list()
 

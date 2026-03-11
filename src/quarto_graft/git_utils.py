@@ -351,7 +351,7 @@ def managed_worktree(ref: str, name: str):
 
 def ensure_worktree(branch: str) -> Path:
     """
-    Ensure there is a git worktree for the given branch under .grafts-cache/<branch>.
+    Ensure there is a git worktree for the given branch under dist/worktrees/<branch>.
     """
 
     if branch in TRUNK_BRANCHES:
@@ -384,14 +384,14 @@ def ensure_worktree(branch: str) -> Path:
 
 
 def delete_worktree(branch: str) -> None:
-    """Delete the git worktree under .grafts-cache/<branch>."""
+    """Delete the git worktree under dist/worktrees/<branch>."""
     logger.info(f"[delete-worktree] Removing worktree for branch '{branch}'")
     remove_worktree(branch)
 
 
 def cleanup_orphan_worktrees() -> list[Path]:
     """
-    Remove directories under .grafts-cache/ that are no longer registered with git.
+    Remove directories under dist/worktrees/ that are no longer registered with git.
 
     Returns:
         List of successfully removed worktree paths.

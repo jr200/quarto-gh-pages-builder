@@ -12,7 +12,7 @@
 : A named attachment point in the trunk's `_quarto.yaml` where grafts connect. Defined with `_GRAFT_COLLAR: <name>` markers. Examples: `main`, `tutorials`, `articles`, `notes`.
 
 **Worktree Cache**
-: Internal build optimization using git worktrees under `.grafts-cache/`. The build system uses worktrees to efficiently render multiple graft branches without affecting the user's working directory. Users work directly on graft branches and don't interact with this cache.
+: Internal build optimization using git worktrees under `dist/worktrees/`. The build system uses worktrees to efficiently render multiple graft branches without affecting the user's working directory. Users work directly on graft branches and don't interact with this cache.
 
 ## Configuration Files
 

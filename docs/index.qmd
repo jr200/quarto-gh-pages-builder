@@ -200,11 +200,10 @@ git push -u origin main
 quarto-graft graft create alice-chapter --collar main
 
 # 5. Alice works in her graft
-cd .grafts-cache/alice-chapter
+git checkout graft/alice-chapter
 # ... edit files ...
 git add . && git commit -m "Added my chapter"
 git push
-cd ../..
 
 # 6. Build and preview trunk
 git checkout main

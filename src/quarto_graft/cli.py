@@ -497,7 +497,7 @@ def _write_build_state(
     """Persist per-page hashes to a transient file for ``trunk cache update``.
 
     Only grafts with page_hashes (non-archived, non-broken) are included.
-    The file lives under .grafts-cache/ and is overwritten each build.
+    The file lives under dist/ and is overwritten each build.
     """
     state: dict[str, dict] = {}
     for _branch_name, res in results.items():

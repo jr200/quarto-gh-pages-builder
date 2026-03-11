@@ -20,15 +20,17 @@
 | **Collar** | A named attachment point in the trunk's `_quarto.yaml` sidebar where grafts connect (marked with `_GRAFT_COLLAR`) |
 | **Manifest** | `grafts.lock` — tracks the build state of each graft branch |
 | **Render cache** | `_cache` orphan branch — stores per-page rendered HTML to skip re-rendering unchanged pages |
-| **Worktree cache** | `.grafts-cache/` — temporary git worktrees used during builds |
+| **Build directory** | `dist/` — assembled graft content, worktrees, and build state |
+| **Worktree cache** | `dist/worktrees/` — temporary git worktrees used during builds |
+| **Build state** | `dist/build-state.json` — transient per-page hashes for cache updates |
 
 ### How a Build Works
 
 1. `trunk build` iterates over graft branches listed in `grafts.yaml`
-2. Each graft is checked out into a worktree under `.grafts-cache/`
+2. Each graft is checked out into a worktree under `dist/worktrees/`
 3. For each page, a content hash (`sha256`) is computed and checked against the `_cache` branch
-4. **Cache hit:** pre-rendered `.html` is restored from cache into `grafts__/<graft-key>/` (skips quarto render)
-5. **Cache miss:** source `.qmd` is exported for quarto to render
+4. **Cache hit:** pre-rendered `.html` is restored from cache into `dist/<graft-key>/` (skips quarto render)
+5. **Cache miss:** source `.qmd` is exported into `dist/` for quarto to render
 6. The trunk's `_quarto.yaml` sidebar is updated — cached pages use `href:` links, uncached use `file:` refs
 7. The full site is rendered from the trunk (only uncached pages go through quarto→pandoc)
 8. `trunk cache update` captures newly rendered HTML back to the `_cache` branch for next time
@@ -60,6 +62,8 @@ src/quarto_graft/
 - **Jinja2 templates with `StrictUndefined`** — missing variables fail loudly at init time.
 - **Path traversal protection** — branch-to-filesystem-key conversion rejects `..` segments.
 - **Last-good-build fallback** — a broken graft never blocks site publication.
+- **All build artifacts in `dist/`** — graft content, worktrees, and build state all live under `dist/` because quarto ignores dot-prefixed folders.
+- **Protected branches** — `main`, `master`, `gh-pages`, and `_cache` cannot be used as graft names.
 - **Per-page render cache** — `_cache` branch stores rendered HTML keyed by `sha256(content)`. Uses rootless commits (no parent chain) to avoid history accumulation. Cached and uncached pages coexist within a single graft. Navigation sidebar in cached pages is fixed via HTML post-processing after render.
 - **Archive vs. cache** — archive (`graft archive`) is graft-owner-driven and stores pre-rendered HTML on the graft branch itself. Cache (`trunk cache`) is trunk-owner-driven and stores rendered HTML on a separate `_cache` orphan branch. Archived grafts skip caching entirely.
 
@@ -105,7 +109,7 @@ uv run ruff check . --fix
 Tests live in `tests/` and use **pytest**. Configuration is in `pytest.ini`:
 
 - Verbose output, short tracebacks, strict markers
-- Test files: `test_branches.py`, `test_file_utils.py`, `test_archive.py`
+- Test files: `test_archive.py`, `test_branches.py`, `test_build.py`, `test_cache.py`, `test_cli.py`, `test_file_utils.py`, `test_git_utils.py`, `test_quarto_config.py`, `test_template_sources.py`
 
 ```bash
 uv run pytest            # run all tests
@@ -182,6 +186,6 @@ quarto-graft trunk build -j 4 --changed   # combine: parallel + incremental
 - Imports use `from __future__ import annotations` throughout.
 - YAML handling always uses `ruamel.yaml` (never PyYAML) to preserve formatting and quoting.
 - Git operations always use `pygit2` — never shell out to `git`.
-- Protected branches (`main`, `master`, `gh-pages`) cannot be used as graft names.
+- Protected branches (`main`, `master`, `gh-pages`, `_cache`) cannot be used as graft names.
 - Template variables use Jinja2 `{{ double_brace }}` syntax with `StrictUndefined`.
 - **Keep `agents.md` up to date.** After any change that adds, removes, or renames commands, flags, modules, conventions, or architectural patterns, update this file to reflect the current state of the project.

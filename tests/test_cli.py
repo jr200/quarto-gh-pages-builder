@@ -87,7 +87,7 @@ class TestBuildState:
         import quarto_graft.constants as constants
         try:
             constants._root_override = tmp_path
-            (tmp_path / ".grafts-cache").mkdir(parents=True, exist_ok=True)
+            (tmp_path / "dist").mkdir(parents=True, exist_ok=True)
 
             results = {
                 "graft/demo": BuildResult(
@@ -118,7 +118,7 @@ class TestBuildState:
         import quarto_graft.constants as constants
         try:
             constants._root_override = tmp_path
-            (tmp_path / ".grafts-cache").mkdir(parents=True, exist_ok=True)
+            (tmp_path / "dist").mkdir(parents=True, exist_ok=True)
 
             results = {
                 "graft/demo": BuildResult(
@@ -154,8 +154,8 @@ class TestBuildState:
         import quarto_graft.constants as constants
         try:
             constants._root_override = tmp_path
-            (tmp_path / ".grafts-cache").mkdir(parents=True, exist_ok=True)
-            (tmp_path / ".grafts-cache" / "build-state.json").write_text(
+            (tmp_path / "dist").mkdir(parents=True, exist_ok=True)
+            (tmp_path / "dist" / "build-state.json").write_text(
                 "not valid json{{{", encoding="utf-8"
             )
             state = _load_build_state()
