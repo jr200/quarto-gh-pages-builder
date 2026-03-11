@@ -5,13 +5,13 @@ This directory contains optional add-on templates that can be included when init
 ## Usage
 
 ```bash
-uv run trunk-init --template default --with gh-pages
+quarto-graft trunk init "My Site" --template default --with gh-pages
 ```
 
 You can use multiple `--with` flags:
 
 ```bash
-uv run trunk-init --template default --with gh-pages --with analytics
+quarto-graft trunk init "My Site" --template default --with gh-pages --with analytics
 ```
 
 ## Available Add-ons

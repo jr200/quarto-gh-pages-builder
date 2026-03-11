@@ -17,6 +17,12 @@ website:
   # page-navigation: true
   # back-to-top-navigation: true
   # open-graph: true
+  navbar:
+    left:
+      - text: "Overview"
+        href: docs/index.qmd
+      - text: "Marimo App"
+        href: docs/app.qmd
   sidebar:
     style: floating
     search: true
