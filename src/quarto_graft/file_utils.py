@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -37,9 +38,7 @@ def atomic_write_text(path: Path, content: str, encoding: str = "utf-8") -> None
         try:
             tmp.write(content)
             tmp.flush()
-            # Ensure data is written to disk
-            tmp.file.flush()
-            # Atomically replace the target file
+            os.fsync(tmp.fileno())
             tmp_path.replace(path)
         except Exception:
             # Clean up temp file on error
@@ -86,7 +85,7 @@ def atomic_write_yaml(path: Path, data: dict[str, Any]) -> None:
         try:
             yaml_loader.dump(data, tmp)
             tmp.flush()
-            tmp.file.flush()
+            os.fsync(tmp.fileno())
             tmp_path.replace(path)
         except Exception:
             if tmp_path.exists():

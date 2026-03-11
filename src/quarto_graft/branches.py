@@ -10,17 +10,10 @@ from typing import Any, TypedDict
 import pygit2
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, TemplateSyntaxError
 
-from .constants import (
-    GRAFTS_CONFIG_FILE,
-    GRAFTS_MANIFEST_FILE,
-    MAIN_DOCS,
-    PROTECTED_BRANCHES,
-    ROOT,
-    TRUNK_TEMPLATES_DIR,
-    WORKTREES_CACHE,
-)
+from . import constants
+from .constants import PROTECTED_BRANCHES, TRUNK_TEMPLATES_DIR
 from .file_utils import atomic_write_json, atomic_write_yaml
-from .git_utils import remove_worktree, run_git, worktrees_for_branch
+from .git_utils import prune_worktrees, push_to_origin, remove_worktree, worktrees_for_branch
 from .yaml_utils import get_yaml_loader
 
 logger = logging.getLogger(__name__)
@@ -139,6 +132,7 @@ class ManifestEntry(TypedDict, total=False):
     exported: list[str]
     structure: Any  # Original sidebar/chapter structure from graft's _quarto.yaml
     prerendered: bool    # True if graft has pre-rendered HTML content
+    cached_pages: list[str]      # source relpaths served from cache
 
 class BranchSpec(TypedDict):
     """Configuration for a single graft branch."""
@@ -196,10 +190,10 @@ def branch_to_key(branch: str) -> str:
 
 
 def _open_repo() -> pygit2.Repository:
-    """Open the main git repository at ROOT."""
-    git_dir = pygit2.discover_repository(str(ROOT))
+    """Open the main git repository at constants.ROOT."""
+    git_dir = pygit2.discover_repository(str(constants.ROOT))
     if not git_dir:
-        raise RuntimeError(f"No git repository found at {ROOT}")
+        raise RuntimeError(f"No git repository found at {constants.ROOT}")
     return pygit2.Repository(git_dir)
 
 
@@ -210,11 +204,11 @@ def remove_from_grafts_config(branch: str) -> list[str]:
     Returns:
         List of name keys removed (for cleaning cache).
     """
-    if not GRAFTS_CONFIG_FILE.exists():
+    if not constants.GRAFTS_CONFIG_FILE.exists():
         return []
 
     yaml_loader = get_yaml_loader()
-    data = yaml_loader.load(GRAFTS_CONFIG_FILE.read_text(encoding="utf-8")) or {}
+    data = yaml_loader.load(constants.GRAFTS_CONFIG_FILE.read_text(encoding="utf-8")) or {}
     branches_list = data.get("branches", [])
     if not isinstance(branches_list, list):
         return []
@@ -236,7 +230,7 @@ def remove_from_grafts_config(branch: str) -> list[str]:
 
     if len(kept) != len(branches_list):
         data["branches"] = kept
-        atomic_write_yaml(GRAFTS_CONFIG_FILE, data)
+        atomic_write_yaml(constants.GRAFTS_CONFIG_FILE, data)
 
     return removed_keys
 
@@ -251,17 +245,17 @@ def load_manifest() -> dict[str, ManifestEntry]:
     Returns:
         Manifest dictionary, or empty dict if file doesn't exist or is corrupted
     """
-    if not GRAFTS_MANIFEST_FILE.exists():
+    if not constants.GRAFTS_MANIFEST_FILE.exists():
         return {}
 
     try:
-        content = GRAFTS_MANIFEST_FILE.read_text(encoding="utf-8")
+        content = constants.GRAFTS_MANIFEST_FILE.read_text(encoding="utf-8")
         return json.loads(content)
     except json.JSONDecodeError as e:
-        logger.error(f"Corrupt manifest file {GRAFTS_MANIFEST_FILE}: {e}")
+        logger.error(f"Corrupt manifest file {constants.GRAFTS_MANIFEST_FILE}: {e}")
 
         # Try to restore from backup
-        backup_file = GRAFTS_MANIFEST_FILE.with_suffix(".lock.bak")
+        backup_file = constants.GRAFTS_MANIFEST_FILE.with_suffix(".lock.bak")
         if backup_file.exists():
             logger.warning(f"Attempting to restore manifest from backup: {backup_file}")
             try:
@@ -275,10 +269,10 @@ def load_manifest() -> dict[str, ManifestEntry]:
                 logger.error(f"Backup restoration failed: {restore_error}")
 
         # No backup or restoration failed - save corrupted file for debugging
-        corrupted_path = GRAFTS_MANIFEST_FILE.with_suffix(".lock.corrupted")
+        corrupted_path = constants.GRAFTS_MANIFEST_FILE.with_suffix(".lock.corrupted")
         try:
             import shutil
-            shutil.copy2(GRAFTS_MANIFEST_FILE, corrupted_path)
+            shutil.copy2(constants.GRAFTS_MANIFEST_FILE, corrupted_path)
             logger.error(
                 f"Saved corrupted manifest to {corrupted_path} for debugging. "
                 "Starting with empty manifest."
@@ -296,16 +290,16 @@ def save_manifest(manifest: dict[str, ManifestEntry]) -> None:
     Creates a .bak file before overwriting to allow recovery from corruption.
     """
     # Create backup of existing manifest before overwriting
-    backup_file = GRAFTS_MANIFEST_FILE.with_suffix(".lock.bak")
-    if GRAFTS_MANIFEST_FILE.exists():
+    backup_file = constants.GRAFTS_MANIFEST_FILE.with_suffix(".lock.bak")
+    if constants.GRAFTS_MANIFEST_FILE.exists():
         try:
             import shutil
-            shutil.copy2(GRAFTS_MANIFEST_FILE, backup_file)
+            shutil.copy2(constants.GRAFTS_MANIFEST_FILE, backup_file)
         except Exception as e:
             logger.warning(f"Failed to create manifest backup: {e}")
 
     # Write new manifest atomically
-    atomic_write_json(GRAFTS_MANIFEST_FILE, manifest)
+    atomic_write_json(constants.GRAFTS_MANIFEST_FILE, manifest)
 
 
 def _validate_label(label: str, value: str) -> None:
@@ -332,7 +326,7 @@ def _validate_label(label: str, value: str) -> None:
 
 
 def read_branches_list(path: Path | None = None) -> list[BranchSpec]:
-    path = path or GRAFTS_CONFIG_FILE
+    path = path or constants.GRAFTS_CONFIG_FILE
     if not path.exists():
         raise FileNotFoundError(f"No grafts.yaml found at {path}")
 
@@ -456,13 +450,13 @@ def new_graft_branch(
 
     # Create worktree + new branch
     branch_key = branch_to_key(name)
-    wt_dir = WORKTREES_CACHE / branch_key
+    wt_dir = constants.WORKTREES_CACHE / branch_key
     if wt_dir.exists():
         raise RuntimeError(
             f"Worktree directory {wt_dir} already exists; refusing to overwrite for new graft."
         )
 
-    WORKTREES_CACHE.mkdir(exist_ok=True)
+    constants.WORKTREES_CACHE.mkdir(exist_ok=True)
     logger.info(f"[new-graft] Creating worktree for new branch '{branch}' at {wt_dir}...")
     if repo.head_is_unborn:
         raise RuntimeError(
@@ -542,7 +536,7 @@ def new_graft_branch(
         if push:
             logger.info(f"[new-graft] Pushing new branch '{branch}' to origin...")
             try:
-                run_git(["push", "origin", f"refs/heads/{branch}:refs/heads/{branch}"], cwd=wt_dir)
+                push_to_origin(f"refs/heads/{branch}:refs/heads/{branch}", cwd=wt_dir)
             except Exception as e:
                 logger.warning(f"[new-graft] Push failed: {e}")
     else:
@@ -550,8 +544,8 @@ def new_graft_branch(
 
     # Append branch name to grafts.yaml if not already present
     yaml_loader = get_yaml_loader()
-    if GRAFTS_CONFIG_FILE.exists():
-        data = yaml_loader.load(GRAFTS_CONFIG_FILE.read_text(encoding="utf-8")) or {}
+    if constants.GRAFTS_CONFIG_FILE.exists():
+        data = yaml_loader.load(constants.GRAFTS_CONFIG_FILE.read_text(encoding="utf-8")) or {}
     else:
         data = {}
 
@@ -566,7 +560,7 @@ def new_graft_branch(
         entry: dict[str, str] = {"name": name, "branch": branch, "collar": collar}
         branches_list.append(entry)
         data["branches"] = branches_list
-        atomic_write_yaml(GRAFTS_CONFIG_FILE, data)
+        atomic_write_yaml(constants.GRAFTS_CONFIG_FILE, data)
         logger.info(f"[new-graft] Added '{branch}' to grafts.yaml")
     else:
         logger.info(f"[new-graft] '{branch}' already exists in grafts.yaml; not adding")
@@ -606,7 +600,7 @@ def destroy_graft(branch: str, delete_remote: bool = True) -> dict[str, list[str
     for wt_path in worktrees_for_branch(branch):
         worktree_candidates.add(wt_path)
         try:
-            worktree_candidates.add(wt_path.relative_to(WORKTREES_CACHE))
+            worktree_candidates.add(wt_path.relative_to(constants.WORKTREES_CACHE))
         except ValueError:
             pass
 
@@ -614,7 +608,7 @@ def destroy_graft(branch: str, delete_remote: bool = True) -> dict[str, list[str
         if isinstance(key, Path):
             wt_dir = key
         else:
-            wt_dir = WORKTREES_CACHE / key
+            wt_dir = constants.WORKTREES_CACHE / key
         if wt_dir.exists():
             logger.info(f"[destroy] Removing worktree {wt_dir}")
             remove_worktree(wt_dir, force=True)
@@ -622,7 +616,7 @@ def destroy_graft(branch: str, delete_remote: bool = True) -> dict[str, list[str
 
     # Ensure git forgets any stale worktree entries
     try:
-        run_git(["worktree", "prune"], cwd=ROOT)
+        prune_worktrees()
     except Exception:
         logger.info("[destroy] worktree prune failed; continuing")
 
@@ -638,7 +632,7 @@ def destroy_graft(branch: str, delete_remote: bool = True) -> dict[str, list[str
 
     if delete_remote:
         try:
-            run_git(["push", "origin", f":refs/heads/{branch}"], cwd=ROOT)
+            push_to_origin(f":refs/heads/{branch}")
             logger.info(f"[destroy] Deleted remote branch '{branch}'")
         except Exception:
             logger.info(f"[destroy] Remote branch '{branch}' could not be deleted or not found")
@@ -676,7 +670,7 @@ def init_trunk(
         raise RuntimeError(f"Trunk template directory not found: {template_dir}")
 
     # Identify top-level conflicts
-    top_level_targets = [MAIN_DOCS / entry.name for entry in template_dir.iterdir()]
+    top_level_targets = [constants.MAIN_DOCS / entry.name for entry in template_dir.iterdir()]
     conflicts = [p for p in top_level_targets if p.exists()]
     if conflicts and not overwrite:
         conflict_names = ", ".join(p.name for p in conflicts)
@@ -702,8 +696,8 @@ def init_trunk(
     }
 
     logger.info(f"[trunk-init] Rendering template '{template_name}' with context: {context}")
-    _render_template_tree(template_dir, MAIN_DOCS, context)
-    logger.info(f"[trunk-init] Trunk initialized from template '{template_name}' at {MAIN_DOCS}")
+    _render_template_tree(template_dir, constants.MAIN_DOCS, context)
+    logger.info(f"[trunk-init] Trunk initialized from template '{template_name}' at {constants.MAIN_DOCS}")
 
     # Collect addon instructions
     addon_instructions: list[tuple[str, str]] = []
@@ -727,12 +721,12 @@ def init_trunk(
 
             logger.info(f"[trunk-init] Applying addon: {with_name}")
             # Render addon with same context
-            _render_template_tree(with_template_dir, MAIN_DOCS, context)
+            _render_template_tree(with_template_dir, constants.MAIN_DOCS, context)
 
             # Remove TRUNK_INSTRUCTIONS.md from rendered output if it exists
-            rendered_instructions_path = MAIN_DOCS / "TRUNK_INSTRUCTIONS.md"
+            rendered_instructions_path = constants.MAIN_DOCS / "TRUNK_INSTRUCTIONS.md"
             if rendered_instructions_path.exists():
                 rendered_instructions_path.unlink()
                 logger.info(f"[trunk-init] Removed TRUNK_INSTRUCTIONS.md from rendered addon '{with_name}'")
 
-    return MAIN_DOCS, addon_instructions
+    return constants.MAIN_DOCS, addon_instructions

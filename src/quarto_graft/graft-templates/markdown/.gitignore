@@ -6,9 +6,6 @@ __pycache__/
 *.log
 
 # Quarto documentation
-.quarto/   
-docs/_site/
-docs/.quarto/
-docs/_freeze/
-docs/_styles-quartodoc.css
-docs/grafts__/
+_site/
+.quarto/
+_freeze/

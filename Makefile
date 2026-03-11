@@ -1,7 +1,7 @@
 # quarto project root - i.e., location of _quarto.yaml
 PROJECT_ROOT := docs
 
-.PHONY: all env build render preview clean clean-grafts clean-all
+.PHONY: all env build render preview clean clean-grafts clean-all cov cov-html
 
 all: render
 
@@ -34,13 +34,17 @@ clean:
 
 
 clean-all: clean
-	rm -rf .venv .ruff_cache .mypy_cache
+	rm -rf .venv .ruff_cache .mypy_cache htmlcov .coverage
 	find . -type f -name '*.py[co]' -delete
 	find . -type d -name '__pycache__' -delete
 	find . -type d -name '.mypy_cache' -print0 | xargs -0 rm -rf
 
 cov:
-	uv run pytest --cov
+	uv run pytest --cov --cov-report=term-missing
+
+cov-html: cov
+	uv run python -m coverage html
+	@echo "Coverage report: htmlcov/index.html"
 
 test:
 	uv run pytest

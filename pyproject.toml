@@ -1,28 +1,48 @@
 [project]
 name = "quarto-graft"
-version = "0.0.24"
+version = "0.1.0"
 description = "Quarto GitHub Pages branch graft tool"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
   "Jinja2>=3.1",
-  "packaging>=25.0",
   "pygit2>=1.19.0",
   "quarto-cli>=1.8.26",
   "questionary>=2.1.1",
   "ruamel-yaml>=0.18.16",
-  "ruff>=0.14.10",
   "typer>=0.20.1",
 ]
 
 [dependency-groups]
 dev = [
+    "packaging>=25.0",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
+    "ruff>=0.14.10",
 ]
 
 [project.scripts]
 quarto-graft = "quarto_graft.cli:main"
+
+[tool.coverage.run]
+source = ["quarto_graft"]
+branch = true
+omit = [
+    "*/graft-templates/*",
+    "*/trunk-templates/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
 
 [build-system]
 requires = ["uv_build>=0.9.14,<0.10.0"]

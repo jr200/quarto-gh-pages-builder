@@ -1532,41 +1532,41 @@ sdist = { url = "https://files.pythonhosted.org/packages/a4/20/3c6d3784b06be0f4b
 
 [[package]]
 name = "quarto-graft"
-version = "0.0.23"
+version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "jinja2" },
-    { name = "packaging" },
     { name = "pygit2" },
     { name = "quarto-cli" },
     { name = "questionary" },
     { name = "ruamel-yaml" },
-    { name = "ruff" },
     { name = "typer" },
 ]
 
 [package.dev-dependencies]
 dev = [
+    { name = "packaging" },
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "ruff" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "jinja2", specifier = ">=3.1" },
-    { name = "packaging", specifier = ">=25.0" },
     { name = "pygit2", specifier = ">=1.19.0" },
     { name = "quarto-cli", specifier = ">=1.8.26" },
     { name = "questionary", specifier = ">=2.1.1" },
     { name = "ruamel-yaml", specifier = ">=0.18.16" },
-    { name = "ruff", specifier = ">=0.14.10" },
     { name = "typer", specifier = ">=0.20.1" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "packaging", specifier = ">=25.0" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
+    { name = "ruff", specifier = ">=0.14.10" },
 ]
 
 [[package]]

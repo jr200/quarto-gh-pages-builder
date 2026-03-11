@@ -1,28 +1,30 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
-import subprocess
+from datetime import datetime
 from pathlib import Path
 
 import questionary
 import typer
 from rich.console import Console
+from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.table import Table
 
+from . import constants
 from .archive import archive_graft, restore_graft
 from .branches import branch_to_key, destroy_graft, init_trunk, load_manifest, new_graft_branch, read_branches_list
-from .build import build_branch, update_manifests
+from .build import BuildResult, build_branch, resolve_head_sha, update_manifests
+from .cache import cache_status, clear_cache, fix_navigation, update_cache_after_render
 from .constants import (
     GRAFT_TEMPLATES_DIR,
-    GRAFTS_CONFIG_FILE,
     PROTECTED_BRANCHES,
-    ROOT,
     TEMPLATE_SOURCE_BUILTIN,
     TRUNK_ADDONS_DIR,
     TRUNK_TEMPLATES_DIR,
 )
-from .git_utils import has_commits, remove_worktree, run_git
+from .git_utils import fetch_origin, has_commits, list_local_branches, prune_worktrees, remove_worktree
 from .quarto_config import apply_manifest
 from .template_sources import TemplateSource, load_template_sources_from_config
 
@@ -57,7 +59,7 @@ def require_trunk() -> None:
     Check if the current directory is a quarto-graft trunk.
     Raises typer.Exit if grafts.yaml is not found.
     """
-    if not GRAFTS_CONFIG_FILE.exists():
+    if not constants.GRAFTS_CONFIG_FILE.exists():
         console.print("[red]Error:[/red] grafts.yaml not found in current directory.")
         console.print("[yellow]Graft commands can only be run from within a quarto-graft trunk.[/yellow]")
         console.print(f"[dim]Current directory: {Path.cwd()}[/dim]")
@@ -66,10 +68,15 @@ def require_trunk() -> None:
 
 
 MAIN_MENU_COMMANDS = [
+    questionary.Separator("=== General ==="),
+    {"name": "status - Show build status of all grafts", "value": "status"},
     questionary.Separator("=== Trunk Commands ==="),
     {"name": "trunk init - Initialize trunk (docs/) from a template", "value": "trunk init"},
     {"name": "trunk build - Build all graft branches and update trunk", "value": "trunk build"},
     {"name": "trunk lock - Update _quarto.yaml from grafts.lock", "value": "trunk lock"},
+    {"name": "trunk cache update - Capture rendered pages into cache", "value": "trunk cache update"},
+    {"name": "trunk cache clear - Clear the render cache", "value": "trunk cache clear"},
+    {"name": "trunk cache status - Show cache status", "value": "trunk cache status"},
     questionary.Separator("=== Graft Commands ==="),
     {"name": "graft create - Create a new graft branch from a template", "value": "graft create"},
     {"name": "graft build - Build a single graft branch", "value": "graft build"},
@@ -309,12 +316,8 @@ def _git_local_branches() -> set[str]:
         RuntimeError: If git operations fail unexpectedly
     """
     try:
-        out = run_git(["for-each-ref", "refs/heads", "--format", "%(refname:short)"], cwd=ROOT)
-        return {line.strip() for line in out.splitlines() if line.strip()}
-    except subprocess.CalledProcessError as e:
-        # Not in a git repo or no branches yet
-        logger.debug(f"Could not list git branches: {e}")
-        return set()
+        branches = list_local_branches(cwd=constants.ROOT)
+        return set(branches)
     except Exception as e:
         logger.error(f"Unexpected error listing git branches: {e}")
         console.print(f"[yellow]Warning:[/yellow] Could not list git branches: {e}")
@@ -385,8 +388,7 @@ def trunk_init(
     template_name, template_path = trunk_validator.validate_template(template)
 
     # Check for conflicts in the current directory (files that template will write)
-    from .constants import MAIN_DOCS
-    top_level_targets = [MAIN_DOCS / entry.name for entry in template_path.iterdir()]
+    top_level_targets = [constants.MAIN_DOCS / entry.name for entry in template_path.iterdir()]
     conflicts = [p for p in top_level_targets if p.exists()]
 
     if conflicts:
@@ -443,6 +445,83 @@ def trunk_init(
         _display_trunk_instructions(instructions, title=f"TRUNK OWNER INSTRUCTIONS - {addon_name.upper()} ADDON")
 
 
+def _print_build_summary(results: dict[str, BuildResult], branch_specs: list) -> None:
+    """Print a formatted build summary table."""
+    if not results:
+        return
+
+    table = Table()
+    table.add_column("Graft", style="cyan")
+    table.add_column("Status", justify="center")
+    table.add_column("Files", justify="right")
+    table.add_column("Time", justify="right")
+    table.add_column("Details", style="dim")
+
+    status_colors = {"ok": "green", "skipped": "blue", "fallback": "yellow", "broken": "red"}
+
+    for spec in branch_specs:
+        b = spec["branch"] if isinstance(spec, dict) else spec
+        r = results.get(b)
+        if not r:
+            continue
+
+        color = status_colors.get(r.status, "white")
+        status_str = f"[{color}]{r.status}[/{color}]"
+        files_str = str(len(r.exported_relpaths)) if r.status != "skipped" else "—"
+        time_str = f"{r.duration_secs:.1f}s" if r.duration_secs > 0 else "—"
+
+        details = ""
+        if r.status == "skipped":
+            details = "unchanged"
+        elif r.error_message:
+            msg = r.error_message
+            if len(msg) > 60:
+                msg = msg[:57] + "..."
+            details = msg
+        elif r.prerendered:
+            details = "pre-rendered"
+        elif r.cached_pages:
+            total = len(r.page_hashes) if r.page_hashes else 0
+            details = f"cache: {len(r.cached_pages)}/{total} pages"
+
+        name = spec["name"] if isinstance(spec, dict) else spec
+        table.add_row(name, status_str, files_str, time_str, details)
+
+    console.print(table)
+
+
+def _write_build_state(
+    results: dict[str, BuildResult],
+    branch_specs: list,
+) -> None:
+    """Persist per-page hashes to a transient file for ``trunk cache update``.
+
+    Only grafts with page_hashes (non-archived, non-broken) are included.
+    The file lives under .grafts-cache/ and is overwritten each build.
+    """
+    state: dict[str, dict] = {}
+    for _branch_name, res in results.items():
+        if res.page_hashes:
+            state[res.branch_key] = {
+                "page_hashes": res.page_hashes,
+                "cached_pages": res.cached_pages or [],
+            }
+    constants.BUILD_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    constants.BUILD_STATE_FILE.write_text(
+        json.dumps(state, indent=2, sort_keys=True), encoding="utf-8",
+    )
+
+
+def _load_build_state() -> dict[str, dict]:
+    """Load the transient build state written by ``trunk build``."""
+    if not constants.BUILD_STATE_FILE.exists():
+        return {}
+    try:
+        return json.loads(constants.BUILD_STATE_FILE.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
 @trunk_app.command("build")
 def trunk_build(
     no_update_manifest: bool = typer.Option(
@@ -450,22 +529,98 @@ def trunk_build(
         "--no-update-manifest",
         help="Do not update grafts.lock",
     ),
+    jobs: int = typer.Option(
+        1,
+        "--jobs",
+        "-j",
+        help="Number of parallel build workers",
+    ),
+    only: list[str] | None = typer.Option(  # noqa: B008
+        None,
+        "--only",
+        help="Only build these grafts (by name, repeatable)",
+    ),
+    skip: list[str] | None = typer.Option(  # noqa: B008
+        None,
+        "--skip",
+        help="Skip these grafts (by name, repeatable)",
+    ),
+    changed: bool = typer.Option(
+        False,
+        "--changed",
+        help="Only rebuild grafts with new commits since last build",
+    ),
+    no_cache: bool = typer.Option(
+        False,
+        "--no-cache",
+        help="Bypass render cache and export all pages as .qmd",
+    ),
 ) -> None:
     """Build all graft branches and update trunk."""
-    results = update_manifests(update_manifest=not no_update_manifest)
-    branch_specs = read_branches_list()
+    require_trunk()
 
-    console.print("\n[bold]Manifest summary:[/bold]")
-    for spec in branch_specs:
-        b = spec["branch"]
-        r = results.get(b)
-        if not r:
-            continue
-        status_color = "green" if r.status == "success" else "yellow"
-        console.print(f"  [bold]{b}:[/bold] [{status_color}]{r.status}[/{status_color}] ({len(r.exported_dest_paths)} files)")
+    branch_specs = read_branches_list()
+    only_set = set(only) if only else None
+    skip_set = set(skip) if skip else None
+
+    # Count grafts that will be processed (after --only/--skip filtering)
+    filtered_count = sum(
+        1 for spec in branch_specs
+        if (not only_set or spec["name"] in only_set)
+        and (not skip_set or spec["name"] not in skip_set)
+    )
+
+    if filtered_count == 0:
+        console.print("[yellow]No grafts to build after filtering.[/yellow]")
+        return
+
+    # Display build configuration
+    build_info = []
+    if only:
+        build_info.append(f"only: {', '.join(only)}")
+    if skip:
+        build_info.append(f"skip: {', '.join(skip)}")
+    if changed:
+        build_info.append("changed only")
+    if jobs > 1:
+        build_info.append(f"{jobs} workers")
+
+    desc = f"Building {filtered_count} graft(s)"
+    if build_info:
+        desc += f" ({', '.join(build_info)})"
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        MofNCompleteColumn(),
+        TimeElapsedColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task(desc, total=filtered_count)
+
+        def on_complete(result: BuildResult) -> None:
+            progress.advance(task)
+
+        results = update_manifests(
+            update_manifest=not no_update_manifest,
+            jobs=jobs,
+            only=only_set,
+            skip=skip_set,
+            changed_only=changed,
+            on_complete=on_complete,
+            use_cache=not no_cache,
+        )
+
+    console.print()
+    _print_build_summary(results, branch_specs)
+
+    # Persist per-page hashes to a transient build state file for `trunk cache update`.
+    # This keeps the large page_hashes out of grafts.lock.
+    _write_build_state(results, branch_specs)
 
     apply_manifest()
-    console.print("\n[green]✓[/green] Trunk build complete")
+    console.print("[green]✓[/green] Trunk build complete")
 
 
 @trunk_app.command("lock")
@@ -473,6 +628,136 @@ def trunk_lock() -> None:
     """Update _quarto.yaml from grafts.lock."""
     apply_manifest()
     console.print("[green]✓[/green] Updated _quarto.yaml")
+
+
+# ============================================================================
+# TRUNK CACHE COMMANDS
+# ============================================================================
+
+cache_app = typer.Typer(help="Manage the per-page render cache", no_args_is_help=True)
+trunk_app.add_typer(cache_app, name="cache")
+
+
+@cache_app.command("update")
+def trunk_cache_update(
+    site_dir: str = typer.Option(
+        "_site",
+        "--site-dir",
+        "-s",
+        help="Path to the Quarto _site/ output directory",
+    ),
+) -> None:
+    """Capture newly rendered pages into the cache.
+
+    Run this after 'quarto render'. Stores rendered HTML on the _cache branch
+    and fixes navigation in cached pages.
+    """
+    require_trunk()
+
+    site_path = Path(site_dir)
+    if not site_path.exists():
+        console.print(f"[red]Error:[/red] Site directory '{site_dir}' not found.")
+        console.print("[dim]Run 'quarto render' first, then 'quarto-graft trunk cache update'.[/dim]")
+        raise typer.Exit(code=1)
+
+    # Read per-page hashes from the transient build state file (written by trunk build).
+    graft_build_states = _load_build_state()
+    if not graft_build_states:
+        console.print("[yellow]No build state found.[/yellow]")
+        console.print("[dim]Run 'quarto-graft trunk build' first.[/dim]")
+        raise typer.Exit(code=1)
+
+    # Identify grafts with cached pages (from manifest) for nav post-processing.
+    manifest = load_manifest()
+    branch_specs = read_branches_list()
+    cached_graft_keys: list[str] = []
+    for spec in branch_specs:
+        entry = manifest.get(spec["branch"])
+        if not entry:
+            continue
+        bk = entry.get("branch_key") or branch_to_key(spec["name"])
+        if entry.get("cached_pages"):
+            cached_graft_keys.append(bk)
+
+    # Capture newly rendered pages
+    with console.status("Updating render cache..."):
+        new_count = update_cache_after_render(site_path, graft_build_states)
+
+    console.print(f"[green]✓[/green] Cached {new_count} newly rendered page(s)")
+
+    # Fix navigation in cached pages
+    if cached_graft_keys:
+        with console.status("Fixing navigation in cached pages..."):
+            nav_count = fix_navigation(site_path, cached_graft_keys)
+        if nav_count:
+            console.print(f"[green]✓[/green] Updated navigation in {nav_count} cached page(s)")
+
+
+@cache_app.command("clear")
+def trunk_cache_clear(
+    graft: str | None = typer.Option(
+        None,
+        "--graft",
+        "-g",
+        help="Only clear cache for this graft (by name)",
+    ),
+    no_remote: bool = typer.Option(
+        False,
+        "--no-remote",
+        help="Do not delete the remote _cache branch",
+    ),
+) -> None:
+    """Clear the render cache.
+
+    Deletes the local (and optionally remote) _cache branch and recreates it empty.
+    Use --graft to clear only a specific graft's cached pages.
+    """
+    require_trunk()
+
+    with console.status("Clearing cache..."):
+        clear_cache(graft_name=graft, delete_remote=not no_remote)
+
+    if graft:
+        console.print(f"[green]✓[/green] Cleared cache for graft '{graft}'")
+    else:
+        console.print("[green]✓[/green] Cache cleared")
+        if not no_remote:
+            console.print("[dim]Remote _cache branch also deleted.[/dim]")
+
+
+@cache_app.command("status")
+def trunk_cache_status() -> None:
+    """Show per-page cache status."""
+    require_trunk()
+
+    entries = cache_status()
+    if not entries:
+        console.print("[dim]Cache is empty. Run 'trunk build' then 'quarto render' then 'trunk cache update' to populate.[/dim]")
+        return
+
+    table = Table(title="Render Cache")
+    table.add_column("Page", style="cyan")
+    table.add_column("Hash", style="dim")
+    table.add_column("Cached At")
+    table.add_column("Files", justify="right")
+
+    for e in entries:
+        cached_at = e["cached_at"]
+        if cached_at != "?":
+            try:
+                dt = datetime.fromisoformat(cached_at.replace("Z", "+00:00"))
+                cached_at = dt.strftime("%Y-%m-%d %H:%M")
+            except Exception:
+                cached_at = cached_at[:16]
+
+        table.add_row(
+            e["page_key"],
+            e["content_hash"],
+            cached_at,
+            str(e["output_files"]),
+        )
+
+    console.print(table)
 
 
 # ============================================================================
@@ -586,7 +871,7 @@ def graft_create(
         branch_key = branch_to_key(name)
         remove_worktree(branch_key, force=True)
         # Prune any stale worktree references from git
-        run_git(["worktree", "prune"], cwd=ROOT)
+        prune_worktrees()
         logger.debug(f"Cleaned up temporary worktree for {branch_key}")
     except Exception as e:
         logger.debug(f"Failed to clean up worktree: {e}")
@@ -634,14 +919,20 @@ def graft_build(
             console.print("[red]Error:[/red] Branch name required")
             raise typer.Exit(code=1)
 
-    res = build_branch(branch, update_manifest=not no_update_manifest)
+    with console.status(f"Building {branch}..."):
+        res = build_branch(branch, update_manifest=not no_update_manifest)
 
-    status_color = "green" if res.status == "success" else "yellow"
-    console.print(f"[bold]{res.branch}[/bold]")
-    console.print(f"  Status: [{status_color}]{res.status}[/{status_color}]")
-    console.print(f"  Files exported: {len(res.exported_dest_paths)}")
-    console.print(f"  HEAD SHA: {res.head_sha}")
-    console.print(f"  Last good SHA: {res.last_good_sha}")
+    status_colors = {"ok": "green", "skipped": "blue", "fallback": "yellow", "broken": "red"}
+    color = status_colors.get(res.status, "white")
+
+    console.print(f"\n[bold]{res.branch}[/bold]")
+    console.print(f"  Status:     [{color}]{res.status}[/{color}]")
+    console.print(f"  Files:      {len(res.exported_dest_paths)}")
+    console.print(f"  Duration:   {res.duration_secs:.1f}s")
+    console.print(f"  HEAD SHA:   {res.head_sha or '—'}")
+    console.print(f"  Built SHA:  {res.last_good_sha or '—'}")
+    if res.error_message:
+        console.print(f"  [red]Error:[/red]    {res.error_message}")
 
 
 @graft_app.command("list")
@@ -826,6 +1117,103 @@ def graft_restore_cmd(
 
 
 # ============================================================================
+# STATUS COMMAND
+# ============================================================================
+
+@app.command("status")
+def status_cmd(
+    no_fetch: bool = typer.Option(
+        False,
+        "--no-fetch",
+        help="Skip fetching origin before checking status",
+    ),
+) -> None:
+    """Show build status of all grafts."""
+    require_trunk()
+
+    branch_specs = read_branches_list()
+    manifest = load_manifest()
+
+    if not branch_specs:
+        console.print("[dim]No grafts configured in grafts.yaml.[/dim]")
+        return
+
+    if not no_fetch:
+        with console.status("Fetching origin..."):
+            fetch_origin()
+
+    table = Table(title="Graft Status")
+    table.add_column("Graft", style="cyan")
+    table.add_column("Collar")
+    table.add_column("Status", justify="center")
+    table.add_column("Last Built")
+    table.add_column("Files", justify="right")
+    table.add_column("HEAD", justify="center")
+    table.add_column("Built", justify="center")
+
+    for spec in branch_specs:
+        name = spec["name"]
+        branch = spec["branch"]
+        collar = spec["collar"]
+        entry = manifest.get(branch, {})
+
+        last_good = entry.get("last_good")
+        last_checked = entry.get("last_checked", "")
+        exported = entry.get("exported", [])
+        is_prerendered = entry.get("prerendered", False)
+
+        head_sha = resolve_head_sha(branch)
+
+        # Determine status
+        if not entry:
+            status = "never built"
+            color = "dim"
+        elif not last_good:
+            status = "broken"
+            color = "red"
+        elif head_sha and head_sha != last_good:
+            status = "stale"
+            color = "yellow"
+        elif head_sha is None:
+            status = "missing"
+            color = "red"
+        else:
+            status = "current"
+            color = "green"
+
+        if is_prerendered and status in ("current", "stale"):
+            status += " (pre-rendered)"
+
+        # Format last-built timestamp
+        time_str = "—"
+        if last_checked:
+            try:
+                dt = datetime.fromisoformat(last_checked.replace("Z", "+00:00"))
+                time_str = dt.strftime("%Y-%m-%d %H:%M")
+            except Exception:
+                time_str = last_checked[:16]
+
+        head_short = head_sha[:7] if head_sha else "—"
+        built_short = last_good[:7] if last_good else "—"
+
+        # Highlight SHA mismatch
+        if head_sha and last_good and head_sha != last_good:
+            head_short = f"[yellow]{head_short}[/yellow]"
+
+        table.add_row(
+            name,
+            collar,
+            f"[{color}]{status}[/{color}]",
+            time_str,
+            str(len(exported)),
+            head_short,
+            built_short,
+        )
+
+    console.print(table)
+
+
+# ============================================================================
 # MAIN ENTRY POINT
 # ============================================================================
 
@@ -855,19 +1243,23 @@ def main_callback(
         raise typer.Exit(code=0)
 
     # Parse and execute the selected command
+    if selected_command == "status":
+        status_cmd(no_fetch=False)
+        return
+
     parts = selected_command.split()
     if len(parts) == 2:
         group, command = parts
 
         # Route to appropriate command handler
         if group == "trunk" and command == "init":
-            trunk_init(name=None, template=None, overwrite=None, with_addons=None)
+            trunk_init()
         elif group == "trunk" and command == "build":
-            trunk_build(no_update_manifest=False)
+            trunk_build()
         elif group == "trunk" and command == "lock":
             trunk_lock()
         elif group == "graft" and command == "create":
-            graft_create(name=None, template=None, collar=None, branch_name=None, push=True)
+            graft_create()
         elif group == "graft" and command == "build":
             # Prompt for branch - use select if branches exist, otherwise text input
             found_branches = _discover_grafts()
@@ -885,7 +1277,7 @@ def main_callback(
             if not branch:
                 console.print("[red]Error:[/red] Branch name required")
                 raise typer.Exit(code=1)
-            graft_build(branch=branch, no_update_manifest=False)
+            graft_build(branch=branch)
         elif group == "graft" and command == "list":
             graft_list()
         elif group == "graft" and command == "destroy":
@@ -906,11 +1298,20 @@ def main_callback(
             if not branch:
                 console.print("[red]Error:[/red] Branch name required")
                 raise typer.Exit(code=1)
-            graft_destroy(branch=branch, keep_remote=False)
+            graft_destroy(branch=branch)
         elif group == "graft" and command == "archive":
-            graft_archive_cmd(project_dir=None)
+            graft_archive_cmd()
         elif group == "graft" and command == "restore":
-            graft_restore_cmd(project_dir=None)
+            graft_restore_cmd()
+    elif len(parts) == 3:
+        group, sub, command = parts
+        if group == "trunk" and sub == "cache":
+            if command == "update":
+                trunk_cache_update()
+            elif command == "clear":
+                trunk_cache_clear()
+            elif command == "status":
+                trunk_cache_status()
 
 
 def main() -> None:

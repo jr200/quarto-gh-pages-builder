@@ -13,12 +13,14 @@ from urllib.request import urlopen
 
 import pygit2
 
-from .constants import ROOT
+from . import constants
 
 logger = logging.getLogger(__name__)
 
-# Cache directory for remote templates
-TEMPLATE_CACHE_DIR = ROOT / ".quarto-graft" / ".template-cache"
+
+def _template_cache_dir() -> Path:
+    """Return the cache directory for remote templates (lazy, respects ROOT override)."""
+    return constants.ROOT / ".quarto-graft" / ".template-cache"
 
 
 class TemplateSource:
@@ -81,7 +83,7 @@ class TemplateSource:
             return path
 
         # If relative, resolve relative to project root
-        resolved = (ROOT / path).resolve()
+        resolved = (constants.ROOT / path).resolve()
         logger.debug(f"[template-source] Resolved relative path '{path_str}' to: {resolved}")
         return resolved
 
@@ -99,7 +101,7 @@ class TemplateSource:
         - Size validation before full download
         """
         # Create cache directory
-        TEMPLATE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        _template_cache_dir().mkdir(parents=True, exist_ok=True)
 
         # Generate cache key from URL
         url_hash = hashlib.sha256(url.encode()).hexdigest()[:16]
@@ -107,7 +109,7 @@ class TemplateSource:
         filename = Path(parsed.path).name or "templates"
 
         # Determine cache subdirectory
-        cache_subdir = TEMPLATE_CACHE_DIR / f"{url_hash}-{filename}"
+        cache_subdir = _template_cache_dir() / f"{url_hash}-{filename}"
 
         # Check if already cached
         if cache_subdir.exists() and any(cache_subdir.iterdir()):
@@ -160,10 +162,11 @@ class TemplateSource:
         return cache_subdir
 
     def _extract_zip(self, content: bytes, dest: Path) -> None:
-        """Extract a zip archive to destination."""
+        """Extract a zip archive to destination, rejecting unsafe members."""
         import io
 
         dest.mkdir(parents=True, exist_ok=True)
+        resolved_dest = dest.resolve()
 
         with zipfile.ZipFile(io.BytesIO(content)) as zf:
             # Find the root directory in the archive
@@ -173,47 +176,80 @@ class TemplateSource:
 
             # Check if all files are in a single root directory
             root_dirs = {Path(m).parts[0] for m in members if m and not m.startswith(".")}
-            if len(root_dirs) == 1:
-                # Strip the root directory
-                root_dir = root_dirs.pop()
-                for member in members:
-                    if member.startswith(root_dir + "/"):
-                        target_path = dest / Path(member).relative_to(root_dir)
-                        if member.endswith("/"):
-                            target_path.mkdir(parents=True, exist_ok=True)
-                        else:
-                            target_path.parent.mkdir(parents=True, exist_ok=True)
-                            with zf.open(member) as source, open(target_path, "wb") as target:
-                                shutil.copyfileobj(source, target)
-            else:
-                # Extract directly
-                zf.extractall(dest)
+            strip_root = root_dirs.pop() if len(root_dirs) == 1 else ""
+
+            for member in members:
+                if not member or member.endswith("/"):
+                    continue
+
+                # Strip single root directory if applicable
+                if strip_root:
+                    if not member.startswith(strip_root + "/"):
+                        continue
+                    rel = str(Path(member).relative_to(strip_root))
+                else:
+                    rel = member
+
+                # Reject absolute paths and path traversal
+                if rel.startswith("/") or ".." in Path(rel).parts:
+                    logger.warning(f"[template-source] Skipping unsafe zip member: {member}")
+                    continue
+
+                # Final check: resolved target must be inside dest
+                target_path = (resolved_dest / rel).resolve()
+                if not target_path.is_relative_to(resolved_dest):
+                    logger.warning(f"[template-source] Skipping zip member escaping destination: {member}")
+                    continue
+
+                target_path.parent.mkdir(parents=True, exist_ok=True)
+                with zf.open(member) as source, open(target_path, "wb") as target:
+                    shutil.copyfileobj(source, target)
 
     def _extract_tar(self, content: bytes, dest: Path) -> None:
-        """Extract a tar.gz archive to destination."""
+        """Extract a tar.gz archive to destination, rejecting unsafe members."""
         import io
 
         dest.mkdir(parents=True, exist_ok=True)
+        resolved_dest = dest.resolve()
 
         with tarfile.open(fileobj=io.BytesIO(content), mode="r:*") as tf:
-            # Find the root directory in the archive
             members = tf.getmembers()
             if not members:
                 raise RuntimeError("Empty tar archive")
 
             # Check if all files are in a single root directory
             root_dirs = {Path(m.name).parts[0] for m in members if m.name and not m.name.startswith(".")}
-            if len(root_dirs) == 1:
-                # Strip the root directory
-                root_dir = root_dirs.pop()
-                for member in members:
-                    if member.name.startswith(root_dir + "/"):
-                        member.name = str(Path(member.name).relative_to(root_dir))
-                        if member.name:  # Skip if empty after stripping
-                            tf.extract(member, dest)
-            else:
-                # Extract directly
-                tf.extractall(dest)
+            root_dir: str = root_dirs.pop() if len(root_dirs) == 1 else ""
+
+            safe_members: list[tarfile.TarInfo] = []
+            for member in members:
+                # Reject symlinks and hardlinks — they can point outside dest
+                if member.issym() or member.islnk():
+                    logger.warning(f"[template-source] Skipping symlink/hardlink in archive: {member.name}")
+                    continue
+
+                # Strip the single root directory if applicable
+                if root_dir:
+                    if not member.name.startswith(root_dir + "/"):
+                        continue
+                    member.name = str(Path(member.name).relative_to(root_dir))
+                    if not member.name:
+                        continue
+
+                # Reject absolute paths and path traversal
+                if member.name.startswith("/") or ".." in Path(member.name).parts:
+                    logger.warning(f"[template-source] Skipping unsafe archive member: {member.name}")
+                    continue
+
+                # Final check: resolved target must be inside dest
+                target = (resolved_dest / member.name).resolve()
+                if not target.is_relative_to(resolved_dest):
+                    logger.warning(f"[template-source] Skipping archive member escaping destination: {member.name}")
+                    continue
+
+                safe_members.append(member)
+
+            tf.extractall(dest, members=safe_members, filter="data")
 
     def discover_templates(self, template_type: str) -> list[str]:
         """
@@ -319,11 +355,11 @@ class TemplateSource:
 
         Cloned repos are cached under .quarto-graft/.template-cache/.
         """
-        TEMPLATE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        _template_cache_dir().mkdir(parents=True, exist_ok=True)
 
         ref_display = ref or "default"
         cache_key = hashlib.sha256(f"{repo}@{ref_display}".encode()).hexdigest()[:16]
-        cache_dir = TEMPLATE_CACHE_DIR / f"github-{cache_key}-{repo.replace('/', '-')}"
+        cache_dir = _template_cache_dir() / f"github-{cache_key}-{repo.replace('/', '-')}"
 
         if cache_dir.exists() and any(cache_dir.iterdir()):
             logger.info(f"[template-source] Using cached GitHub repo {repo}@{ref_display}")

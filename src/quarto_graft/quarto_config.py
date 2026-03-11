@@ -5,11 +5,11 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from . import constants
 from .branches import BranchSpec, branch_to_key, load_manifest, read_branches_list, save_manifest
 from .constants import (
     GRAFT_COLLAR_MARKER,
     QUARTO_CONFIG_YAML,
-    QUARTO_PROJECT_YAML,
     YAML_AUTOGEN_MARKER,
 )
 from .file_utils import atomic_write_yaml
@@ -44,7 +44,7 @@ def list_available_collars(config_path: Path | None = None) -> list[str]:
     Searches for _GRAFT_COLLAR markers in the sidebar/chapters structure.
     Returns a list of collar names (e.g., ['main', 'notes', 'bugs']).
     """
-    config_path = config_path or QUARTO_PROJECT_YAML
+    config_path = config_path or constants.QUARTO_PROJECT_YAML
     if not config_path.exists():
         raise RuntimeError(f"No {QUARTO_CONFIG_YAML} found at {config_path}")
 
@@ -338,7 +338,7 @@ def apply_manifest() -> None:
     Update _quarto.yaml to match docs/grafts__ content, using
     grafts.lock and grafts.yaml.
     """
-    quarto_file = QUARTO_PROJECT_YAML
+    quarto_file = constants.QUARTO_PROJECT_YAML
     # text = quarto_file.read_text(encoding="utf-8")
 
     with open(quarto_file) as fp:
@@ -384,10 +384,25 @@ def apply_manifest() -> None:
             text = p.stem.replace("-", " ").replace("_", " ").title()
             return {"text": text, "href": html_path}
 
-        def rewrite_paths(node: Any, branch_key: str, prerendered: bool = False) -> Any:
-            """Recursively rewrite file paths in a structure to prepend grafts__/{branch_key}/."""
+        def _is_cached_page(file_path: str, cached_set: set[str] | None) -> bool:
+            """Check if a source file path is in the cached pages set."""
+            if not cached_set:
+                return False
+            return file_path in cached_set
+
+        def rewrite_paths(
+            node: Any,
+            branch_key: str,
+            prerendered: bool = False,
+            cached_set: set[str] | None = None,
+        ) -> Any:
+            """Recursively rewrite file paths in a structure to prepend grafts__/{branch_key}/.
+
+            For prerendered grafts, all pages use href with .html extension.
+            For cached pages (per-page), only those in *cached_set* use href.
+            """
             if isinstance(node, str):
-                if prerendered:
+                if prerendered or _is_cached_page(node, cached_set):
                     return _to_html_href(node, branch_key)
                 # It's a file path - prepend the graft path
                 return f"grafts__/{branch_key}/{node}"
@@ -397,9 +412,9 @@ def apply_manifest() -> None:
                 for key, value in node.items():
                     if key in (content_key, "chapters", "contents"):
                         # Recursively process contents/chapters
-                        result[key] = rewrite_paths(value, branch_key, prerendered)
+                        result[key] = rewrite_paths(value, branch_key, prerendered, cached_set)
                     elif key in ("file", "href"):
-                        if prerendered:
+                        if prerendered or _is_cached_page(value, cached_set):
                             # Convert file refs to href with .html extension
                             p = Path(value)
                             if p.suffix.lower() in _source_exts:
@@ -415,7 +430,7 @@ def apply_manifest() -> None:
                 return result
             elif isinstance(node, list):
                 # Recursively process list items
-                return [rewrite_paths(item, branch_key, prerendered) for item in node]
+                return [rewrite_paths(item, branch_key, prerendered, cached_set) for item in node]
             else:
                 # Return as-is for other types
                 return node
@@ -430,6 +445,8 @@ def apply_manifest() -> None:
             branch_key = entry.get("branch_key") or branch_to_key(spec["name"])
             structure = entry.get("structure")
             is_prerendered = bool(entry.get("prerendered"))
+            cached_pages_list = entry.get("cached_pages", [])
+            cached_set = set(cached_pages_list) if cached_pages_list else None
 
             # If no structure is preserved, skip this graft
             if not structure:
@@ -437,7 +454,7 @@ def apply_manifest() -> None:
                 continue
 
             # Rewrite all paths in the structure
-            rewritten_structure = rewrite_paths(structure, branch_key, prerendered=is_prerendered)
+            rewritten_structure = rewrite_paths(structure, branch_key, prerendered=is_prerendered, cached_set=cached_set)
 
             # Wrap in a section/part with the graft title
             item = {
@@ -500,29 +517,35 @@ def apply_manifest() -> None:
             "cannot apply auto-generated chapter updates."
         )
 
-    # Add project resources for pre-rendered grafts so Quarto copies HTML as-is
-    prerender_resources = []
+    # Add project resources for pre-rendered and cached grafts so Quarto copies HTML as-is
+    html_resources: list[str] = []
     for spec in branches:
         entry = manifest.get(spec["branch"])
-        if entry and entry.get("prerendered"):
-            bk = entry.get("branch_key") or branch_to_key(spec["name"])
-            prerender_resources.append(f"grafts__/{bk}/**")
+        if not entry:
+            continue
+        bk = entry.get("branch_key") or branch_to_key(spec["name"])
+        if entry.get("prerendered"):
+            # Entire graft is pre-rendered
+            html_resources.append(f"grafts__/{bk}/**")
+        elif entry.get("cached_pages"):
+            # Graft has some cached pages — their .html files need to be resources
+            html_resources.append(f"grafts__/{bk}/**/*.html")
 
-    if prerender_resources:
+    if html_resources:
         project_cfg = data.setdefault("project", {})
         resources = project_cfg.get("resources", [])
-        for r in prerender_resources:
+        for r in html_resources:
             if r not in resources:
                 resources.append(r)
         project_cfg["resources"] = resources
 
-    # Clean up stale resource entries for grafts no longer pre-rendered
+    # Clean up stale resource entries for grafts no longer pre-rendered/cached
     existing_resources = data.get("project", {}).get("resources", [])
     if existing_resources:
-        active_prerender_set = set(prerender_resources)
+        active_set = set(html_resources)
         cleaned = [
             r for r in existing_resources
-            if not r.startswith("grafts__/") or r in active_prerender_set
+            if not r.startswith("grafts__/") or r in active_set
         ]
         if cleaned != existing_resources:
             data.setdefault("project", {})["resources"] = cleaned

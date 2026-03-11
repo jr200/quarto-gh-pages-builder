@@ -11,10 +11,9 @@ website:
   title: "{{ project_name }}"
   description: "Skeleton docs for branch-based Quarto builds."
   favicon: docs/favicon.svg
-  repo-url: https://github.com/jr200/quarto-graft
-  repo-actions: [source, issue]
+  # repo-url: https://github.com/YOUR_ORG/YOUR_REPO
+  # repo-actions: [source, issue]
   page-footer:
-    left: "[quarto-graft](https://github.com/jr200/quarto-graft)"
     right: "Last build: {{< meta site_build >}}"
 
   navbar:
@@ -24,10 +23,10 @@ website:
     left:
     - href: docs/index.qmd
       text: Overview
-    right:
-    - text: GitHub
-      icon: github
-      href: https://github.com/jr200/quarto-graft
+    # right:
+    # - text: GitHub
+    #   icon: github
+    #   href: https://github.com/YOUR_ORG/YOUR_REPO
 
 
   sidebar:

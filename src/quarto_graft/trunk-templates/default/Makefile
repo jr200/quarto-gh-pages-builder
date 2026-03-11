@@ -8,7 +8,7 @@ all: render
 ## Setup Python deps (bookbuilder, PyYAML, etc.)
 env:
 	@echo "Syncing uv environment..."
-	uv venv --clear && uv sync
+	uv sync --frozen || uv sync
 
 ## Linting
 .PHONY: lint

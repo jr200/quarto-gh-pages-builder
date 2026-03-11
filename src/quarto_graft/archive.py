@@ -15,7 +15,7 @@ from .yaml_utils import get_yaml_loader
 logger = logging.getLogger(__name__)
 
 
-def _find_quarto_command() -> list[str]:
+def find_quarto_command() -> list[str]:
     """Find the quarto command to use, checking for uv first, then falling back to quarto."""
     try:
         subprocess.run(
@@ -51,16 +51,11 @@ def _get_output_dir(project_root: Path) -> Path:
 
 def _get_source_commit(project_root: Path) -> str | None:
     """Get the current HEAD commit SHA, or None if not in a git repo."""
+    from .git_utils import GitRefNotFoundError, rev_parse
+
     try:
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=project_root,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        return result.stdout.strip()
-    except (subprocess.CalledProcessError, FileNotFoundError):
+        return rev_parse("HEAD", cwd=project_root)
+    except (GitRefNotFoundError, RuntimeError):
         return None
 
 
@@ -89,7 +84,7 @@ def archive_graft(project_dir: Path | None = None) -> Path:
     prerender_dir = project_root / PRERENDER_DIR_NAME
 
     # Run quarto render
-    quarto_cmd = _find_quarto_command()
+    quarto_cmd = find_quarto_command()
     logger.info(f"[archive] Running {' '.join(quarto_cmd)} render in {project_root}")
 
     result = subprocess.run(
