@@ -51,6 +51,14 @@ jobs:
           path: ${{ github.event.inputs.docs }}
           to: html
 
+      - name: Update graft cache
+        run: |
+          uv run quarto-graft trunk cache update
+
+      - name: Push graft cache
+        run: |
+          git push origin _cache --force
+
       - name: Publish to GitHub Pages
         uses: quarto-dev/quarto-actions/publish@v2.2.0
         with:
