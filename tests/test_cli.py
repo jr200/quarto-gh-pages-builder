@@ -441,6 +441,16 @@ class TestMenuDispatchDefaults:
             main_callback(ctx, log_level=None)
         self._assert_no_typer_info(mock_fn, graft_restore_cmd)
 
+    def test_trunk_release(self):
+        from quarto_graft.cli import trunk_release
+        ctx = MagicMock(spec=typer.Context)
+        ctx.invoked_subcommand = None
+        with patch("quarto_graft.cli.show_main_menu", return_value="trunk release"), \
+             patch("quarto_graft.cli._configure_logging"), \
+             patch("quarto_graft.cli.trunk_release") as mock_fn:
+            main_callback(ctx, log_level=None)
+        self._assert_no_typer_info(mock_fn, trunk_release)
+
     def test_status(self):
         from quarto_graft.cli import status_cmd
         ctx = MagicMock(spec=typer.Context)

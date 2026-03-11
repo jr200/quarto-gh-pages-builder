@@ -499,6 +499,15 @@ wheels = [
 ]
 
 [[package]]
+name = "fastcore"
+version = "1.12.24"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b3/32/f825b36faade2655071d0fb9488309db78c597d467fadc3ab2d64ccafd8f/fastcore-1.12.24.tar.gz", hash = "sha256:3a07824efe3e2e8b555a29c661e801c32764ac6a34b8e38074f5d15ea722ff49", size = 93286, upload-time = "2026-03-09T07:07:13.89Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/87/3c/286648f162a0c964a3cad6532f27db552ffb431db25e5bcd2010a8708777/fastcore-1.12.24-py3-none-any.whl", hash = "sha256:ff1457a8ce41d25bf2351a342d8a6938d5dccf198d15efc3f0964a0fe021c16e", size = 97487, upload-time = "2026-03-09T07:07:10.19Z" },
+]
+
+[[package]]
 name = "fastjsonschema"
 version = "2.21.2"
 source = { registry = "https://pypi.org/simple" }
@@ -514,6 +523,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/30/3e/a80a8c077fd798951169626cde3e239adeba7dab75deb3555716415bd9b0/fqdn-1.5.1.tar.gz", hash = "sha256:105ed3677e767fb5ca086a0c1f4bb66ebc3c100be518f0e0d755d9eae164d89f", size = 6015, upload-time = "2021-03-11T07:16:29.08Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cf/58/8acf1b3e91c58313ce5cb67df61001fc9dcd21be4fadb76c1a2d540e09ed/fqdn-1.5.1-py3-none-any.whl", hash = "sha256:3a179af3761e4df6eb2e026ff9e1a3033d3587bf980a0b1b2e1e5d08d7358014", size = 9121, upload-time = "2021-03-11T07:16:28.351Z" },
+]
+
+[[package]]
+name = "ghapi"
+version = "1.0.13"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "fastcore" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/62/09/1b88f97e8599cda096d42dac830bb2e28ddf202d71843f61bda52bbe99ce/ghapi-1.0.13.tar.gz", hash = "sha256:fb46f5e101efa33bd12a0ae7694de761eec5be1de90f48847699f1e00128f928", size = 72914, upload-time = "2026-02-28T02:21:01.892Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/67/ac/e1960ec21cfd5a0fd9b329822c04d0b5f91abb688c3b1acd7e8ff3390432/ghapi-1.0.13-py3-none-any.whl", hash = "sha256:49d7e336e5664e4d4f92b1d442dfe80f31ecccbee4370bd1d271bd63a1ccf18e", size = 71409, upload-time = "2026-02-28T02:21:00.457Z" },
 ]
 
 [[package]]
@@ -1599,9 +1620,10 @@ dependencies = [
 
 [[package]]
 name = "quarto-graft"
-version = "0.1.9"
+version = "0.1.10"
 source = { editable = "." }
 dependencies = [
+    { name = "ghapi" },
     { name = "jinja2" },
     { name = "pygit2" },
     { name = "quarto-cli" },
@@ -1620,6 +1642,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "ghapi", specifier = ">=1.0.6" },
     { name = "jinja2", specifier = ">=3.1" },
     { name = "pygit2", specifier = ">=1.19.0" },
     { name = "quarto-cli", git = "https://github.com/quarto-dev/quarto-cli?rev=v1.9.31" },

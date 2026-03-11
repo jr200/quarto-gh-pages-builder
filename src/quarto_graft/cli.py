@@ -77,6 +77,7 @@ MAIN_MENU_COMMANDS = [
     {"name": "trunk cache update - Capture rendered pages into cache", "value": "trunk cache update"},
     {"name": "trunk cache clear - Clear the render cache", "value": "trunk cache clear"},
     {"name": "trunk cache status - Show cache status", "value": "trunk cache status"},
+    {"name": "trunk release - Create a GitHub release", "value": "trunk release"},
     questionary.Separator("=== Graft Commands ==="),
     {"name": "graft create - Create a new graft branch from a template", "value": "graft create"},
     {"name": "graft build - Build a single graft branch", "value": "graft build"},
@@ -628,6 +629,100 @@ def trunk_lock() -> None:
     """Update _quarto.yaml from grafts.lock."""
     apply_manifest()
     console.print("[green]✓[/green] Updated _quarto.yaml")
+
+
+@trunk_app.command("release")
+def trunk_release(
+    workflow: str = typer.Option(
+        "quarto-graft-build-publish.yaml",
+        "--workflow",
+        help="GitHub Actions workflow file to trigger after release",
+    ),
+    no_trigger: bool = typer.Option(
+        False,
+        "--no-trigger",
+        help="Skip triggering the build workflow after release",
+    ),
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        "-y",
+        help="Skip confirmation prompt",
+    ),
+) -> None:
+    """Create a GitHub release with auto-incremented patch version.
+
+    Generates release notes from main branch PRs and per-graft commit logs.
+    Uses a two-tag system (released/<key>, releasing/<key>) for safe rollback.
+    """
+    from .release import (
+        build_release_notes,
+        compute_next_version,
+        create_release,
+        get_latest_release_tag,
+        promote_tags,
+        rollback_staging_tags,
+        stage_graft_tags,
+        trigger_workflow,
+    )
+
+    require_trunk()
+
+    # 1. Determine versions
+    console.print("[dim]Fetching latest release info...[/dim]")
+    fetch_origin()
+    current = get_latest_release_tag()
+    next_tag = compute_next_version(current)
+    console.print(f"Current: [bold]{current or '<none>'}[/bold]  →  Next: [bold green]{next_tag}[/bold green]")
+
+    # 2. Build release notes
+    console.print("[dim]Generating release notes...[/dim]")
+    notes = build_release_notes(current, next_tag)
+
+    # 3. Preview
+    console.print()
+    console.rule(f"Release notes for {next_tag}")
+    console.print(notes or "[dim]No changes found.[/dim]")
+    console.rule()
+    console.print()
+
+    # 4. Confirm
+    if not yes:
+        import questionary
+
+        confirm = questionary.confirm(f"Create release {next_tag}?", default=False).ask()
+        if not confirm:
+            console.print("[yellow]Aborted.[/yellow]")
+            raise typer.Exit(code=0)
+
+    # 5. Stage graft HEADs
+    staged_keys = stage_graft_tags()
+
+    # 6. Create release
+    try:
+        console.print(f"[dim]Creating release {next_tag} on main...[/dim]")
+        url = create_release(next_tag, notes)
+        console.print(f"[green]✓[/green] Release created: {url}")
+    except Exception as e:
+        console.print(f"[red]Release failed:[/red] {e}")
+        console.print("[dim]Rolling back staging tags...[/dim]")
+        rollback_staging_tags(staged_keys)
+        raise typer.Exit(code=1) from None
+
+    # 7. Promote tags
+    if staged_keys:
+        console.print("[dim]Promoting graft release tags...[/dim]")
+        promote_tags(staged_keys)
+        console.print(f"[green]✓[/green] Updated {len(staged_keys)} released/ tag(s)")
+
+    # 8. Trigger workflow
+    if not no_trigger:
+        try:
+            console.print(f"[dim]Triggering {workflow}...[/dim]")
+            trigger_workflow(workflow)
+            console.print("[green]✓[/green] Workflow triggered")
+        except Exception as e:
+            console.print(f"[yellow]Warning:[/yellow] Failed to trigger workflow: {e}")
 
 
 # ============================================================================
@@ -1262,6 +1357,12 @@ def main_callback(
             )
         elif group == "trunk" and command == "lock":
             trunk_lock()
+        elif group == "trunk" and command == "release":
+            trunk_release(
+                workflow="quarto-graft-build-publish.yaml",
+                no_trigger=False,
+                yes=False,
+            )
         elif group == "graft" and command == "create":
             graft_create(name=None, template=None, collar=None, branch_name=None, push=True)
         elif group == "graft" and command == "build":
