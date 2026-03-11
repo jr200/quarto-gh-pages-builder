@@ -126,19 +126,18 @@ class TestUpdateManifestEntry:
         manifest: dict = {}
         _update_manifest_entry(
             manifest, "branch1", "branch1", "Title",
-            ["page.qmd"], now="2026-01-01T00:00:00Z",
+            now="2026-01-01T00:00:00Z",
         )
         entry = manifest["branch1"]
         assert entry["title"] == "Title"
         assert entry["branch_key"] == "branch1"
-        assert entry["exported"] == ["page.qmd"]
         assert entry["last_checked"] == "2026-01-01T00:00:00Z"
 
     def test_with_nav_structure(self):
         manifest: dict = {}
         nav = [{"section": "Ch1", "contents": ["a.qmd"]}]
         _update_manifest_entry(
-            manifest, "b", "b", "T", ["a.qmd"],
+            manifest, "b", "b", "T",
             nav_structure=nav, now="2026-01-01T00:00:00Z",
         )
         assert manifest["b"]["structure"] == nav
@@ -146,7 +145,7 @@ class TestUpdateManifestEntry:
     def test_with_last_good(self):
         manifest: dict = {}
         _update_manifest_entry(
-            manifest, "b", "b", "T", [],
+            manifest, "b", "b", "T",
             last_good="abc123", now="2026-01-01T00:00:00Z",
         )
         assert manifest["b"]["last_good"] == "abc123"
@@ -154,7 +153,7 @@ class TestUpdateManifestEntry:
     def test_with_prerendered(self):
         manifest: dict = {}
         _update_manifest_entry(
-            manifest, "b", "b", "T", [],
+            manifest, "b", "b", "T",
             prerendered=True, now="2026-01-01T00:00:00Z",
         )
         assert manifest["b"]["prerendered"] is True
@@ -162,7 +161,7 @@ class TestUpdateManifestEntry:
     def test_prerendered_false_omitted(self):
         manifest: dict = {}
         _update_manifest_entry(
-            manifest, "b", "b", "T", [],
+            manifest, "b", "b", "T",
             prerendered=False, now="2026-01-01T00:00:00Z",
         )
         assert "prerendered" not in manifest["b"]
@@ -170,7 +169,7 @@ class TestUpdateManifestEntry:
     def test_with_cached_pages(self):
         manifest: dict = {}
         _update_manifest_entry(
-            manifest, "b", "b", "T", ["p.qmd"],
+            manifest, "b", "b", "T",
             cached_pages=["p.qmd"], now="2026-01-01T00:00:00Z",
         )
         assert manifest["b"]["cached_pages"] == ["p.qmd"]
@@ -178,7 +177,7 @@ class TestUpdateManifestEntry:
     def test_empty_cached_pages_omitted(self):
         manifest: dict = {}
         _update_manifest_entry(
-            manifest, "b", "b", "T", [],
+            manifest, "b", "b", "T",
             cached_pages=[], now="2026-01-01T00:00:00Z",
         )
         assert "cached_pages" not in manifest["b"]
@@ -186,7 +185,7 @@ class TestUpdateManifestEntry:
     def test_none_optional_fields_omitted(self):
         manifest: dict = {}
         _update_manifest_entry(
-            manifest, "b", "b", "T", [], now="2026-01-01T00:00:00Z",
+            manifest, "b", "b", "T", now="2026-01-01T00:00:00Z",
         )
         for key in ("structure", "last_good", "prerendered", "cached_pages"):
             assert key not in manifest["b"]
@@ -218,7 +217,6 @@ class TestManifestEntryFromResult:
         entry = _manifest_entry_from_result(result)
         assert entry["title"] == "T"
         assert entry["branch_key"] == "b"
-        assert entry["exported"] == ["p.qmd"]
         assert entry["last_checked"] == "2026-01-01T00:00:00Z"
         assert entry["last_good"] == "abc"
 

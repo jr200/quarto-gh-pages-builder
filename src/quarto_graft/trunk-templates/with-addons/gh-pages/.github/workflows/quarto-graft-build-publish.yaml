@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.inputs.ref || github.ref }}
           fetch-depth: 0
@@ -40,7 +40,7 @@ jobs:
 
       - name: Build grafts
         run: |
-          uv run quarto-graft trunk build
+          uv run quarto-graft trunk build -j 4
 
       - name: Setup Quarto
         uses: quarto-dev/quarto-actions/setup@v2.2.0
