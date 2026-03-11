@@ -20,7 +20,7 @@ from typing import Any
 import pygit2
 
 from . import constants
-from .constants import CACHE_BRANCH
+from .constants import CACHE_BRANCH, GRAFTS_BUILD_RELPATH
 
 logger = logging.getLogger(__name__)
 
@@ -290,7 +290,7 @@ def update_cache_after_render(
             # Source .qmd → rendered .html
             source_path = Path(source_relpath)
             html_relpath = source_path.with_suffix(".html").as_posix()
-            site_graft_dir = site_dir / "grafts__" / branch_key
+            site_graft_dir = site_dir / GRAFTS_BUILD_RELPATH / branch_key
 
             rendered_html = site_graft_dir / html_relpath
             if not rendered_html.exists():
@@ -545,7 +545,7 @@ def fix_navigation(
 
     updated = 0
     for branch_key in cached_graft_keys:
-        graft_dir = site_dir / "grafts__" / branch_key
+        graft_dir = site_dir / GRAFTS_BUILD_RELPATH / branch_key
         if not graft_dir.exists():
             continue
         for html_file in graft_dir.rglob("*.html"):

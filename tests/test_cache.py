@@ -158,7 +158,7 @@ SAMPLE_SIDEBAR = (
     '<a href="index.html" class="sidebar-item-text sidebar-link active">'
     '<span class="menu-text">Home</span></a></div></li>'
     '<li class="sidebar-item"><div class="sidebar-item-container">'
-    '<a href="grafts__/demo/page1.html" class="sidebar-item-text sidebar-link">'
+    '<a href=".grafts-cache/build/demo/page1.html" class="sidebar-item-text sidebar-link">'
     '<span class="menu-text">Page 1</span></a></div></li>'
     '</ul></nav>'
 )
@@ -203,7 +203,7 @@ class TestReplaceSidebar:
     def test_sets_active_on_existing_class_attr(self):
         """Bug C regression: active must be added to the existing class, not as a duplicate attr."""
         result = _replace_sidebar(
-            SAMPLE_HTML_WITH_SIDEBAR, SAMPLE_SIDEBAR, "grafts__/demo/page1.html"
+            SAMPLE_HTML_WITH_SIDEBAR, SAMPLE_SIDEBAR, ".grafts-cache/build/demo/page1.html"
         )
         # "active" should appear in the class for page1
         assert 'class="active sidebar-item-text sidebar-link"' in result
@@ -235,7 +235,7 @@ class TestReplaceSidebar:
 
     def test_removes_active_from_previously_active_link(self):
         result = _replace_sidebar(
-            SAMPLE_HTML_WITH_SIDEBAR, SAMPLE_SIDEBAR, "grafts__/demo/page1.html"
+            SAMPLE_HTML_WITH_SIDEBAR, SAMPLE_SIDEBAR, ".grafts-cache/build/demo/page1.html"
         )
         # index.html was "active" in the fresh sidebar — should be stripped
         # Find the <a> for index.html and confirm "active" is NOT in its class
@@ -259,10 +259,10 @@ class TestReplaceSidebar:
     def test_preserves_other_classes(self):
         """Active injection must not drop existing classes like sidebar-item-text."""
         result = _replace_sidebar(
-            SAMPLE_HTML_WITH_SIDEBAR, SAMPLE_SIDEBAR, "grafts__/demo/page1.html"
+            SAMPLE_HTML_WITH_SIDEBAR, SAMPLE_SIDEBAR, ".grafts-cache/build/demo/page1.html"
         )
         import re
-        link = re.search(r'<a\s[^>]*href="grafts__/demo/page1\.html"[^>]*>', result)
+        link = re.search(r'<a\s[^>]*href=".grafts-cache/build/demo/page1\.html"[^>]*>', result)
         assert link is not None
         class_match = re.search(r'class="([^"]*)"', link.group(0))
         assert class_match is not None
@@ -288,13 +288,13 @@ class TestFixNavigation:
             '<nav id="quarto-sidebar" class="sidebar">'
             '<ul><li><a href="index.html" class="sidebar-item-text sidebar-link active">'
             '<span class="menu-text">Home</span></a></li>'
-            '<li><a href="grafts__/demo/page.html" class="sidebar-item-text sidebar-link">'
+            '<li><a href=".grafts-cache/build/demo/page.html" class="sidebar-item-text sidebar-link">'
             '<span class="menu-text">Demo Page</span></a></li></ul>'
             '</nav><div>Fresh</div></body></html>'
         )
         (site_dir / "index.html").write_text(fresh_html)
 
-        graft_dir = site_dir / "grafts__" / "demo"
+        graft_dir = site_dir / ".grafts-cache" / "build" / "demo"
         graft_dir.mkdir(parents=True)
         cached_html = (
             '<!DOCTYPE html><html><body>'
@@ -309,7 +309,7 @@ class TestFixNavigation:
     def test_updates_cached_page_sidebar(self, tmp_path):
         site_dir = self._setup_site(tmp_path)
         assert fix_navigation(site_dir, ["demo"]) == 1
-        page = (site_dir / "grafts__" / "demo" / "page.html").read_text()
+        page = (site_dir / ".grafts-cache" / "build" / "demo" / "page.html").read_text()
         assert "Demo Page" in page  # fresh sidebar content injected
 
     def test_returns_zero_when_no_fresh_page(self, tmp_path):
@@ -328,7 +328,7 @@ class TestFixNavigation:
 
     def test_skips_non_page_html(self, tmp_path):
         site_dir = self._setup_site(tmp_path)
-        asset = site_dir / "grafts__" / "demo" / "widget.html"
+        asset = site_dir / ".grafts-cache" / "build" / "demo" / "widget.html"
         asset.write_text("<div>just a widget</div>")
         assert fix_navigation(site_dir, ["demo"]) == 1  # only page.html
 
@@ -496,9 +496,9 @@ class TestRestoreCachedFiles:
 
 class TestUpdateCacheAfterRender:
     def _make_site(self, tmp_path, branch_key, pages):
-        """Create ``_site/grafts__/<branch_key>/`` with rendered *pages*."""
+        """Create ``_site/.grafts-cache/build/<branch_key>/`` with rendered *pages*."""
         site_dir = tmp_path / "_site"
-        graft_dir = site_dir / "grafts__" / branch_key
+        graft_dir = site_dir / ".grafts-cache" / "build" / branch_key
         graft_dir.mkdir(parents=True, exist_ok=True)
         for rel, content in pages.items():
             f = graft_dir / rel
@@ -542,7 +542,7 @@ class TestUpdateCacheAfterRender:
 
     def test_caches_page_with_assets(self, repo_with_cache, tmp_path):
         site_dir = self._make_site(tmp_path, "demo", {"analysis.html": b"<html>A</html>"})
-        asset_dir = tmp_path / "_site" / "grafts__" / "demo" / "analysis_files"
+        asset_dir = tmp_path / "_site" / ".grafts-cache" / "build" / "demo" / "analysis_files"
         asset_dir.mkdir()
         (asset_dir / "fig1.png").write_bytes(b"\x89PNG")
 
@@ -557,7 +557,7 @@ class TestUpdateCacheAfterRender:
     def test_multiple_grafts(self, repo_with_cache, tmp_path):
         site_dir = tmp_path / "_site"
         for bk, html in [("ga", b"<html>A</html>"), ("gb", b"<html>B</html>")]:
-            d = site_dir / "grafts__" / bk
+            d = site_dir / ".grafts-cache" / "build" / bk
             d.mkdir(parents=True)
             (d / "index.html").write_bytes(html)
 
@@ -578,7 +578,7 @@ class TestUpdateCacheAfterRender:
 
     def test_warns_when_rendered_file_missing(self, repo_with_cache, tmp_path):
         site_dir = tmp_path / "_site"
-        (site_dir / "grafts__" / "demo").mkdir(parents=True)
+        (site_dir / ".grafts-cache" / "build" / "demo").mkdir(parents=True)
         # page.html does NOT exist in _site
         states = {"demo": {"page_hashes": {"page.qmd": "h"}, "cached_pages": []}}
         with patch("quarto_graft.cache._get_repo", return_value=repo_with_cache):

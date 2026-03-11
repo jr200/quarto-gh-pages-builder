@@ -54,6 +54,10 @@ PROTECTED_BRANCHES = TRUNK_BRANCHES.union({"gh-pages"})
 # Render cache branch name
 CACHE_BRANCH = "_cache"
 
+# Relative path from project root to the graft build output directory.
+# Used in _quarto.yaml path entries and _site/ rendered output lookups.
+GRAFTS_BUILD_RELPATH = ".grafts-cache/build"
+
 
 # ---------------------------------------------------------------------------
 # Lazy ROOT-derived attributes — computed on every access so that
@@ -65,11 +69,11 @@ def __getattr__(name: str):  # noqa: N807 – module-level __getattr__ (PEP 562)
         "ROOT": lambda: get_root(),
         "GRAFTS_MANIFEST_FILE": lambda: get_root() / "grafts.lock",
         "GRAFTS_CONFIG_FILE": lambda: get_root() / "grafts.yaml",
-        "WORKTREES_CACHE": lambda: get_root() / ".grafts-cache",
+        "WORKTREES_CACHE": lambda: get_root() / ".grafts-cache" / "worktrees",
         "BUILD_STATE_FILE": lambda: get_root() / ".grafts-cache" / "build-state.json",
         "QUARTO_PROJECT_YAML": lambda: get_root() / "_quarto.yaml",
         "MAIN_DOCS": lambda: get_root(),
-        "GRAFTS_BUILD_DIR": lambda: get_root() / "grafts__",
+        "GRAFTS_BUILD_DIR": lambda: get_root() / GRAFTS_BUILD_RELPATH,
     }
     if name in _derived:
         return _derived[name]()

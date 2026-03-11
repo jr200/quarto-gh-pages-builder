@@ -34,7 +34,7 @@ preview: build
 ## Clean build artifacts
 clean:
 	@echo "Cleaning Quarto build artifacts..."
-	rm -rf "$(DOCS_DIR)/_site" "$(DOCS_DIR)/.quarto" "$(DOCS_DIR)/grafts__" 
+	rm -rf "$(DOCS_DIR)/_site" "$(DOCS_DIR)/.quarto"
 
 clean-grafts:
 	@echo "Ensuring graft worktrees are clean before removal..."
