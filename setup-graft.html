@@ -414,6 +414,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#important-notes" id="toc-important-notes" class="nav-link" data-scroll-target="#important-notes">Important Notes</a></li>
   </ul></li>
   <li><a href="#using-custom-graft-templates" id="toc-using-custom-graft-templates" class="nav-link" data-scroll-target="#using-custom-graft-templates">Using Custom Graft Templates</a></li>
+  <li><a href="#pre-rendering-archive" id="toc-pre-rendering-archive" class="nav-link" data-scroll-target="#pre-rendering-archive">Pre-rendering (Archive)</a></li>
   <li><a href="#building-from-the-trunk" id="toc-building-from-the-trunk" class="nav-link" data-scroll-target="#building-from-the-trunk">Building from the Trunk</a></li>
   <li><a href="#managing-grafts" id="toc-managing-grafts" class="nav-link" data-scroll-target="#managing-grafts">Managing Grafts</a>
   <ul class="collapse">
@@ -523,36 +524,49 @@ Branch: graft/my-first-graft</code></pre>
 └── README.md</code></pre>
 <p>Templates support Jinja2 variables: - <code>{ graft_name }</code> - Graft display name - <code>{ graft_branch }</code> - Git branch name - <code>{ graft_slug }</code> - URL-safe identifier</p>
 </section>
+<section id="pre-rendering-archive" class="level2">
+<h2 class="anchored" data-anchor-id="pre-rendering-archive">Pre-rendering (Archive)</h2>
+<p>For grafts with expensive computations, you can pre-render the content so trunk builds skip rendering entirely:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Pre-render your graft</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> graft archive</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Commit and push</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> add _prerendered/ .graft-prerender.json</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"Pre-render graft"</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> push</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>To revert to source-based rendering:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> graft restore</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
 <section id="building-from-the-trunk" class="level2">
 <h2 class="anchored" data-anchor-id="building-from-the-trunk">Building from the Trunk</h2>
 <p>After pushing graft changes, build from the trunk:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /path/to/trunk</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> build         <span class="co"># Builds all grafts</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> preview             <span class="co"># Preview the full site</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /path/to/trunk</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk build   <span class="co"># Builds all grafts</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> preview             <span class="co"># Preview the full site</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>The trunk will: 1. Fetch your latest graft commits 2. Render your graft’s content 3. Copy outputs to <code>grafts__/my-first-graft/</code> 4. Update navigation to include your graft under the specified collar</p>
 </section>
 <section id="managing-grafts" class="level2">
 <h2 class="anchored" data-anchor-id="managing-grafts">Managing Grafts</h2>
 <section id="list-all-grafts" class="level3">
 <h3 class="anchored" data-anchor-id="list-all-grafts">List All Grafts</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> graft list</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> graft list</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="remove-a-graft" class="level3">
 <h3 class="anchored" data-anchor-id="remove-a-graft">Remove a Graft</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Destroy branch completely (removes from grafts.yaml, deletes local + remote)</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> graft destroy my-first-graft</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Keep remote branch</span></span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> graft destroy my-first-graft <span class="at">--keep-remote</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Destroy branch completely (removes from grafts.yaml, deletes local + remote)</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> graft destroy my-first-graft</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Keep remote branch</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> graft destroy my-first-graft <span class="at">--keep-remote</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 </section>
 <section id="troubleshooting" class="level2">
 <h2 class="anchored" data-anchor-id="troubleshooting">Troubleshooting</h2>
 <p><strong>Build failures</strong>: If your graft fails to build, the trunk will: - Use the last successful build (if available) - Display a warning banner on your graft’s pages - Log the error details</p>
 <p><strong>Broken outputs</strong>: Remember to execute and save notebook outputs before committing:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render docs <span class="at">--execute</span></span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> add docs/</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"Update outputs"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render docs <span class="at">--execute</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> add docs/</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"Update outputs"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 
 
 </section>
@@ -987,7 +1001,7 @@ Branch: graft/my-first-graft</code></pre>
       &nbsp;
     <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/jr200/quarto-graft/blob/main/setup-graft.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/jr200/quarto-graft/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div>
     <div class="nav-footer-right">
-<p>Last build: 2026-03-11 03:46 UTC</p>
+<p>Last build: 2026-03-11 11:00 UTC</p>
 </div>
   </div>
 </footer>

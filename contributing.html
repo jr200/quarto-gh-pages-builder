@@ -436,12 +436,71 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="code-contributions" class="level3">
 <h3 class="anchored" data-anchor-id="code-contributions">Code Contributions</h3>
 <p><strong>Areas to contribute:</strong> - CLI improvements and new commands - Template rendering engine - Build system optimizations - Error handling and user experience - Test coverage</p>
-<p><strong>Process:</strong> 1. Fork the repository 2. Create a feature branch: <code>git checkout -b feature/my-feature</code> 3. Make your changes with tests 4. Run tests: <code>pytest</code> 5. Submit a pull request</p>
+<p><strong>Process:</strong></p>
+<ol type="1">
+<li>Fork the repository</li>
+<li>Create a feature branch: <code>git checkout -b feature/my-feature</code></li>
+<li>Make your changes with tests</li>
+<li>Run linter and tests: <code>make lint &amp;&amp; make test</code></li>
+<li>Submit a pull request</li>
+</ol>
 <p><strong>Development setup:</strong></p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/jr200/quarto-graft</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> quarto-graft</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install <span class="at">-e</span> <span class="st">".[dev]"</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">pytest</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> env          <span class="co"># Create venv and install deps via uv</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> test         <span class="co"># Run test suite</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> lint         <span class="co"># Run ruff linter</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Available make targets:</strong></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Target</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>make env</code></td>
+<td>Create venv and sync dependencies with <code>uv</code></td>
+</tr>
+<tr class="even">
+<td><code>make lint</code></td>
+<td>Run <code>ruff</code> linter with auto-fix</td>
+</tr>
+<tr class="odd">
+<td><code>make test</code></td>
+<td>Run <code>pytest</code></td>
+</tr>
+<tr class="even">
+<td><code>make cov</code></td>
+<td>Run tests with coverage report</td>
+</tr>
+<tr class="odd">
+<td><code>make render</code></td>
+<td>Render the documentation site</td>
+</tr>
+<tr class="even">
+<td><code>make preview</code></td>
+<td>Build and preview docs locally</td>
+</tr>
+<tr class="odd">
+<td><code>make clean</code></td>
+<td>Remove Quarto build artifacts</td>
+</tr>
+<tr class="even">
+<td><code>make clean-all</code></td>
+<td>Full clean (venv, caches, coverage)</td>
+</tr>
+<tr class="odd">
+<td><code>make bump v=patch</code></td>
+<td>Bump version (<code>patch</code>, <code>minor</code>, or <code>major</code>)</td>
+</tr>
+<tr class="even">
+<td><code>make release</code></td>
+<td>Lint, test, tag, push, and create GitHub release</td>
+</tr>
+</tbody>
+</table>
 </section>
 <section id="template-contributions" class="level3">
 <h3 class="anchored" data-anchor-id="template-contributions">Template Contributions</h3>
@@ -566,18 +625,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="code-style" class="level2">
 <h2 class="anchored" data-anchor-id="code-style">Code Style</h2>
 <ul>
-<li>Follow PEP 8 for Python code</li>
-<li>Use type hints</li>
-<li>Write docstrings for public functions</li>
+<li>Follow PEP 8 (enforced by <code>ruff</code> with line length 120, target Python 3.11)</li>
+<li>Use type hints and <code>from __future__ import annotations</code></li>
+<li>Use <code>ruamel.yaml</code> for YAML (preserves formatting), never <code>PyYAML</code></li>
+<li>Use <code>pygit2</code> for git operations, never shell out to <code>git</code></li>
 <li>Keep functions focused and testable</li>
 </ul>
 </section>
 <section id="testing" class="level2">
 <h2 class="anchored" data-anchor-id="testing">Testing</h2>
 <p>Run the test suite:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pytest</span>                    <span class="co"># All tests</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pytest</span> tests/test_cli.py  <span class="co"># Specific file</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="ex">pytest</span> <span class="at">-v</span>                 <span class="co"># Verbose output</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> test                          <span class="co"># All tests</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">uv</span> run pytest tests/test_cli.py    <span class="co"># Specific file</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="ex">uv</span> run pytest <span class="at">-v</span>                   <span class="co"># Verbose output</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> cov                           <span class="co"># With coverage</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="questions" class="level2">
 <h2 class="anchored" data-anchor-id="questions">Questions?</h2>
@@ -1021,7 +1082,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       &nbsp;
     <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/jr200/quarto-graft/blob/main/contributing.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/jr200/quarto-graft/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div>
     <div class="nav-footer-right">
-<p>Last build: 2026-03-11 03:46 UTC</p>
+<p>Last build: 2026-03-11 11:00 UTC</p>
 </div>
   </div>
 </footer>

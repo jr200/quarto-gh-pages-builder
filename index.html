@@ -479,14 +479,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="what-you-get" class="level2">
 <h2 class="anchored" data-anchor-id="what-you-get">What You Get</h2>
 <ul>
-<li>🚀 Python CLI (<code>quarto-graft</code>) for project management</li>
-<li>📦 Customizable trunk and graft templates</li>
-<li>🔧 Git branch-based isolation</li>
-<li>🎯 Multiple collar attachment points</li>
-<li>🔄 Automatic navigation updates</li>
-<li>💾 Last-good build fallbacks</li>
-<li>🔍 Full-site search across all grafts</li>
-<li>⚡ Fast trunk builds (no code execution)</li>
+<li>Python CLI (<code>quarto-graft</code>) with interactive mode</li>
+<li>Customizable trunk and graft templates (built-in, local, GitHub, URL sources)</li>
+<li>Git branch-based isolation (zero merge conflicts)</li>
+<li>Multiple collar attachment points for organizing content</li>
+<li>Automatic navigation updates</li>
+<li>Last-good build fallbacks (broken grafts never block the site)</li>
+<li>Full-site search across all grafts</li>
+<li>Per-page render cache for incremental builds</li>
+<li>Parallel builds (<code>--jobs N</code>)</li>
+<li>Pre-rendering support (<code>graft archive</code>) for faster trunk builds</li>
 </ul>
 </section>
 <section id="who-this-is-for" class="level2">
@@ -615,6 +617,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
+<td><code>quarto-graft</code></td>
+<td>Launch interactive command menu</td>
+</tr>
+<tr class="even">
+<td><code>quarto-graft status</code></td>
+<td>Show build status dashboard for all grafts</td>
+</tr>
+<tr class="odd">
 <td><code>quarto-graft trunk init</code></td>
 <td>Create trunk structure from template</td>
 </tr>
@@ -625,6 +635,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td><code>quarto-graft trunk lock</code></td>
 <td>Update <code>_quarto.yaml</code> from <code>grafts.lock</code> (no rebuild)</td>
+</tr>
+<tr class="even">
+<td><code>quarto-graft trunk list</code></td>
+<td>List available trunk templates</td>
+</tr>
+<tr class="odd">
+<td><code>quarto-graft trunk cache update</code></td>
+<td>Capture rendered pages into cache</td>
+</tr>
+<tr class="even">
+<td><code>quarto-graft trunk cache clear</code></td>
+<td>Clear the render cache</td>
+</tr>
+<tr class="odd">
+<td><code>quarto-graft trunk cache status</code></td>
+<td>Show per-page cache status</td>
 </tr>
 <tr class="even">
 <td><code>quarto-graft graft create &lt;name&gt;</code></td>
@@ -641,6 +667,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td><code>quarto-graft graft destroy &lt;name&gt;</code></td>
 <td>Delete graft (branch, worktree, config)</td>
+</tr>
+<tr class="even">
+<td><code>quarto-graft graft archive</code></td>
+<td>Pre-render graft for faster trunk builds</td>
+</tr>
+<tr class="odd">
+<td><code>quarto-graft graft restore</code></td>
+<td>Remove pre-rendered content</td>
+</tr>
+<tr class="even">
+<td><code>quarto-graft collars list</code></td>
+<td>List available collar attachment points</td>
+</tr>
+<tr class="odd">
+<td><code>quarto-graft templates list</code></td>
+<td>List available templates</td>
 </tr>
 </tbody>
 </table>
@@ -1091,7 +1133,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       &nbsp;
     <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/jr200/quarto-graft/blob/main/index.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/jr200/quarto-graft/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div>
     <div class="nav-footer-right">
-<p>Last build: 2026-03-11 03:46 UTC</p>
+<p>Last build: 2026-03-11 11:00 UTC</p>
 </div>
   </div>
 </footer>

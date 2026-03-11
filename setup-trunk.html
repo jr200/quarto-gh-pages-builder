@@ -415,6 +415,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </ul></li>
   <li><a href="#publishing-to-github-pages" id="toc-publishing-to-github-pages" class="nav-link" data-scroll-target="#publishing-to-github-pages">Publishing to GitHub Pages</a></li>
   <li><a href="#how-it-works" id="toc-how-it-works" class="nav-link" data-scroll-target="#how-it-works">How It Works</a></li>
+  <li><a href="#render-cache" id="toc-render-cache" class="nav-link" data-scroll-target="#render-cache">Render Cache</a></li>
+  <li><a href="#monitoring-build-status" id="toc-monitoring-build-status" class="nav-link" data-scroll-target="#monitoring-build-status">Monitoring Build Status</a></li>
   </ul></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/jr200/quarto-graft/blob/main/setup-trunk.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/jr200/quarto-graft/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
@@ -431,7 +433,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>The <strong>trunk</strong> is your main branch that defines the overall Quarto site structure.</p>
 <section id="installation" class="level2">
 <h2 class="anchored" data-anchor-id="installation">Installation</h2>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install quarto-graft</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">uv</span> init <span class="at">--lib</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">uv</span> add quarto-graft</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="create-a-new-trunk" class="level2">
 <h2 class="anchored" data-anchor-id="create-a-new-trunk">Create a New Trunk</h2>
@@ -478,7 +481,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="first-build" class="level2">
 <h2 class="anchored" data-anchor-id="first-build">First Build</h2>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> build          <span class="co"># Build all grafts</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk build    <span class="co"># Build all grafts</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> preview              <span class="co"># Preview the site</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>On first build, no grafts exist yet, so collars will be empty.</p>
 </section>
@@ -537,18 +540,39 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>Settings → Actions → Permissions: Enable read/write</li>
 </ul></li>
 <li><p>Build and publish:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> build</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> publish gh-pages</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk build</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> publish gh-pages</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
 </ol>
 </section>
 <section id="how-it-works" class="level2">
 <h2 class="anchored" data-anchor-id="how-it-works">How It Works</h2>
 <ol type="1">
 <li><strong>Grafts attach to collars</strong>: Each graft specifies a collar in <code>grafts.yaml</code></li>
-<li><strong>Build process</strong>: <code>quarto-graft build</code> renders each graft in isolation</li>
+<li><strong>Build process</strong>: <code>quarto-graft trunk build</code> renders each graft in isolation</li>
 <li><strong>Auto-navigation</strong>: Built content is injected after the matching collar marker</li>
 <li><strong>Atomic updates</strong>: The trunk’s <code>_quarto.yaml</code> is updated automatically</li>
 </ol>
+</section>
+<section id="render-cache" class="level2">
+<h2 class="anchored" data-anchor-id="render-cache">Render Cache</h2>
+<p>The render cache stores pre-rendered HTML on an orphan <code>_cache</code> branch. Pages whose source hasn’t changed are served directly from cache, dramatically speeding up incremental builds.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Typical workflow with caching</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk build     <span class="co"># Build grafts (uses cache for unchanged pages)</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render                <span class="co"># Render the site</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk cache update  <span class="co"># Store newly rendered pages in cache</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Inspect cache contents</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk cache status</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Clear cache when needed</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk cache clear</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="monitoring-build-status" class="level2">
+<h2 class="anchored" data-anchor-id="monitoring-build-status">Monitoring Build Status</h2>
+<p>Use the status dashboard to see the state of all grafts at a glance:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> status</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This shows each graft’s build status (<code>current</code>, <code>stale</code>, <code>broken</code>, <code>never built</code>), last build time, and whether HEAD matches the last built commit.</p>
 
 
 </section>
@@ -983,7 +1007,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       &nbsp;
     <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/jr200/quarto-graft/blob/main/setup-trunk.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/jr200/quarto-graft/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div>
     <div class="nav-footer-right">
-<p>Last build: 2026-03-11 03:46 UTC</p>
+<p>Last build: 2026-03-11 11:00 UTC</p>
 </div>
   </div>
 </footer>
