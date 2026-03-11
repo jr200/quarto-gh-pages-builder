@@ -455,7 +455,7 @@ def new_graft_branch(
             f"Worktree directory {wt_dir} already exists; refusing to overwrite for new graft."
         )
 
-    constants.WORKTREES_CACHE.mkdir(exist_ok=True)
+    constants.WORKTREES_CACHE.mkdir(parents=True, exist_ok=True)
     logger.info(f"[new-graft] Creating worktree for new branch '{branch}' at {wt_dir}...")
     if repo.head_is_unborn:
         raise RuntimeError(

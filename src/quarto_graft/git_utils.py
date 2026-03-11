@@ -236,7 +236,7 @@ def create_worktree(ref: str, name: str) -> Path:
     """
     Create (or reuse) a git worktree for the given reference.
     """
-    constants.WORKTREES_CACHE.mkdir(exist_ok=True)
+    constants.WORKTREES_CACHE.mkdir(parents=True, exist_ok=True)
     wt_dir = constants.WORKTREES_CACHE / name
 
     # Always recreate to ensure clean state
@@ -376,7 +376,7 @@ def ensure_worktree(branch: str) -> Path:
     else:
         raise RuntimeError(f"Branch '{branch}' does not exist locally or on origin")
 
-    constants.WORKTREES_CACHE.mkdir(exist_ok=True)
+    constants.WORKTREES_CACHE.mkdir(parents=True, exist_ok=True)
     create_worktree(ref, branch)
 
     logger.info(f"[get-worktree] Worktree created: {wt_dir}")
@@ -397,7 +397,7 @@ def cleanup_orphan_worktrees() -> list[Path]:
         List of successfully removed worktree paths.
         Failed removals are logged but don't stop the cleanup process.
     """
-    constants.WORKTREES_CACHE.mkdir(exist_ok=True)
+    constants.WORKTREES_CACHE.mkdir(parents=True, exist_ok=True)
     registered = set(list_worktree_paths())
     removed: list[Path] = []
     failures: list[tuple[Path, Exception]] = []

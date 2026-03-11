@@ -221,7 +221,6 @@ docs/_freeze/
 docs/.jupyter_cache/
 docs/**/.jupyter_cache/
 docs/_styles-quartodoc.css
-docs/grafts__/
 
 .history/
 *.bak

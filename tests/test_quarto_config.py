@@ -604,7 +604,7 @@ class TestApplyManifest:
             yaml_loader = get_yaml_loader()
             result = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
             resources = result.get("project", {}).get("resources", [])
-            assert "grafts__/pre/**" in resources
+            assert ".grafts-cache/build/pre/**" in resources
         finally:
             constants._root_override = None
 

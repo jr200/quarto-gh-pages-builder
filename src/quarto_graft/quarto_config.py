@@ -9,6 +9,7 @@ from . import constants
 from .branches import BranchSpec, branch_to_key, load_manifest, read_branches_list, save_manifest
 from .constants import (
     GRAFT_COLLAR_MARKER,
+    GRAFTS_BUILD_RELPATH,
     QUARTO_CONFIG_YAML,
     YAML_AUTOGEN_MARKER,
 )
@@ -378,9 +379,9 @@ def apply_manifest() -> None:
             """Convert a source file path to a pre-rendered HTML href entry."""
             p = Path(file_path)
             if p.suffix.lower() in _source_exts:
-                html_path = f"grafts__/{branch_key}/{p.with_suffix('.html').as_posix()}"
+                html_path = f"{GRAFTS_BUILD_RELPATH}/{branch_key}/{p.with_suffix('.html').as_posix()}"
             else:
-                html_path = f"grafts__/{branch_key}/{file_path}"
+                html_path = f"{GRAFTS_BUILD_RELPATH}/{branch_key}/{file_path}"
             text = p.stem.replace("-", " ").replace("_", " ").title()
             return {"text": text, "href": html_path}
 
@@ -405,7 +406,7 @@ def apply_manifest() -> None:
                 if prerendered or _is_cached_page(node, cached_set):
                     return _to_html_href(node, branch_key)
                 # It's a file path - prepend the graft path
-                return f"grafts__/{branch_key}/{node}"
+                return f"{GRAFTS_BUILD_RELPATH}/{branch_key}/{node}"
             elif isinstance(node, dict):
                 # Recursively process dict values
                 result = {}
@@ -418,12 +419,12 @@ def apply_manifest() -> None:
                             # Convert file refs to href with .html extension
                             p = Path(value)
                             if p.suffix.lower() in _source_exts:
-                                result["href"] = f"grafts__/{branch_key}/{p.with_suffix('.html').as_posix()}"
+                                result["href"] = f"{GRAFTS_BUILD_RELPATH}/{branch_key}/{p.with_suffix('.html').as_posix()}"
                             else:
-                                result["href"] = f"grafts__/{branch_key}/{value}"
+                                result["href"] = f"{GRAFTS_BUILD_RELPATH}/{branch_key}/{value}"
                         else:
                             # These are file references
-                            result[key] = f"grafts__/{branch_key}/{value}"
+                            result[key] = f"{GRAFTS_BUILD_RELPATH}/{branch_key}/{value}"
                     else:
                         # Keep other keys as-is
                         result[key] = value
@@ -526,10 +527,10 @@ def apply_manifest() -> None:
         bk = entry.get("branch_key") or branch_to_key(spec["name"])
         if entry.get("prerendered"):
             # Entire graft is pre-rendered
-            html_resources.append(f"grafts__/{bk}/**")
+            html_resources.append(f"{GRAFTS_BUILD_RELPATH}/{bk}/**")
         elif entry.get("cached_pages"):
             # Graft has some cached pages — their .html files need to be resources
-            html_resources.append(f"grafts__/{bk}/**/*.html")
+            html_resources.append(f"{GRAFTS_BUILD_RELPATH}/{bk}/**/*.html")
 
     if html_resources:
         project_cfg = data.setdefault("project", {})
@@ -545,7 +546,7 @@ def apply_manifest() -> None:
         active_set = set(html_resources)
         cleaned = [
             r for r in existing_resources
-            if not r.startswith("grafts__/") or r in active_set
+            if not r.startswith(f"{GRAFTS_BUILD_RELPATH}/") or r in active_set
         ]
         if cleaned != existing_resources:
             data.setdefault("project", {})["resources"] = cleaned

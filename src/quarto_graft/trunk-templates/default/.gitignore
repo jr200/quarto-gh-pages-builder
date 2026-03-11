@@ -55,5 +55,4 @@ _site/
 .quarto
 /.quarto/
 **/*.quarto_ipynb
-grafts__/
 grafts.lock
