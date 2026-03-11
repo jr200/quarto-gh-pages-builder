@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import inspect
 import json
 import logging
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
+import typer
 
 from quarto_graft.build import BuildResult
 from quarto_graft.cli import (
@@ -15,6 +17,7 @@ from quarto_graft.cli import (
     _configure_logging,
     _load_build_state,
     _write_build_state,
+    main_callback,
     require_trunk,
 )
 
@@ -327,3 +330,123 @@ class TestYamlBranches:
             assert result == set()
         finally:
             constants._root_override = None
+
+
+# ---------------------------------------------------------------------------
+# Interactive menu dispatch – typer default resolution
+# ---------------------------------------------------------------------------
+
+
+def _get_typer_params(func):
+    """Return {name: intended_default} for all typer.Option/Argument params."""
+    sig = inspect.signature(func)
+    result = {}
+    for name, param in sig.parameters.items():
+        default = param.default
+        if isinstance(default, typer.models.OptionInfo):
+            result[name] = default.default
+        elif isinstance(default, typer.models.ArgumentInfo):
+            result[name] = default.default
+    return result
+
+
+class TestMenuDispatchDefaults:
+    """Verify that main_callback passes explicit defaults when calling
+    command functions directly, so typer.Option/Argument objects never
+    leak through as parameter values.
+
+    Regression test for: TypeError: argument should be a str or an
+    os.PathLike object where __fspath__ returns a str, not 'OptionInfo'
+    """
+
+    def _assert_no_typer_info(self, mock_func, func_ref):
+        """Assert the mock was called and none of its args/kwargs are OptionInfo/ArgumentInfo."""
+        mock_func.assert_called_once()
+        _, kwargs = mock_func.call_args
+        typer_params = _get_typer_params(func_ref)
+        for name in typer_params:
+            if name in kwargs:
+                val = kwargs[name]
+                assert not isinstance(val, (typer.models.OptionInfo, typer.models.ArgumentInfo)), (
+                    f"Parameter '{name}' received {type(val).__name__} instead of a plain value"
+                )
+
+    def test_trunk_cache_update(self):
+        from quarto_graft.cli import trunk_cache_update
+        ctx = MagicMock(spec=typer.Context)
+        ctx.invoked_subcommand = None
+        with patch("quarto_graft.cli.show_main_menu", return_value="trunk cache update"), \
+             patch("quarto_graft.cli._configure_logging"), \
+             patch("quarto_graft.cli.trunk_cache_update") as mock_fn:
+            main_callback(ctx, log_level=None)
+        self._assert_no_typer_info(mock_fn, trunk_cache_update)
+
+    def test_trunk_cache_clear(self):
+        from quarto_graft.cli import trunk_cache_clear
+        ctx = MagicMock(spec=typer.Context)
+        ctx.invoked_subcommand = None
+        with patch("quarto_graft.cli.show_main_menu", return_value="trunk cache clear"), \
+             patch("quarto_graft.cli._configure_logging"), \
+             patch("quarto_graft.cli.trunk_cache_clear") as mock_fn:
+            main_callback(ctx, log_level=None)
+        self._assert_no_typer_info(mock_fn, trunk_cache_clear)
+
+    def test_trunk_init(self):
+        from quarto_graft.cli import trunk_init
+        ctx = MagicMock(spec=typer.Context)
+        ctx.invoked_subcommand = None
+        with patch("quarto_graft.cli.show_main_menu", return_value="trunk init"), \
+             patch("quarto_graft.cli._configure_logging"), \
+             patch("quarto_graft.cli.trunk_init") as mock_fn:
+            main_callback(ctx, log_level=None)
+        self._assert_no_typer_info(mock_fn, trunk_init)
+
+    def test_trunk_build(self):
+        from quarto_graft.cli import trunk_build
+        ctx = MagicMock(spec=typer.Context)
+        ctx.invoked_subcommand = None
+        with patch("quarto_graft.cli.show_main_menu", return_value="trunk build"), \
+             patch("quarto_graft.cli._configure_logging"), \
+             patch("quarto_graft.cli.trunk_build") as mock_fn:
+            main_callback(ctx, log_level=None)
+        self._assert_no_typer_info(mock_fn, trunk_build)
+
+    def test_graft_create(self):
+        from quarto_graft.cli import graft_create
+        ctx = MagicMock(spec=typer.Context)
+        ctx.invoked_subcommand = None
+        with patch("quarto_graft.cli.show_main_menu", return_value="graft create"), \
+             patch("quarto_graft.cli._configure_logging"), \
+             patch("quarto_graft.cli.graft_create") as mock_fn:
+            main_callback(ctx, log_level=None)
+        self._assert_no_typer_info(mock_fn, graft_create)
+
+    def test_graft_archive(self):
+        from quarto_graft.cli import graft_archive_cmd
+        ctx = MagicMock(spec=typer.Context)
+        ctx.invoked_subcommand = None
+        with patch("quarto_graft.cli.show_main_menu", return_value="graft archive"), \
+             patch("quarto_graft.cli._configure_logging"), \
+             patch("quarto_graft.cli.graft_archive_cmd") as mock_fn:
+            main_callback(ctx, log_level=None)
+        self._assert_no_typer_info(mock_fn, graft_archive_cmd)
+
+    def test_graft_restore(self):
+        from quarto_graft.cli import graft_restore_cmd
+        ctx = MagicMock(spec=typer.Context)
+        ctx.invoked_subcommand = None
+        with patch("quarto_graft.cli.show_main_menu", return_value="graft restore"), \
+             patch("quarto_graft.cli._configure_logging"), \
+             patch("quarto_graft.cli.graft_restore_cmd") as mock_fn:
+            main_callback(ctx, log_level=None)
+        self._assert_no_typer_info(mock_fn, graft_restore_cmd)
+
+    def test_status(self):
+        from quarto_graft.cli import status_cmd
+        ctx = MagicMock(spec=typer.Context)
+        ctx.invoked_subcommand = None
+        with patch("quarto_graft.cli.show_main_menu", return_value="status"), \
+             patch("quarto_graft.cli._configure_logging"), \
+             patch("quarto_graft.cli.status_cmd") as mock_fn:
+            main_callback(ctx, log_level=None)
+        self._assert_no_typer_info(mock_fn, status_cmd)

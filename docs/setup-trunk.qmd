@@ -5,7 +5,8 @@ The **trunk** is your main branch that defines the overall Quarto site structure
 ## Installation
 
 ```bash
-pip install quarto-graft
+uv init --lib
+uv add quarto-graft
 ```
 
 ## Create a New Trunk
