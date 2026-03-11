@@ -129,7 +129,6 @@ class ManifestEntry(TypedDict, total=False):
     last_checked: str
     title: str
     branch_key: str
-    exported: list[str]
     structure: Any  # Original sidebar/chapter structure from graft's _quarto.yaml
     prerendered: bool    # True if graft has pre-rendered HTML content
     cached_pages: list[str]      # source relpaths served from cache

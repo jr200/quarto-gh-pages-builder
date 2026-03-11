@@ -1147,7 +1147,6 @@ def status_cmd(
     table.add_column("Collar")
     table.add_column("Status", justify="center")
     table.add_column("Last Built")
-    table.add_column("Files", justify="right")
     table.add_column("HEAD", justify="center")
     table.add_column("Built", justify="center")
 
@@ -1159,7 +1158,6 @@ def status_cmd(
 
         last_good = entry.get("last_good")
         last_checked = entry.get("last_checked", "")
-        exported = entry.get("exported", [])
         is_prerendered = entry.get("prerendered", False)
 
         head_sha = resolve_head_sha(branch)
@@ -1205,7 +1203,6 @@ def status_cmd(
             collar,
             f"[{color}]{status}[/{color}]",
             time_str,
-            str(len(exported)),
             head_short,
             built_short,
         )

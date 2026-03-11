@@ -279,7 +279,6 @@ def _update_manifest_entry(
     branch: str,
     branch_key: str,
     title: str,
-    exported_relpaths: list[str],
     nav_structure: Any = None,
     last_good: str | None = None,
     now: str | None = None,
@@ -294,7 +293,6 @@ def _update_manifest_entry(
         "last_checked": now,
         "title": title,
         "branch_key": branch_key,
-        "exported": exported_relpaths,
     }
     if nav_structure is not None:
         entry["structure"] = nav_structure
@@ -322,7 +320,7 @@ def _create_broken_stub_and_update_manifest(
     exported_relpaths = [p.relative_to(dest_dir).as_posix() for p in exported_dest_paths]
 
     if update_manifest:
-        _update_manifest_entry(manifest, branch, branch_key, branch, exported_relpaths, now=now)
+        _update_manifest_entry(manifest, branch, branch_key, branch, now=now)
         save_manifest(manifest)
 
     return exported_dest_paths, exported_relpaths
@@ -394,7 +392,7 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
                 result_last_good = prev_last_good
                 if update_manifest:
                     _update_manifest_entry(
-                        manifest, branch, branch_key, title, exported_relpaths,
+                        manifest, branch, branch_key, title,
                         nav_structure=nav_structure, last_good=prev_last_good, now=now,
                         prerendered=prerendered, cached_pages=cached_pages,
                     )
@@ -430,7 +428,7 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
             result_last_good = sha
             if update_manifest:
                 _update_manifest_entry(
-                    manifest, branch, branch_key, title, exported_relpaths,
+                    manifest, branch, branch_key, title,
                     nav_structure=nav_structure, last_good=sha, now=now,
                     prerendered=prerendered, cached_pages=cached_pages,
                 )
@@ -454,7 +452,7 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
                     result_last_good = prev_last_good
                     if update_manifest:
                         _update_manifest_entry(
-                            manifest, branch, branch_key, title, exported_relpaths,
+                            manifest, branch, branch_key, title,
                             nav_structure=nav_structure, last_good=prev_last_good, now=now,
                             prerendered=prerendered, cached_pages=cached_pages,
                         )
@@ -515,7 +513,6 @@ def _manifest_entry_from_result(result: BuildResult) -> ManifestEntry:
         "last_checked": result.built_at,
         "title": result.title,
         "branch_key": result.branch_key,
-        "exported": result.exported_relpaths,
     }
     if result.nav_structure is not None:
         entry["structure"] = result.nav_structure
@@ -596,7 +593,7 @@ def update_manifests(
                         head_sha=current_sha,
                         last_good_sha=last_good,
                         built_at=now,
-                        exported_relpaths=entry.get("exported", []),
+                        exported_relpaths=[],
                         exported_dest_paths=[],
                         nav_structure=entry.get("structure"),
                         prerendered=entry.get("prerendered", False),

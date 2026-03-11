@@ -559,8 +559,8 @@ def apply_manifest() -> None:
     for spec in branches:
         branch = spec["branch"]
         entry = manifest.get(branch)
-        if not entry or not entry.get("exported"):
+        if not entry or not entry.get("last_good"):
             continue
         logger.info(
-            f"  - {branch}: {len(entry['exported'])} files -> title '{entry.get('title')}'"
+            f"  - {branch}: title '{entry.get('title', branch)}'"
         )
