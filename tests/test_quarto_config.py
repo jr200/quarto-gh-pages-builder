@@ -609,6 +609,86 @@ class TestApplyManifest:
         finally:
             constants._root_override = None
 
+    def test_cached_href_entries_get_text_field(self, tmp_path):
+        """Cached pages using href: dict format must get a text field added,
+        otherwise quarto drops them from the sidebar."""
+        import quarto_graft.constants as constants
+        try:
+            self._setup_project(tmp_path, "website")
+            self._setup_grafts_config(tmp_path, [
+                {"name": "demo", "branch": "graft/demo", "collar": "main"},
+            ])
+            self._setup_manifest(tmp_path, {
+                "graft/demo": {
+                    "title": "Demo",
+                    "branch_key": "demo",
+                    "exported": ["page.qmd", "notebook.ipynb"],
+                    "last_checked": "2026-01-01T00:00:00Z",
+                    "structure": [
+                        {"href": "page.qmd"},
+                        {"href": "notebook.ipynb"},
+                    ],
+                    "cached_pages": ["page.qmd", "notebook.ipynb"],
+                },
+            })
+
+            from quarto_graft.quarto_config import apply_manifest
+            apply_manifest()
+
+            from quarto_graft.yaml_utils import get_yaml_loader
+            yaml_loader = get_yaml_loader()
+            result = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
+            contents = result["website"]["sidebar"]["contents"]
+
+            autogen = contents[2]
+            assert autogen.get("_autogen_branch") == "graft/demo"
+            items = autogen["contents"]
+            assert len(items) == 2
+
+            # Both should have text and href with .html extension
+            assert items[0]["href"] == f"{GRAFTS_BUILD_RELPATH}/demo/page.html"
+            assert items[0]["text"] == "Page"
+            assert items[1]["href"] == f"{GRAFTS_BUILD_RELPATH}/demo/notebook.html"
+            assert items[1]["text"] == "Notebook"
+        finally:
+            constants._root_override = None
+
+    def test_cached_href_preserves_existing_text(self, tmp_path):
+        """Cached pages that already have a text field should keep it."""
+        import quarto_graft.constants as constants
+        try:
+            self._setup_project(tmp_path, "website")
+            self._setup_grafts_config(tmp_path, [
+                {"name": "demo", "branch": "graft/demo", "collar": "main"},
+            ])
+            self._setup_manifest(tmp_path, {
+                "graft/demo": {
+                    "title": "Demo",
+                    "branch_key": "demo",
+                    "exported": ["page.qmd"],
+                    "last_checked": "2026-01-01T00:00:00Z",
+                    "structure": [
+                        {"text": "Custom Title", "href": "page.qmd"},
+                    ],
+                    "cached_pages": ["page.qmd"],
+                },
+            })
+
+            from quarto_graft.quarto_config import apply_manifest
+            apply_manifest()
+
+            from quarto_graft.yaml_utils import get_yaml_loader
+            yaml_loader = get_yaml_loader()
+            result = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
+            contents = result["website"]["sidebar"]["contents"]
+
+            autogen = contents[2]
+            items = autogen["contents"]
+            assert items[0]["text"] == "Custom Title"
+            assert items[0]["href"] == f"{GRAFTS_BUILD_RELPATH}/demo/page.html"
+        finally:
+            constants._root_override = None
+
     def test_raises_when_no_structure(self, tmp_path):
         import quarto_graft.constants as constants
         try:

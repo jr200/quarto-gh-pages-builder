@@ -422,6 +422,9 @@ def apply_manifest() -> None:
                                 result["href"] = f"{GRAFTS_BUILD_RELPATH}/{branch_key}/{p.with_suffix('.html').as_posix()}"
                             else:
                                 result["href"] = f"{GRAFTS_BUILD_RELPATH}/{branch_key}/{value}"
+                            # Ensure a text field so quarto can display the sidebar entry
+                            if "text" not in node:
+                                result["text"] = p.stem.replace("-", " ").replace("_", " ").title()
                         else:
                             # These are file references
                             result[key] = f"{GRAFTS_BUILD_RELPATH}/{branch_key}/{value}"
