@@ -534,7 +534,7 @@ def apply_manifest() -> None:
 
     if html_resources:
         project_cfg = data.setdefault("project", {})
-        resources = project_cfg.get("resources", [])
+        resources = list(project_cfg.get("resources", []))
         for r in html_resources:
             if r not in resources:
                 resources.append(r)

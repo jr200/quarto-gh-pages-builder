@@ -5,6 +5,9 @@ description = "Quarto trunk site for {{ project_name }}"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "quarto-cli>=1.8.26",
+    "quarto-cli",
     "quarto-graft",
 ]
+
+[tool.uv.sources]
+quarto-cli = { git = "https://github.com/quarto-dev/quarto-cli", rev = "v1.9.31" }

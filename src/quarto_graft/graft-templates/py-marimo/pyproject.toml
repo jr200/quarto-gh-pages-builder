@@ -6,11 +6,14 @@ readme = "README.md"
 authors = [{ name = "quarto-graft" }]
 requires-python = ">=3.11"
 dependencies = [
-    "polars>=1.35.2",
-    "quarto-cli>=1.8.26",
-    "marimo>=0.8.17",
+    "polars>=1.38.1",
+    "ipykernel>=6.28",
+    "quarto-cli",
 ]
 
 [build-system]
 requires = ["uv_build>=0.9.14,<0.10.0"]
 build-backend = "uv_build"
+
+[tool.uv.sources]
+quarto-cli = { git = "https://github.com/quarto-dev/quarto-cli", rev = "v1.9.31" }
