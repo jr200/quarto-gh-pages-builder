@@ -575,6 +575,50 @@ class TestUpdateCacheAfterRender:
         assert "demo/p1.qmd" in manifest["pages"]
         assert "demo/p2.qmd" not in manifest["pages"]
 
+    def test_prunes_deleted_page_removes_blobs(self, repo_with_cache, tmp_path):
+        """When a cached page is deleted from the graft, its output blobs
+        must be removed from the ``_cache`` tree — not just the manifest entry."""
+        _populate_cache(repo_with_cache, "demo", {
+            "keep.qmd": ("h1", {"keep.html": b"<html>keep</html>"}),
+            "gone.qmd": ("h2", {
+                "gone.html": b"<html>gone</html>",
+                "gone_files/fig.png": b"\x89PNG",
+            }),
+        })
+        # Only "keep" survives
+        site_dir = self._make_site(tmp_path, "demo", {})
+        states = {"demo": {"page_hashes": {"keep.qmd": "h1"}, "cached_pages": ["keep.qmd"]}}
+        with patch("quarto_graft.cache._get_repo", return_value=repo_with_cache):
+            update_cache_after_render(site_dir, states)
+        # Verify blobs for deleted page are gone from the tree
+        commit = repo_with_cache.revparse_single(CACHE_BRANCH)
+        tree = commit.peel(pygit2.Tree)
+        paths = [p for p, _, _ in _iter_tree_blobs(repo_with_cache, tree)]
+        assert not any("gone" in p for p in paths)
+        # Kept page blobs still present
+        assert any("keep" in p for p in paths)
+
+    def test_prunes_all_pages_when_graft_emptied(self, repo_with_cache, tmp_path):
+        """If every page in a graft is removed, all cache entries for that
+        graft are pruned while other grafts remain untouched."""
+        _populate_cache(repo_with_cache, "alpha", {
+            "a.qmd": ("ha", {"a.html": b"<html>A</html>"}),
+        })
+        _populate_cache(repo_with_cache, "beta", {
+            "b.qmd": ("hb", {"b.html": b"<html>B</html>"}),
+        })
+        # alpha has no pages left; beta still has its page
+        site_dir = self._make_site(tmp_path, "beta", {})
+        states = {
+            "alpha": {"page_hashes": {}, "cached_pages": []},
+            "beta": {"page_hashes": {"b.qmd": "hb"}, "cached_pages": ["b.qmd"]},
+        }
+        with patch("quarto_graft.cache._get_repo", return_value=repo_with_cache):
+            update_cache_after_render(site_dir, states)
+            manifest = load_cache_manifest()
+        assert "alpha/a.qmd" not in manifest["pages"]
+        assert "beta/b.qmd" in manifest["pages"]
+
     def test_caches_page_with_assets(self, repo_with_cache, tmp_path):
         site_dir = self._make_site(tmp_path, "demo", {"analysis.html": b"<html>A</html>"})
         asset_dir = tmp_path / "_site" / GRAFTS_BUILD_RELPATH / "demo" / "analysis_files"

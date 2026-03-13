@@ -773,3 +773,118 @@ class TestApplyManifest:
                 apply_manifest()
         finally:
             constants._root_override = None
+
+    def test_cached_page_removed_then_sidebar_updated(self, tmp_path):
+        """When a page is removed from a graft, the manifest structure and
+        cached_pages should be updated so the sidebar no longer references it.
+
+        Simulates: page.qmd and extra.qmd both cached → extra.qmd removed →
+        apply_manifest should only produce a sidebar entry for page.qmd."""
+        import quarto_graft.constants as constants
+        try:
+            self._setup_project(tmp_path, "website")
+            self._setup_grafts_config(tmp_path, [
+                {"name": "demo", "branch": "graft/demo", "collar": "main"},
+            ])
+            # Manifest as it would look AFTER the deleted page's rebuild:
+            # structure no longer lists extra.qmd, cached_pages only has page.qmd
+            self._setup_manifest(tmp_path, {
+                "graft/demo": {
+                    "title": "Demo",
+                    "branch_key": "demo",
+                    "exported": ["page.qmd"],
+                    "last_checked": "2026-01-01T00:00:00Z",
+                    "structure": ["page.qmd"],
+                    "cached_pages": ["page.qmd"],
+                },
+            })
+
+            from quarto_graft.quarto_config import apply_manifest
+            apply_manifest()
+
+            from quarto_graft.yaml_utils import get_yaml_loader
+            yaml_loader = get_yaml_loader()
+            result = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
+            contents = result["website"]["sidebar"]["contents"]
+
+            autogen = contents[2]
+            assert autogen.get("_autogen_branch") == "graft/demo"
+            items = autogen["contents"]
+            # Only page.qmd should appear — extra.qmd must NOT be present
+            assert len(items) == 1
+            assert items[0]["href"] == f"{GRAFTS_BUILD_RELPATH}/demo/page.html"
+        finally:
+            constants._root_override = None
+
+    def test_stale_structure_references_deleted_cached_page(self, tmp_path):
+        """Edge case: structure still lists a page that was removed from
+        cached_pages (e.g. graft config wasn't updated). The page should
+        appear as a file reference (not href) since it's not in cached_pages,
+        pointing to a path that won't exist — exposing the inconsistency."""
+        import quarto_graft.constants as constants
+        try:
+            self._setup_project(tmp_path, "website")
+            self._setup_grafts_config(tmp_path, [
+                {"name": "demo", "branch": "graft/demo", "collar": "main"},
+            ])
+            # Structure still mentions extra.qmd but it's NOT in cached_pages
+            self._setup_manifest(tmp_path, {
+                "graft/demo": {
+                    "title": "Demo",
+                    "branch_key": "demo",
+                    "exported": ["page.qmd"],
+                    "last_checked": "2026-01-01T00:00:00Z",
+                    "structure": ["page.qmd", "extra.qmd"],
+                    "cached_pages": ["page.qmd"],
+                },
+            })
+
+            from quarto_graft.quarto_config import apply_manifest
+            apply_manifest()
+
+            from quarto_graft.yaml_utils import get_yaml_loader
+            yaml_loader = get_yaml_loader()
+            result = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
+            contents = result["website"]["sidebar"]["contents"]
+
+            autogen = contents[2]
+            items = autogen["contents"]
+            assert len(items) == 2
+            # page.qmd is cached → href with .html
+            assert items[0]["href"] == f"{GRAFTS_BUILD_RELPATH}/demo/page.html"
+            # extra.qmd is NOT cached → regular file reference (broken link)
+            assert items[1] == f"{GRAFTS_BUILD_RELPATH}/demo/extra.qmd"
+        finally:
+            constants._root_override = None
+
+    def test_all_cached_pages_removed_cleans_resources(self, tmp_path):
+        """When all cached pages are removed from a graft, the project.resources
+        entry for that graft should be cleaned up."""
+        import quarto_graft.constants as constants
+        try:
+            self._setup_project(tmp_path, "website")
+            self._setup_grafts_config(tmp_path, [
+                {"name": "demo", "branch": "graft/demo", "collar": "main"},
+            ])
+            # No cached pages — all were removed
+            self._setup_manifest(tmp_path, {
+                "graft/demo": {
+                    "title": "Demo",
+                    "branch_key": "demo",
+                    "exported": ["page.qmd"],
+                    "last_checked": "2026-01-01T00:00:00Z",
+                    "structure": ["page.qmd"],
+                },
+            })
+
+            from quarto_graft.quarto_config import apply_manifest
+            apply_manifest()
+
+            from quarto_graft.yaml_utils import get_yaml_loader
+            yaml_loader = get_yaml_loader()
+            result = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
+            resources = result.get("project", {}).get("resources", [])
+            # No cached pages → no resource glob for this graft
+            assert not any("demo" in r for r in resources)
+        finally:
+            constants._root_override = None
