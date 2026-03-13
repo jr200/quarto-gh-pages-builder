@@ -41,6 +41,8 @@ jobs:
       - name: Build grafts
         run: |
           uv run quarto-graft trunk build -j 4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Quarto
         uses: quarto-dev/quarto-actions/setup@v2.2.0
