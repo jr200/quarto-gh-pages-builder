@@ -12,6 +12,7 @@ from quarto_graft.quarto_config import (
     _find_all_collars,
     collect_exported_relpaths,
     derive_section_title,
+    expand_nav_globs,
     extract_nav_structure,
     flatten_quarto_contents,
     is_collar_marker,
@@ -226,6 +227,73 @@ class TestExtractNavStructure:
     def test_returns_none_for_empty_book(self):
         cfg = {"book": {}}
         assert extract_nav_structure(cfg) is None
+
+
+# ---------------------------------------------------------------------------
+# expand_nav_globs
+# ---------------------------------------------------------------------------
+
+
+class TestExpandNavGlobs:
+    def test_expands_recursive_glob_in_list(self):
+        nav = ["index.qmd", "investigations/**"]
+        src = ["index.qmd", "investigations/a.ipynb", "investigations/sub/b.qmd"]
+        result = expand_nav_globs(nav, src)
+        assert result == [
+            "index.qmd",
+            "investigations/a.ipynb",
+            "investigations/sub/b.qmd",
+        ]
+
+    def test_expands_glob_in_section_contents(self):
+        nav = [
+            "index.qmd",
+            {"section": "JIRAs", "contents": "jira/**"},
+        ]
+        src = ["index.qmd", "jira/t1.ipynb", "jira/t2.qmd"]
+        result = expand_nav_globs(nav, src)
+        assert result == [
+            "index.qmd",
+            {"section": "JIRAs", "contents": ["jira/t1.ipynb", "jira/t2.qmd"]},
+        ]
+
+    def test_preserves_non_glob_strings(self):
+        nav = ["index.qmd", "page.qmd"]
+        src = ["index.qmd", "page.qmd"]
+        result = expand_nav_globs(nav, src)
+        assert result == ["index.qmd", "page.qmd"]
+
+    def test_returns_none_for_none(self):
+        assert expand_nav_globs(None, ["a.qmd"]) is None
+
+    def test_no_match_keeps_glob(self):
+        nav = ["missing/**"]
+        src = ["other/a.qmd"]
+        result = expand_nav_globs(nav, src)
+        assert result == ["missing/**"]
+
+    def test_multiple_sections_with_globs(self):
+        """Mimics the jayshan graft structure from the bug report."""
+        nav = [
+            "docs/index.qmd",
+            {"section": "Investigations", "contents": "investigations/**"},
+            {"section": "JIRAs", "contents": "jira/**"},
+            {"section": "Support", "contents": "support/**"},
+        ]
+        src = [
+            "docs/index.qmd",
+            "investigations/inv1.ipynb",
+            "jira/TRD-1234/page.ipynb",
+            "support/fixgw.ipynb",
+            "support/index.qmd",
+        ]
+        result = expand_nav_globs(nav, src)
+        assert result == [
+            "docs/index.qmd",
+            {"section": "Investigations", "contents": ["investigations/inv1.ipynb"]},
+            {"section": "JIRAs", "contents": ["jira/TRD-1234/page.ipynb"]},
+            {"section": "Support", "contents": ["support/fixgw.ipynb", "support/index.qmd"]},
+        ]
 
 
 # ---------------------------------------------------------------------------

@@ -134,6 +134,69 @@ def extract_nav_structure(cfg: dict[str, Any]) -> Any:
     return None
 
 
+def _glob_matches(pattern: str, path: str) -> bool:
+    """Check if *path* matches a Quarto-style glob pattern.
+
+    Handles ``**`` (recursive) by treating the prefix before ``**`` as a
+    directory prefix match.  Simpler patterns (e.g. ``*.qmd``) fall back to
+    :func:`fnmatch.fnmatch`.
+    """
+    if "**" in pattern:
+        prefix = pattern.split("**")[0]
+        return path.startswith(prefix)
+    import fnmatch
+    return fnmatch.fnmatch(path, pattern)
+
+
+def expand_nav_globs(nav_structure: Any, src_relpaths: list[str]) -> Any:
+    """Expand glob patterns in a nav structure into explicit file entries.
+
+    Quarto sidebar entries like ``contents: investigations/**`` are glob
+    patterns that Quarto expands at render time.  When cached pages are served
+    as pre-rendered ``.html`` files (no source files on disk), Quarto's
+    auto-expansion fails because it cannot find source files.
+
+    By expanding globs into explicit file lists *before* saving the manifest,
+    :func:`rewrite_paths` in :func:`apply_manifest` can convert each entry
+    individually to an ``href`` for cached pages or a ``file`` path for
+    non-cached pages.
+    """
+    if nav_structure is None:
+        return None
+
+    def _expand(node: Any) -> Any:
+        if isinstance(node, str):
+            if "*" in node:
+                matches = sorted(
+                    rp for rp in src_relpaths if _glob_matches(node, rp)
+                )
+                if matches:
+                    return matches  # list replaces the glob string
+            return node
+        elif isinstance(node, dict):
+            result = {}
+            for key, value in node.items():
+                if key in ("contents", "chapters"):
+                    expanded = _expand(value)
+                    result[key] = expanded
+                else:
+                    result[key] = value
+            return result
+        elif isinstance(node, list):
+            expanded_list: list[Any] = []
+            for item in node:
+                expanded = _expand(item)
+                if isinstance(expanded, list) and not isinstance(item, list):
+                    # A glob was expanded — flatten into the parent list
+                    expanded_list.extend(expanded)
+                else:
+                    expanded_list.append(expanded)
+            return expanded_list
+        return node
+
+    return _expand(nav_structure)
+
+
 def collect_exported_relpaths(docs_dir: Path, cfg: dict[str, Any]) -> list[str]:
     """
     Determine which *source documents* to export from this branch's docs/,

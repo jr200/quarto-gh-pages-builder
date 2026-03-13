@@ -39,6 +39,7 @@ from .git_utils import (
 from .quarto_config import (
     collect_exported_relpaths,
     derive_section_title,
+    expand_nav_globs,
     extract_nav_structure,
     load_quarto_config,
 )
@@ -199,6 +200,11 @@ def _export_from_worktree(
 
             # Normal source file export
             src_relpaths = collect_exported_relpaths(project_dir, cfg)
+
+            # Expand glob patterns (e.g. "investigations/**") in the nav
+            # structure into explicit file entries so that cached pages can
+            # be individually converted to href links later.
+            nav_structure = expand_nav_globs(nav_structure, src_relpaths)
 
             dest_dir = constants.GRAFTS_BUILD_DIR / branch_key
             dest_dir.mkdir(parents=True, exist_ok=True)
