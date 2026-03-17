@@ -14,6 +14,7 @@ import logging
 import re
 import threading
 from datetime import UTC, datetime
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
@@ -585,6 +586,182 @@ def fix_navigation(
 
     logger.info(f"[cache] Updated navigation in {updated} cached pages")
     return updated
+
+
+# ---------------------------------------------------------------------------
+# Search index post-processing
+# ---------------------------------------------------------------------------
+
+class _SearchContentParser(HTMLParser):
+    """Extract title, section headings, and body text from a Quarto HTML page."""
+
+    # Tags whose content should be ignored entirely
+    _SKIP_TAGS = frozenset({"script", "style", "nav", "header", "footer", "noscript"})
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.title: str | None = None
+        self.sections: list[tuple[str, list[str]]] = []  # (heading, text_chunks)
+        self._current_heading: str | None = None
+        self._current_chunks: list[str] = []
+        self._in_title = False
+        self._title_parts: list[str] = []
+        self._in_main = False
+        self._skip_depth = 0  # nesting depth inside a skipped tag
+        self._heading_depth = 0
+        self._heading_parts: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if self._skip_depth > 0:
+            if tag in self._SKIP_TAGS:
+                self._skip_depth += 1
+            return
+        if tag in self._SKIP_TAGS:
+            self._skip_depth += 1
+            return
+        if tag == "title":
+            self._in_title = True
+        if tag == "main":
+            self._in_main = True
+        if self._in_main and tag in ("h1", "h2", "h3", "h4", "h5", "h6"):
+            # Flush previous section
+            if self._current_heading is not None or self._current_chunks:
+                self.sections.append((self._current_heading or "", self._current_chunks))
+            self._current_heading = None
+            self._current_chunks = []
+            self._heading_depth += 1
+            self._heading_parts = []
+
+    def handle_endtag(self, tag: str) -> None:
+        if self._skip_depth > 0:
+            if tag in self._SKIP_TAGS:
+                self._skip_depth -= 1
+            return
+        if tag == "title":
+            self._in_title = False
+            self.title = " ".join(self._title_parts).strip()
+        if tag == "main":
+            # Flush last section
+            if self._current_heading is not None or self._current_chunks:
+                self.sections.append((self._current_heading or "", self._current_chunks))
+            self._in_main = False
+        if self._heading_depth > 0 and tag in ("h1", "h2", "h3", "h4", "h5", "h6"):
+            self._heading_depth -= 1
+            if self._heading_depth == 0:
+                self._current_heading = " ".join(self._heading_parts).strip()
+                self._heading_parts = []
+
+    def handle_data(self, data: str) -> None:
+        if self._skip_depth > 0:
+            return
+        if self._in_title:
+            self._title_parts.append(data)
+        if not self._in_main:
+            return
+        if self._heading_depth > 0:
+            self._heading_parts.append(data)
+        else:
+            text = data.strip()
+            if text:
+                self._current_chunks.append(text)
+
+
+def _parse_search_content(html: str) -> tuple[str, list[tuple[str, str]]]:
+    """Parse an HTML page and return ``(title, [(section_heading, section_text), ...])``.
+
+    Each section corresponds to a heading within ``<main>``.  The first
+    section may have an empty heading (content before the first heading).
+    """
+    parser = _SearchContentParser()
+    parser.feed(html)
+    title = parser.title or ""
+    result: list[tuple[str, str]] = []
+    for heading, chunks in parser.sections:
+        text = " ".join(chunks).strip()
+        result.append((heading, text))
+    # If no sections found, return a single empty-headed section
+    if not result:
+        result.append(("", ""))
+    return title, result
+
+
+def fix_search_index(
+    site_dir: Path,
+    cached_graft_keys: list[str],
+) -> int:
+    """Merge cached pages into Quarto's ``search.json``.
+
+    Quarto's search index only contains pages it rendered.  Pre-rendered
+    cached pages are absent.  This function parses cached HTML files,
+    extracts title/section/text, and appends entries to ``search.json``.
+
+    Args:
+        site_dir: The ``_site/`` output directory after ``quarto render``.
+        cached_graft_keys: Branch keys whose cached pages need indexing.
+
+    Returns:
+        Number of search entries added.
+    """
+    search_json_path = site_dir / "search.json"
+    if not search_json_path.exists():
+        logger.warning("[cache] search.json not found in %s — skipping search fix", site_dir)
+        return 0
+
+    try:
+        search_data = json.loads(search_json_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as e:
+        logger.warning("[cache] Failed to read search.json: %s", e)
+        return 0
+
+    # Collect hrefs already in the index so we don't double-add
+    existing_hrefs = {entry.get("href") for entry in search_data if isinstance(entry, dict)}
+
+    added = 0
+    for branch_key in cached_graft_keys:
+        graft_dir = site_dir / GRAFTS_BUILD_RELPATH / branch_key
+        if not graft_dir.exists():
+            continue
+        for html_file in graft_dir.rglob("*.html"):
+            try:
+                page_html = html_file.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            # Skip non-page HTML (fragments without <main>)
+            if "<main" not in page_html:
+                continue
+            page_href = html_file.relative_to(site_dir).as_posix()
+            title, sections = _parse_search_content(page_html)
+
+            for section_heading, section_text in sections:
+                # Build the href — with anchor for sub-sections
+                if section_heading:
+                    anchor = re.sub(r"[^\w\s-]", "", section_heading.lower())
+                    anchor = re.sub(r"[\s]+", "-", anchor).strip("-")
+                    entry_href = f"{page_href}#{anchor}"
+                else:
+                    entry_href = page_href
+
+                if entry_href in existing_hrefs:
+                    continue
+
+                search_entry = {
+                    "objectID": entry_href,
+                    "href": entry_href,
+                    "title": title,
+                    "section": section_heading if section_heading else "",
+                    "text": section_text,
+                }
+                search_data.append(search_entry)
+                existing_hrefs.add(entry_href)
+                added += 1
+
+    if added:
+        search_json_path.write_text(
+            json.dumps(search_data, ensure_ascii=False), encoding="utf-8",
+        )
+        logger.info("[cache] Added %d search entries for cached pages", added)
+
+    return added
 
 
 # ---------------------------------------------------------------------------

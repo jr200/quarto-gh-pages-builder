@@ -15,6 +15,7 @@ from quarto_graft.cache import (
     _create_empty_cache_branch,
     _extract_sidebar,
     _iter_tree_blobs,
+    _parse_search_content,
     _replace_sidebar,
     _write_rootless_commit,
     cache_branch_exists,
@@ -24,6 +25,7 @@ from quarto_graft.cache import (
     content_hash_bytes,
     ensure_local_cache_branch,
     fix_navigation,
+    fix_search_index,
     load_cache_manifest,
     lookup_cached_page,
     restore_cached_files,
@@ -828,3 +830,171 @@ class TestManifestEntryFromResult:
         entry = _manifest_entry_from_result(result)
         assert "page_hashes" not in entry
         assert "cached_pages" not in entry
+
+
+# ---------------------------------------------------------------------------
+# Search index post-processing
+# ---------------------------------------------------------------------------
+
+def _make_cached_page_html(title="Demo Page", sections=None):
+    """Build a minimal Quarto-style HTML page for search index tests."""
+    if sections is None:
+        sections = [("Introduction", "Hello world content here.")]
+    body_parts = []
+    for heading, text in sections:
+        if heading:
+            body_parts.append(f"<h2>{heading}</h2>")
+        body_parts.append(f"<p>{text}</p>")
+    return (
+        f"<!DOCTYPE html><html><head><title>{title}</title></head><body>"
+        '<nav id="quarto-sidebar" class="sidebar"><ul></ul></nav>'
+        f'<main>{"".join(body_parts)}</main>'
+        "</body></html>"
+    )
+
+
+class TestParseSearchContent:
+    def test_extracts_title(self):
+        html = _make_cached_page_html(title="My Title")
+        title, _ = _parse_search_content(html)
+        assert title == "My Title"
+
+    def test_extracts_sections(self):
+        html = _make_cached_page_html(sections=[
+            ("Intro", "First section text."),
+            ("Details", "Second section text."),
+        ])
+        _, sections = _parse_search_content(html)
+        assert len(sections) == 2
+        assert sections[0] == ("Intro", "First section text.")
+        assert sections[1] == ("Details", "Second section text.")
+
+    def test_content_before_first_heading(self):
+        html = (
+            "<html><head><title>T</title></head><body>"
+            "<main><p>Preamble</p><h2>Sec</h2><p>Body</p></main>"
+            "</body></html>"
+        )
+        _, sections = _parse_search_content(html)
+        assert sections[0] == ("", "Preamble")
+        assert sections[1] == ("Sec", "Body")
+
+    def test_ignores_script_and_style(self):
+        html = (
+            "<html><head><title>T</title></head><body>"
+            "<main><script>var x = 1;</script><style>.a{}</style>"
+            "<p>Visible</p></main></body></html>"
+        )
+        _, sections = _parse_search_content(html)
+        assert sections[0] == ("", "Visible")
+
+    def test_ignores_nav_content(self):
+        html = (
+            "<html><head><title>T</title></head><body>"
+            "<main><nav><a>Link</a></nav><p>Body</p></main>"
+            "</body></html>"
+        )
+        _, sections = _parse_search_content(html)
+        assert sections[0] == ("", "Body")
+
+    def test_empty_main(self):
+        html = "<html><head><title>T</title></head><body><main></main></body></html>"
+        title, sections = _parse_search_content(html)
+        assert title == "T"
+        assert sections == [("", "")]
+
+
+class TestFixSearchIndex:
+    def _setup_site(self, tmp_path, search_data=None, cached_pages=None):
+        """Create a mock _site/ with search.json and cached graft HTML pages."""
+        site_dir = tmp_path / "_site"
+        site_dir.mkdir()
+
+        if search_data is None:
+            search_data = [
+                {"objectID": "index.html", "href": "index.html",
+                 "title": "Home", "section": "", "text": "Welcome"},
+            ]
+        (site_dir / "search.json").write_text(json.dumps(search_data))
+
+        if cached_pages is None:
+            cached_pages = {"demo": [("page.html", _make_cached_page_html())]}
+
+        for branch_key, pages in cached_pages.items():
+            graft_dir = site_dir / GRAFTS_BUILD_RELPATH / branch_key
+            graft_dir.mkdir(parents=True)
+            for filename, html in pages:
+                (graft_dir / filename).write_text(html)
+
+        return site_dir
+
+    def test_adds_entries_for_cached_pages(self, tmp_path):
+        site_dir = self._setup_site(tmp_path)
+        added = fix_search_index(site_dir, ["demo"])
+        assert added > 0
+
+        search_data = json.loads((site_dir / "search.json").read_text())
+        hrefs = {e["href"] for e in search_data}
+        assert f"{GRAFTS_BUILD_RELPATH}/demo/page.html" in hrefs or any(
+            f"{GRAFTS_BUILD_RELPATH}/demo/page.html" in h for h in hrefs
+        )
+
+    def test_does_not_duplicate_existing_entries(self, tmp_path):
+        site_dir = self._setup_site(tmp_path)
+        # Run twice
+        first = fix_search_index(site_dir, ["demo"])
+        second = fix_search_index(site_dir, ["demo"])
+        assert first > 0
+        assert second == 0
+
+    def test_returns_zero_when_no_search_json(self, tmp_path):
+        site_dir = tmp_path / "_site"
+        site_dir.mkdir()
+        assert fix_search_index(site_dir, ["demo"]) == 0
+
+    def test_returns_zero_when_no_cached_grafts(self, tmp_path):
+        site_dir = self._setup_site(tmp_path)
+        assert fix_search_index(site_dir, []) == 0
+
+    def test_skips_html_fragments(self, tmp_path):
+        """HTML files without <main> should be skipped."""
+        site_dir = self._setup_site(
+            tmp_path,
+            cached_pages={"demo": [("widget.html", "<div>Just a fragment</div>")]},
+        )
+        assert fix_search_index(site_dir, ["demo"]) == 0
+
+    def test_handles_missing_graft_dir(self, tmp_path):
+        site_dir = self._setup_site(tmp_path, cached_pages={})
+        assert fix_search_index(site_dir, ["nonexistent"]) == 0
+
+    def test_creates_section_entries(self, tmp_path):
+        html = _make_cached_page_html(
+            title="Multi",
+            sections=[("Alpha", "First."), ("Beta", "Second.")],
+        )
+        site_dir = self._setup_site(
+            tmp_path,
+            cached_pages={"demo": [("multi.html", html)]},
+        )
+        added = fix_search_index(site_dir, ["demo"])
+        assert added == 2
+
+        search_data = json.loads((site_dir / "search.json").read_text())
+        new_entries = [e for e in search_data if e.get("title") == "Multi"]
+        assert len(new_entries) == 2
+        sections = {e["section"] for e in new_entries}
+        assert sections == {"Alpha", "Beta"}
+
+    def test_preserves_existing_search_entries(self, tmp_path):
+        existing = [
+            {"objectID": "index.html", "href": "index.html",
+             "title": "Home", "section": "", "text": "Welcome"},
+        ]
+        site_dir = self._setup_site(tmp_path, search_data=existing)
+        fix_search_index(site_dir, ["demo"])
+
+        search_data = json.loads((site_dir / "search.json").read_text())
+        home = [e for e in search_data if e["href"] == "index.html"]
+        assert len(home) == 1
+        assert home[0]["text"] == "Welcome"

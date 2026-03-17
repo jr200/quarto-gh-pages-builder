@@ -16,7 +16,7 @@ from . import constants
 from .archive import archive_graft, restore_graft
 from .branches import branch_to_key, destroy_graft, init_trunk, load_manifest, new_graft_branch, read_branches_list
 from .build import BuildResult, build_branch, resolve_head_sha, update_manifests
-from .cache import cache_status, clear_cache, fix_navigation, update_cache_after_render
+from .cache import cache_status, clear_cache, fix_navigation, fix_search_index, update_cache_after_render
 from .constants import (
     GRAFT_TEMPLATES_DIR,
     PROTECTED_BRANCHES,
@@ -786,6 +786,13 @@ def trunk_cache_update(
             nav_count = fix_navigation(site_path, cached_graft_keys)
         if nav_count:
             console.print(f"[green]✓[/green] Updated navigation in {nav_count} cached page(s)")
+
+    # Merge cached pages into search index
+    if cached_graft_keys:
+        with console.status("Updating search index for cached pages..."):
+            search_count = fix_search_index(site_path, cached_graft_keys)
+        if search_count:
+            console.print(f"[green]✓[/green] Added {search_count} search entry/entries for cached page(s)")
 
 
 @cache_app.command("clear")
