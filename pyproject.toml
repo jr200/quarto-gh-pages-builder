@@ -1,6 +1,6 @@
 [project]
 name = "quarto-graft"
-version = "0.1.13"
+version = "0.1.14"
 description = "Quarto GitHub Pages branch graft tool"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -20,6 +20,7 @@ dev = [
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
     "ruff>=0.14.10",
+    "mypy>=1.15",
 ]
 
 [project.scripts]
@@ -44,6 +45,12 @@ exclude_lines = [
 
 [tool.coverage.html]
 directory = "htmlcov"
+
+[tool.mypy]
+exclude = [
+    "src/quarto_graft/graft-templates/",
+    "src/quarto_graft/trunk-templates/",
+]
 
 [build-system]
 requires = ["uv_build>=0.9.14,<0.10.0"]
