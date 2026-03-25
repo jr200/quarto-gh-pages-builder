@@ -1097,8 +1097,8 @@ class TestApplyManifest:
             assert len(items) == 2
             # page.qmd is cached → href with .html
             assert items[0]["href"] == f"{GRAFTS_BUILD_RELPATH}/demo/page.html"
-            # extra.qmd is NOT cached → regular file reference (broken link)
-            assert items[1] == f"{GRAFTS_BUILD_RELPATH}/demo/extra.qmd"
+            # extra.qmd is NOT cached → file reference dict with clean text
+            assert items[1] == {"text": "Extra", "file": f"{GRAFTS_BUILD_RELPATH}/demo/extra.qmd"}
         finally:
             constants._root_override = None
 
@@ -1217,7 +1217,7 @@ class TestApplyManifest:
             assert g4["section"] == "G-L4"
             g5 = g4["contents"][0]
             assert g5["section"] == "G-L5"
-            assert g5["contents"] == [f"{GRAFTS_BUILD_RELPATH}/deep/deep-page.qmd"]
+            assert g5["contents"] == [{"text": "Deep Page", "file": f"{GRAFTS_BUILD_RELPATH}/deep/deep-page.qmd"}]
         finally:
             constants._root_override = None
 
@@ -1336,9 +1336,9 @@ class TestApplyManifest:
             g2 = g1_items[1]
             assert g2["section"] == "G-L2"
 
-            # l2-page.qmd is NOT cached → should be a string path
+            # l2-page.qmd is NOT cached → should be a file dict with text
             g2_items = g2["contents"]
-            assert g2_items[0] == f"{GRAFTS_BUILD_RELPATH}/deep/l2-page.qmd"
+            assert g2_items[0] == {"text": "L2 Page", "file": f"{GRAFTS_BUILD_RELPATH}/deep/l2-page.qmd"}
 
             g3 = g2_items[1]
             assert g3["section"] == "G-L3"
@@ -1352,7 +1352,7 @@ class TestApplyManifest:
             assert g4["section"] == "G-L4"
 
             g4_items = g4["contents"]
-            assert g4_items[0] == f"{GRAFTS_BUILD_RELPATH}/deep/l4-page.qmd"
+            assert g4_items[0] == {"text": "L4 Page", "file": f"{GRAFTS_BUILD_RELPATH}/deep/l4-page.qmd"}
 
             g5 = g4_items[1]
             assert g5["section"] == "G-L5"
@@ -1578,7 +1578,7 @@ class TestApplyManifest:
             assert g4["part"] == "G-P4"
             g5 = g4["chapters"][0]
             assert g5["part"] == "G-P5"
-            assert g5["chapters"] == [f"{GRAFTS_BUILD_RELPATH}/deep/deep-ch.qmd"]
+            assert g5["chapters"] == [{"text": "Deep Ch", "file": f"{GRAFTS_BUILD_RELPATH}/deep/deep-ch.qmd"}]
         finally:
             constants._root_override = None
 

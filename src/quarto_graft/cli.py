@@ -637,6 +637,12 @@ def trunk_release(
         "--trigger",
         help="Trigger the build workflow after release",
     ),
+    edit_release: bool = typer.Option(
+        False,
+        "--edit-release",
+        "-e",
+        help="Open release notes in $EDITOR before publishing",
+    ),
     yes: bool = typer.Option(
         False,
         "--yes",
@@ -653,6 +659,7 @@ def trunk_release(
         build_release_notes,
         compute_next_version,
         create_release,
+        edit_release_notes,
         get_latest_release_tag,
         promote_tags,
         rollback_staging_tags,
@@ -672,6 +679,14 @@ def trunk_release(
     # 2. Build release notes
     console.print("[dim]Generating release notes...[/dim]")
     notes = build_release_notes(current, next_tag)
+
+    # 2b. Open in editor if requested
+    if edit_release:
+        edited = edit_release_notes(notes)
+        if edited is None:
+            console.print("[yellow]Empty release notes — aborted.[/yellow]")
+            raise typer.Exit(code=0)
+        notes = edited
 
     # 3. Preview
     console.print()
@@ -1362,6 +1377,7 @@ def main_callback(
             trunk_release(
                 workflow="quarto-graft-build-publish.yaml",
                 trigger=False,
+                edit_release=False,
                 yes=False,
             )
         elif group == "graft" and command == "create":

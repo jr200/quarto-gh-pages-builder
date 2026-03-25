@@ -599,8 +599,15 @@ def apply_manifest() -> None:
             if isinstance(node, str):
                 if prerendered or _is_cached_page(node, cached_set):
                     return _to_html_href(node, branch_key)
-                # It's a file path - prepend the graft path
-                return f"{GRAFTS_BUILD_RELPATH}/{branch_key}/{node}"
+                # It's a file path - prepend the graft path and add a
+                # text field so the sidebar shows a clean name without
+                # the file extension.
+                p = Path(node)
+                rewritten = f"{GRAFTS_BUILD_RELPATH}/{branch_key}/{node}"
+                if p.suffix.lower() in _source_exts:
+                    text = p.stem.replace("-", " ").replace("_", " ").title()
+                    return {"text": text, "file": rewritten}
+                return rewritten
             elif isinstance(node, dict):
                 # Recursively process dict values
                 result = {}
@@ -609,21 +616,22 @@ def apply_manifest() -> None:
                         # Recursively process contents/chapters
                         result[key] = rewrite_paths(value, branch_key, prerendered, cached_set)
                     elif key in ("file", "href"):
+                        p = Path(value)
                         if prerendered or _is_cached_page(value, cached_set):
                             # Convert file refs to href with .html extension
-                            p = Path(value)
                             if p.suffix.lower() in _source_exts:
                                 result["href"] = (
                                     f"{GRAFTS_BUILD_RELPATH}/{branch_key}/{p.with_suffix('.html').as_posix()}"
                                 )
                             else:
                                 result["href"] = f"{GRAFTS_BUILD_RELPATH}/{branch_key}/{value}"
-                            # Ensure a text field so quarto can display the sidebar entry
-                            if "text" not in node:
-                                result["text"] = p.stem.replace("-", " ").replace("_", " ").title()
                         else:
                             # These are file references
                             result[key] = f"{GRAFTS_BUILD_RELPATH}/{branch_key}/{value}"
+                        # Always set a clean text field (extension stripped)
+                        # so the sidebar never shows "file.html" or "file.qmd".
+                        if "text" not in node and p.suffix.lower() in (_source_exts | {".html"}):
+                            result["text"] = p.stem.replace("-", " ").replace("_", " ").title()
                     else:
                         # Keep other keys as-is
                         result[key] = value

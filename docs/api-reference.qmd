@@ -135,6 +135,7 @@ quarto-graft trunk release [OPTIONS]
 
 **Options:**
 
+- `--edit-release, -e` - Open release notes in `$EDITOR` before publishing (like `git commit`)
 - `--trigger` - Trigger the build workflow after release (default: off)
 - `--workflow TEXT` - GitHub Actions workflow file to trigger (default: `quarto-graft-build-publish.yaml`)
 - `--yes, -y` - Skip confirmation prompt
@@ -145,6 +146,9 @@ quarto-graft trunk release [OPTIONS]
 # Create a release (no workflow trigger)
 quarto-graft trunk release
 
+# Edit release notes before publishing
+quarto-graft trunk release --edit-release
+
 # Create a release and trigger the build workflow
 quarto-graft trunk release --trigger
 
@@ -152,7 +156,7 @@ quarto-graft trunk release --trigger
 quarto-graft trunk release --yes
 ```
 
-Generates release notes from main branch PRs and per-graft commit logs. Uses a two-tag system (`released/<key>`, `releasing/<key>`) for safe rollback.
+Generates release notes from main branch PRs and per-graft commit logs. Uses a two-tag system (`released/<key>`, `releasing/<key>`) for safe rollback. When `--edit-release` is used, the auto-generated notes are opened in your terminal editor (`$VISUAL`, `$EDITOR`, or `vi`) for review and customisation — saving an empty file aborts the release.
 
 ---
 

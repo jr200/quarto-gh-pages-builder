@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 import os
 import re
+import subprocess
+import tempfile
 
 import pygit2
 
@@ -172,6 +174,42 @@ def build_release_notes(current: str | None, next_tag: str) -> str:
         parts.append(f"# Graft branch changes\n\n{graft_notes}")
 
     return "\n\n".join(parts)
+
+
+_EDIT_COMMENT = "\n# Lines starting with '#' will be stripped.\n# An empty message aborts the release.\n"
+
+
+def edit_release_notes(notes: str) -> str | None:
+    """Open *notes* in the user's terminal editor for editing.
+
+    Mimics ``git commit`` behaviour: writes the text to a temp file, launches
+    ``$VISUAL`` / ``$EDITOR`` / ``vi``, and reads back the result.  Lines
+    starting with ``#`` are stripped.  Returns ``None`` if the user empties
+    the file (abort).
+    """
+    editor = os.environ.get("VISUAL") or os.environ.get("EDITOR") or "vi"
+
+    with tempfile.NamedTemporaryFile(
+        suffix=".md",
+        prefix="RELEASE_NOTES_",
+        mode="w",
+        delete=False,
+    ) as fh:
+        fh.write(notes)
+        fh.write(_EDIT_COMMENT)
+        tmp_path = fh.name
+
+    try:
+        subprocess.check_call([editor, tmp_path])
+        with open(tmp_path, encoding="utf-8") as fh:
+            edited = fh.read()
+    finally:
+        os.unlink(tmp_path)
+
+    # Strip comment lines
+    lines = [ln for ln in edited.splitlines() if not ln.startswith("#")]
+    result = "\n".join(lines).strip()
+    return result or None
 
 
 def stage_graft_tags() -> list[str]:
