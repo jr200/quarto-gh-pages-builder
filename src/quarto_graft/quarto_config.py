@@ -188,6 +188,40 @@ def _build_auto_nav(relpaths: list[str]) -> list[Any]:
     return _build_level(filtered, "")
 
 
+def _build_glob_nav(matches: list[str], prefix: str) -> list[Any]:
+    """Build a hierarchical nav structure from glob-matched file paths.
+
+    Like :func:`_build_auto_nav` but keeps index files and strips the glob
+    *prefix* so that subdirectories beneath it become sections.
+    """
+
+    def _build_level(paths: list[str], level_prefix: str) -> list[Any]:
+        local_files: list[str] = []
+        subdirs: dict[str, list[str]] = {}
+
+        for p in paths:
+            rel = p[len(level_prefix) :] if level_prefix else p
+            parts = Path(rel).parts
+            if len(parts) == 1:
+                local_files.append(p)
+            else:
+                subdir = parts[0]
+                if subdir not in subdirs:
+                    subdirs[subdir] = []
+                subdirs[subdir].append(p)
+
+        items: list[Any] = []
+        items.extend(local_files)
+        for dirname in sorted(subdirs):
+            section_name = dirname.replace("-", " ").replace("_", " ").title()
+            contents = _build_level(subdirs[dirname], f"{level_prefix}{dirname}/")
+            if contents:
+                items.append({"section": section_name, "contents": contents})
+        return items
+
+    return _build_level(sorted(matches), prefix)
+
+
 def expand_nav_globs(nav_structure: Any, src_relpaths: list[str]) -> Any:
     """Expand glob patterns and ``auto`` in a nav structure into explicit entries.
 
@@ -215,7 +249,9 @@ def expand_nav_globs(nav_structure: Any, src_relpaths: list[str]) -> Any:
             if "*" in node:
                 matches = sorted(rp for rp in src_relpaths if _glob_matches(node, rp))
                 if matches:
-                    return matches  # list replaces the glob string
+                    # Determine the fixed prefix before the glob wildcard
+                    glob_prefix = node.split("*")[0]
+                    return _build_glob_nav(matches, glob_prefix)
             return node
         elif isinstance(node, dict):
             result = {}

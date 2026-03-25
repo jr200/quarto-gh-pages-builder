@@ -230,10 +230,11 @@ class TestExpandNavGlobs:
         nav = ["index.qmd", "investigations/**"]
         src = ["index.qmd", "investigations/a.ipynb", "investigations/sub/b.qmd"]
         result = expand_nav_globs(nav, src)
+        # Glob expansion now preserves directory hierarchy
         assert result == [
             "index.qmd",
             "investigations/a.ipynb",
-            "investigations/sub/b.qmd",
+            {"section": "Sub", "contents": ["investigations/sub/b.qmd"]},
         ]
 
     def test_expands_glob_in_section_contents(self):
@@ -326,6 +327,30 @@ class TestExpandNavGlobs:
         assert "page.qmd" in files
         assert "sub/other.qmd" in files
 
+    def test_glob_preserves_intermediate_empty_dirs(self):
+        """Glob expansion must preserve intermediate dirs with no direct files."""
+        nav = ["a/**"]
+        src = ["a/b/c/d.qmd", "a/b/c/e.qmd"]
+        result = expand_nav_globs(nav, src)
+        # a/b has no files → b section still present with c section inside
+        b_section = result[0]
+        assert b_section["section"] == "B"
+        c_section = b_section["contents"][0]
+        assert c_section["section"] == "C"
+        assert sorted(c_section["contents"]) == ["a/b/c/d.qmd", "a/b/c/e.qmd"]
+
+    def test_glob_mixed_depths(self):
+        """Glob with files at multiple depths creates correct hierarchy."""
+        nav = ["proj/**"]
+        src = ["proj/root.qmd", "proj/sub/deep/page.qmd"]
+        result = expand_nav_globs(nav, src)
+        assert result[0] == "proj/root.qmd"
+        sub_section = result[1]
+        assert sub_section["section"] == "Sub"
+        deep_section = sub_section["contents"][0]
+        assert deep_section["section"] == "Deep"
+        assert deep_section["contents"] == ["proj/sub/deep/page.qmd"]
+
     def test_auto_preserves_intermediate_empty_dirs(self):
         """Directories with no direct files but with subdirs must be preserved."""
         src = [
@@ -366,7 +391,12 @@ class TestExpandNavGlobs:
         assert result == [
             "docs/index.qmd",
             {"section": "Investigations", "contents": ["investigations/inv1.ipynb"]},
-            {"section": "JIRAs", "contents": ["jira/TRD-1234/page.ipynb"]},
+            {
+                "section": "JIRAs",
+                "contents": [
+                    {"section": "Trd 1234", "contents": ["jira/TRD-1234/page.ipynb"]},
+                ],
+            },
             {"section": "Support", "contents": ["support/fixgw.ipynb", "support/index.qmd"]},
         ]
 
