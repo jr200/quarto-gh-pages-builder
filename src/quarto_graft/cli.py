@@ -632,10 +632,10 @@ def trunk_release(
         "--workflow",
         help="GitHub Actions workflow file to trigger after release",
     ),
-    no_trigger: bool = typer.Option(
+    trigger: bool = typer.Option(
         False,
-        "--no-trigger",
-        help="Skip triggering the build workflow after release",
+        "--trigger",
+        help="Trigger the build workflow after release",
     ),
     yes: bool = typer.Option(
         False,
@@ -710,7 +710,7 @@ def trunk_release(
         console.print(f"[green]✓[/green] Updated {len(staged_keys)} released/ tag(s)")
 
     # 8. Trigger workflow
-    if not no_trigger:
+    if trigger:
         try:
             console.print(f"[dim]Triggering {workflow}...[/dim]")
             trigger_workflow(workflow)
@@ -1361,7 +1361,7 @@ def main_callback(
         elif group == "trunk" and command == "release":
             trunk_release(
                 workflow="quarto-graft-build-publish.yaml",
-                no_trigger=False,
+                trigger=False,
                 yes=False,
             )
         elif group == "graft" and command == "create":

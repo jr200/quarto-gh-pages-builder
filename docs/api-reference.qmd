@@ -125,6 +125,37 @@ Useful for recovering from an interrupted build or after manual config changes.
 
 ---
 
+### `trunk release`
+
+Create a GitHub release with auto-incremented patch version.
+
+```bash
+quarto-graft trunk release [OPTIONS]
+```
+
+**Options:**
+
+- `--trigger` - Trigger the build workflow after release (default: off)
+- `--workflow TEXT` - GitHub Actions workflow file to trigger (default: `quarto-graft-build-publish.yaml`)
+- `--yes, -y` - Skip confirmation prompt
+- `--help` - Show help message
+
+**Examples:**
+```bash
+# Create a release (no workflow trigger)
+quarto-graft trunk release
+
+# Create a release and trigger the build workflow
+quarto-graft trunk release --trigger
+
+# Skip confirmation
+quarto-graft trunk release --yes
+```
+
+Generates release notes from main branch PRs and per-graft commit logs. Uses a two-tag system (`released/<key>`, `releasing/<key>`) for safe rollback.
+
+---
+
 ### `trunk list`
 
 List available trunk templates.
