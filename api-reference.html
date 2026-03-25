@@ -562,6 +562,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk release <span class="pp">[</span><span class="ss">OPTIONS</span><span class="pp">]</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p><strong>Options:</strong></p>
 <ul>
+<li><code>--edit-release, -e</code> - Open release notes in <code>$EDITOR</code> before publishing (like <code>git commit</code>)</li>
 <li><code>--trigger</code> - Trigger the build workflow after release (default: off)</li>
 <li><code>--workflow TEXT</code> - GitHub Actions workflow file to trigger (default: <code>quarto-graft-build-publish.yaml</code>)</li>
 <li><code>--yes, -y</code> - Skip confirmation prompt</li>
@@ -571,12 +572,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a release (no workflow trigger)</span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk release</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a release and trigger the build workflow</span></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk release <span class="at">--trigger</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Edit release notes before publishing</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk release <span class="at">--edit-release</span></span>
 <span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Skip confirmation</span></span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk release <span class="at">--yes</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Generates release notes from main branch PRs and per-graft commit logs. Uses a two-tag system (<code>released/&lt;key&gt;</code>, <code>releasing/&lt;key&gt;</code>) for safe rollback.</p>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a release and trigger the build workflow</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk release <span class="at">--trigger</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Skip confirmation</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto-graft</span> trunk release <span class="at">--yes</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Generates release notes from main branch PRs and per-graft commit logs. Uses a two-tag system (<code>released/&lt;key&gt;</code>, <code>releasing/&lt;key&gt;</code>) for safe rollback. When <code>--edit-release</code> is used, the auto-generated notes are opened in your terminal editor (<code>$VISUAL</code>, <code>$EDITOR</code>, or <code>vi</code>) for review and customisation — saving an empty file aborts the release.</p>
 <hr>
 </section>
 <section id="trunk-list" class="level3">
@@ -1312,7 +1316,7 @@ Warning
       &nbsp;
     <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/jr200/quarto-graft/blob/main/api-reference.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/jr200/quarto-graft/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div>
     <div class="nav-footer-right">
-<p>Last build: 2026-03-25 04:18 UTC</p>
+<p>Last build: 2026-03-25 04:53 UTC</p>
 </div>
   </div>
 </footer>
