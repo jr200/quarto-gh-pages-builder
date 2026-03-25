@@ -41,6 +41,7 @@ from .quarto_config import (
     derive_section_title,
     expand_nav_globs,
     extract_nav_structure,
+    filter_nav_missing,
     load_quarto_config,
 )
 
@@ -203,6 +204,8 @@ def _export_from_worktree(
             # structure into explicit file entries so that cached pages can
             # be individually converted to href links later.
             nav_structure = expand_nav_globs(nav_structure, src_relpaths)
+            # Remove entries for files that no longer exist in the graft
+            nav_structure = filter_nav_missing(nav_structure, src_relpaths)
 
             dest_dir = constants.GRAFTS_BUILD_DIR / branch_key
             dest_dir.mkdir(parents=True, exist_ok=True)

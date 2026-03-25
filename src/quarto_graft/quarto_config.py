@@ -241,6 +241,55 @@ def expand_nav_globs(nav_structure: Any, src_relpaths: list[str]) -> Any:
     return _expand(nav_structure)
 
 
+def filter_nav_missing(nav_structure: Any, src_relpaths: list[str]) -> Any:
+    """Remove explicit file entries from *nav_structure* that are not in *src_relpaths*.
+
+    When a page is deleted from the graft but its ``_quarto.yml`` still
+    references it, the nav structure will contain a stale entry.  Without
+    filtering, ``apply_manifest`` emits a file reference to a path that
+    doesn't exist, causing Quarto to silently drop it from the sidebar.
+    """
+    if nav_structure is None:
+        return None
+
+    src_set = set(src_relpaths)
+
+    def _is_source_ref(value: str) -> bool:
+        """Return True if *value* looks like a source file path."""
+        return Path(value).suffix.lower() in SUPPORTED_SOURCE_EXTS
+
+    def _filter(node: Any) -> Any:
+        if isinstance(node, str):
+            if _is_source_ref(node) and node not in src_set:
+                return None  # sentinel: drop this entry
+            return node
+        elif isinstance(node, dict):
+            # Check file/href values
+            for key in ("file", "href"):
+                val = node.get(key)
+                if val and isinstance(val, str) and _is_source_ref(val) and val not in src_set:
+                    return None
+            result = {}
+            for key, value in node.items():
+                if key in ("contents", "chapters"):
+                    filtered = _filter(value)
+                    if filtered:  # keep non-empty lists
+                        result[key] = filtered
+                else:
+                    result[key] = value
+            return result
+        elif isinstance(node, list):
+            filtered_list: list[Any] = []
+            for item in node:
+                filtered = _filter(item)
+                if filtered is not None:
+                    filtered_list.append(filtered)
+            return filtered_list
+        return node
+
+    return _filter(nav_structure)
+
+
 def collect_exported_relpaths(docs_dir: Path, cfg: dict[str, Any]) -> list[str]:
     """
     Determine which *source documents* to export from this branch's docs/,

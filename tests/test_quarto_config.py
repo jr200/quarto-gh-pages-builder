@@ -14,6 +14,7 @@ from quarto_graft.quarto_config import (
     derive_section_title,
     expand_nav_globs,
     extract_nav_structure,
+    filter_nav_missing,
     flatten_quarto_contents,
     is_collar_marker,
     list_available_collars,
@@ -368,6 +369,69 @@ class TestExpandNavGlobs:
             {"section": "JIRAs", "contents": ["jira/TRD-1234/page.ipynb"]},
             {"section": "Support", "contents": ["support/fixgw.ipynb", "support/index.qmd"]},
         ]
+
+
+# ---------------------------------------------------------------------------
+# filter_nav_missing
+# ---------------------------------------------------------------------------
+
+
+class TestFilterNavMissing:
+    def test_removes_missing_file_from_flat_list(self):
+        nav = ["a.qmd", "b.qmd", "c.qmd"]
+        result = filter_nav_missing(nav, ["a.qmd", "c.qmd"])
+        assert result == ["a.qmd", "c.qmd"]
+
+    def test_keeps_all_when_all_exist(self):
+        nav = ["a.qmd", "b.qmd", "c.qmd"]
+        result = filter_nav_missing(nav, ["a.qmd", "b.qmd", "c.qmd"])
+        assert result == ["a.qmd", "b.qmd", "c.qmd"]
+
+    def test_removes_missing_dict_file_entry(self):
+        nav = [
+            {"file": "a.qmd"},
+            {"file": "b.qmd", "text": "Page B"},
+            {"file": "c.qmd"},
+        ]
+        result = filter_nav_missing(nav, ["a.qmd", "c.qmd"])
+        assert len(result) == 2
+        assert result[0] == {"file": "a.qmd"}
+        assert result[1] == {"file": "c.qmd"}
+
+    def test_removes_missing_dict_href_entry(self):
+        nav = [{"href": "a.qmd"}, {"href": "gone.qmd"}]
+        result = filter_nav_missing(nav, ["a.qmd"])
+        assert result == [{"href": "a.qmd"}]
+
+    def test_removes_from_nested_section(self):
+        nav = [
+            {
+                "section": "My Section",
+                "contents": ["a.qmd", "b.qmd", "c.qmd"],
+            }
+        ]
+        result = filter_nav_missing(nav, ["a.qmd", "c.qmd"])
+        assert result == [{"section": "My Section", "contents": ["a.qmd", "c.qmd"]}]
+
+    def test_preserves_non_source_entries(self):
+        """Non-source strings (section titles, URLs, etc.) are kept."""
+        nav = ["a.qmd", "https://example.com", "b.qmd"]
+        result = filter_nav_missing(nav, ["a.qmd"])
+        assert result == ["a.qmd", "https://example.com"]
+
+    def test_none_passthrough(self):
+        assert filter_nav_missing(None, ["a.qmd"]) is None
+
+    def test_removes_section_with_all_contents_gone(self):
+        nav = [
+            "a.qmd",
+            {"section": "Empty", "contents": ["gone.qmd"]},
+            "c.qmd",
+        ]
+        result = filter_nav_missing(nav, ["a.qmd", "c.qmd"])
+        # Section kept (has title) but contents emptied
+        assert len(result) == 3
+        assert result[1] == {"section": "Empty"}
 
 
 # ---------------------------------------------------------------------------
