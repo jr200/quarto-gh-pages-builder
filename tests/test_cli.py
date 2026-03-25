@@ -60,6 +60,7 @@ class TestConfigureLogging:
 class TestRequireTrunk:
     def test_passes_when_config_exists(self, tmp_path):
         import quarto_graft.constants as constants
+
         try:
             constants._root_override = tmp_path
             (tmp_path / "grafts.yaml").write_text("branches: []")
@@ -69,6 +70,7 @@ class TestRequireTrunk:
 
     def test_exits_when_config_missing(self, tmp_path):
         import quarto_graft.constants as constants
+
         try:
             constants._root_override = tmp_path
             with pytest.raises((SystemExit, Exception)):
@@ -85,6 +87,7 @@ class TestRequireTrunk:
 class TestBuildState:
     def test_roundtrip(self, tmp_path):
         import quarto_graft.constants as constants
+
         try:
             constants._root_override = tmp_path
             (tmp_path / "dist").mkdir(parents=True, exist_ok=True)
@@ -116,6 +119,7 @@ class TestBuildState:
 
     def test_skips_results_without_page_hashes(self, tmp_path):
         import quarto_graft.constants as constants
+
         try:
             constants._root_override = tmp_path
             (tmp_path / "dist").mkdir(parents=True, exist_ok=True)
@@ -143,6 +147,7 @@ class TestBuildState:
 
     def test_load_returns_empty_when_no_file(self, tmp_path):
         import quarto_graft.constants as constants
+
         try:
             constants._root_override = tmp_path
             state = _load_build_state()
@@ -152,12 +157,11 @@ class TestBuildState:
 
     def test_load_returns_empty_on_corrupt_json(self, tmp_path):
         import quarto_graft.constants as constants
+
         try:
             constants._root_override = tmp_path
             (tmp_path / "dist").mkdir(parents=True, exist_ok=True)
-            (tmp_path / "dist" / "build-state.json").write_text(
-                "not valid json{{{", encoding="utf-8"
-            )
+            (tmp_path / "dist" / "build-state.json").write_text("not valid json{{{", encoding="utf-8")
             state = _load_build_state()
             assert state == {}
         finally:
@@ -235,16 +239,20 @@ class TestTemplateValidator:
 class TestDiscoverGrafts:
     def test_discover_grafts_combines_sources(self, tmp_path):
         import quarto_graft.constants as constants
+
         try:
             constants._root_override = tmp_path
 
             # Set up grafts.yaml
             from quarto_graft.yaml_utils import get_yaml_loader
+
             yaml_loader = get_yaml_loader()
             gf = tmp_path / "grafts.yaml"
-            data = {"branches": [
-                {"name": "demo", "branch": "graft/demo", "collar": "main"},
-            ]}
+            data = {
+                "branches": [
+                    {"name": "demo", "branch": "graft/demo", "collar": "main"},
+                ]
+            }
             with open(gf, "w") as f:
                 yaml_loader.dump(data, f)
 
@@ -253,6 +261,7 @@ class TestDiscoverGrafts:
             mf.write_text(json.dumps({"graft/lock-only": {"title": "Lock"}}))
 
             from quarto_graft.cli import _discover_grafts
+
             with patch("quarto_graft.cli._git_local_branches", return_value={"graft/git-only"}):
                 result = _discover_grafts()
 
@@ -267,12 +276,14 @@ class TestDiscoverGrafts:
 
     def test_filters_protected_branches(self, tmp_path):
         import quarto_graft.constants as constants
+
         try:
             constants._root_override = tmp_path
             (tmp_path / "grafts.yaml").write_text("branches: []")
             (tmp_path / "grafts.lock").write_text("{}")
 
             from quarto_graft.cli import _discover_grafts
+
             with patch("quarto_graft.cli._git_local_branches", return_value={"main", "graft/demo"}):
                 result = _discover_grafts()
 
@@ -285,6 +296,7 @@ class TestDiscoverGrafts:
 class TestGitLocalBranches:
     def test_returns_branches(self):
         from quarto_graft.cli import _git_local_branches
+
         with patch("quarto_graft.cli.list_local_branches", return_value=["feature", "main"]):
             with patch("quarto_graft.cli.constants") as mock_constants:
                 mock_constants.ROOT = Path("/tmp")
@@ -293,6 +305,7 @@ class TestGitLocalBranches:
 
     def test_handles_error(self):
         from quarto_graft.cli import _git_local_branches
+
         with patch("quarto_graft.cli.list_local_branches", side_effect=Exception("fail")):
             with patch("quarto_graft.cli.constants") as mock_constants:
                 mock_constants.ROOT = Path("/tmp")
@@ -303,19 +316,24 @@ class TestGitLocalBranches:
 class TestYamlBranches:
     def test_returns_branches(self, tmp_path):
         import quarto_graft.constants as constants
+
         try:
             constants._root_override = tmp_path
             from quarto_graft.yaml_utils import get_yaml_loader
+
             yaml_loader = get_yaml_loader()
             gf = tmp_path / "grafts.yaml"
-            data = {"branches": [
-                {"name": "a", "branch": "graft/a", "collar": "main"},
-                {"name": "b", "branch": "graft/b", "collar": "main"},
-            ]}
+            data = {
+                "branches": [
+                    {"name": "a", "branch": "graft/a", "collar": "main"},
+                    {"name": "b", "branch": "graft/b", "collar": "main"},
+                ]
+            }
             with open(gf, "w") as f:
                 yaml_loader.dump(data, f)
 
             from quarto_graft.cli import _yaml_branches
+
             result = _yaml_branches()
             assert result == {"graft/a", "graft/b"}
         finally:
@@ -323,9 +341,11 @@ class TestYamlBranches:
 
     def test_returns_empty_when_no_file(self, tmp_path):
         import quarto_graft.constants as constants
+
         try:
             constants._root_override = tmp_path
             from quarto_graft.cli import _yaml_branches
+
             result = _yaml_branches()
             assert result == set()
         finally:
@@ -373,90 +393,117 @@ class TestMenuDispatchDefaults:
 
     def test_trunk_cache_update(self):
         from quarto_graft.cli import trunk_cache_update
+
         ctx = MagicMock(spec=typer.Context)
         ctx.invoked_subcommand = None
-        with patch("quarto_graft.cli.show_main_menu", return_value="trunk cache update"), \
-             patch("quarto_graft.cli._configure_logging"), \
-             patch("quarto_graft.cli.trunk_cache_update") as mock_fn:
+        with (
+            patch("quarto_graft.cli.show_main_menu", return_value="trunk cache update"),
+            patch("quarto_graft.cli._configure_logging"),
+            patch("quarto_graft.cli.trunk_cache_update") as mock_fn,
+        ):
             main_callback(ctx, log_level=None)
         self._assert_no_typer_info(mock_fn, trunk_cache_update)
 
     def test_trunk_cache_clear(self):
         from quarto_graft.cli import trunk_cache_clear
+
         ctx = MagicMock(spec=typer.Context)
         ctx.invoked_subcommand = None
-        with patch("quarto_graft.cli.show_main_menu", return_value="trunk cache clear"), \
-             patch("quarto_graft.cli._configure_logging"), \
-             patch("quarto_graft.cli.trunk_cache_clear") as mock_fn:
+        with (
+            patch("quarto_graft.cli.show_main_menu", return_value="trunk cache clear"),
+            patch("quarto_graft.cli._configure_logging"),
+            patch("quarto_graft.cli.trunk_cache_clear") as mock_fn,
+        ):
             main_callback(ctx, log_level=None)
         self._assert_no_typer_info(mock_fn, trunk_cache_clear)
 
     def test_trunk_init(self):
         from quarto_graft.cli import trunk_init
+
         ctx = MagicMock(spec=typer.Context)
         ctx.invoked_subcommand = None
-        with patch("quarto_graft.cli.show_main_menu", return_value="trunk init"), \
-             patch("quarto_graft.cli._configure_logging"), \
-             patch("quarto_graft.cli.trunk_init") as mock_fn:
+        with (
+            patch("quarto_graft.cli.show_main_menu", return_value="trunk init"),
+            patch("quarto_graft.cli._configure_logging"),
+            patch("quarto_graft.cli.trunk_init") as mock_fn,
+        ):
             main_callback(ctx, log_level=None)
         self._assert_no_typer_info(mock_fn, trunk_init)
 
     def test_trunk_build(self):
         from quarto_graft.cli import trunk_build
+
         ctx = MagicMock(spec=typer.Context)
         ctx.invoked_subcommand = None
-        with patch("quarto_graft.cli.show_main_menu", return_value="trunk build"), \
-             patch("quarto_graft.cli._configure_logging"), \
-             patch("quarto_graft.cli.trunk_build") as mock_fn:
+        with (
+            patch("quarto_graft.cli.show_main_menu", return_value="trunk build"),
+            patch("quarto_graft.cli._configure_logging"),
+            patch("quarto_graft.cli.trunk_build") as mock_fn,
+        ):
             main_callback(ctx, log_level=None)
         self._assert_no_typer_info(mock_fn, trunk_build)
 
     def test_graft_create(self):
         from quarto_graft.cli import graft_create
+
         ctx = MagicMock(spec=typer.Context)
         ctx.invoked_subcommand = None
-        with patch("quarto_graft.cli.show_main_menu", return_value="graft create"), \
-             patch("quarto_graft.cli._configure_logging"), \
-             patch("quarto_graft.cli.graft_create") as mock_fn:
+        with (
+            patch("quarto_graft.cli.show_main_menu", return_value="graft create"),
+            patch("quarto_graft.cli._configure_logging"),
+            patch("quarto_graft.cli.graft_create") as mock_fn,
+        ):
             main_callback(ctx, log_level=None)
         self._assert_no_typer_info(mock_fn, graft_create)
 
     def test_graft_archive(self):
         from quarto_graft.cli import graft_archive_cmd
+
         ctx = MagicMock(spec=typer.Context)
         ctx.invoked_subcommand = None
-        with patch("quarto_graft.cli.show_main_menu", return_value="graft archive"), \
-             patch("quarto_graft.cli._configure_logging"), \
-             patch("quarto_graft.cli.graft_archive_cmd") as mock_fn:
+        with (
+            patch("quarto_graft.cli.show_main_menu", return_value="graft archive"),
+            patch("quarto_graft.cli._configure_logging"),
+            patch("quarto_graft.cli.graft_archive_cmd") as mock_fn,
+        ):
             main_callback(ctx, log_level=None)
         self._assert_no_typer_info(mock_fn, graft_archive_cmd)
 
     def test_graft_restore(self):
         from quarto_graft.cli import graft_restore_cmd
+
         ctx = MagicMock(spec=typer.Context)
         ctx.invoked_subcommand = None
-        with patch("quarto_graft.cli.show_main_menu", return_value="graft restore"), \
-             patch("quarto_graft.cli._configure_logging"), \
-             patch("quarto_graft.cli.graft_restore_cmd") as mock_fn:
+        with (
+            patch("quarto_graft.cli.show_main_menu", return_value="graft restore"),
+            patch("quarto_graft.cli._configure_logging"),
+            patch("quarto_graft.cli.graft_restore_cmd") as mock_fn,
+        ):
             main_callback(ctx, log_level=None)
         self._assert_no_typer_info(mock_fn, graft_restore_cmd)
 
     def test_trunk_release(self):
         from quarto_graft.cli import trunk_release
+
         ctx = MagicMock(spec=typer.Context)
         ctx.invoked_subcommand = None
-        with patch("quarto_graft.cli.show_main_menu", return_value="trunk release"), \
-             patch("quarto_graft.cli._configure_logging"), \
-             patch("quarto_graft.cli.trunk_release") as mock_fn:
+        with (
+            patch("quarto_graft.cli.show_main_menu", return_value="trunk release"),
+            patch("quarto_graft.cli._configure_logging"),
+            patch("quarto_graft.cli.trunk_release") as mock_fn,
+        ):
             main_callback(ctx, log_level=None)
         self._assert_no_typer_info(mock_fn, trunk_release)
 
     def test_status(self):
         from quarto_graft.cli import status_cmd
+
         ctx = MagicMock(spec=typer.Context)
         ctx.invoked_subcommand = None
-        with patch("quarto_graft.cli.show_main_menu", return_value="status"), \
-             patch("quarto_graft.cli._configure_logging"), \
-             patch("quarto_graft.cli.status_cmd") as mock_fn:
+        with (
+            patch("quarto_graft.cli.show_main_menu", return_value="status"),
+            patch("quarto_graft.cli._configure_logging"),
+            patch("quarto_graft.cli.status_cmd") as mock_fn,
+        ):
             main_callback(ctx, log_level=None)
         self._assert_no_typer_info(mock_fn, status_cmd)

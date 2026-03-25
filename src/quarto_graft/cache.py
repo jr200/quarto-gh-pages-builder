@@ -32,6 +32,7 @@ CACHE_MANIFEST_NAME = "cache-manifest.json"
 # Content hashing
 # ---------------------------------------------------------------------------
 
+
 def content_hash(path: Path) -> str:
     """Return the hex sha256 digest of a file's content."""
     h = hashlib.sha256()
@@ -86,7 +87,7 @@ def ensure_local_cache_branch() -> bool:
         return False
     target_oid = repo.references[remote_ref].resolve().target
     commit = repo.get(target_oid)
-    repo.branches.create(CACHE_BRANCH, commit)
+    repo.branches.create(CACHE_BRANCH, commit)  # type: ignore[arg-type]
     logger.info(f"[cache] Created local '{CACHE_BRANCH}' branch from origin/{CACHE_BRANCH}")
     return True
 
@@ -123,6 +124,7 @@ def _iter_tree_blobs(
 # Cache manifest (stored as cache-manifest.json on the _cache branch)
 # ---------------------------------------------------------------------------
 
+
 def load_cache_manifest() -> dict[str, Any]:
     """Load the cache manifest from the _cache branch.
 
@@ -146,7 +148,7 @@ def load_cache_manifest() -> dict[str, Any]:
     try:
         entry = tree[CACHE_MANIFEST_NAME]
         blob = repo.get(entry.id)
-        return json.loads(blob.data)
+        return json.loads(blob.data)  # type: ignore[union-attr]
     except (KeyError, json.JSONDecodeError):
         return {"version": 1, "pages": {}}
 
@@ -154,6 +156,7 @@ def load_cache_manifest() -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Reading cached files
 # ---------------------------------------------------------------------------
+
 
 def lookup_cached_page(
     branch_key: str,
@@ -197,7 +200,7 @@ def restore_cached_files(
             blob = repo.get(entry.id)
             dest = dest_dir / relpath
             dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_bytes(blob.data)
+            dest.write_bytes(blob.data)  # type: ignore[union-attr]
         except (KeyError, pygit2.GitError):
             logger.warning(f"[cache] Failed to restore {cache_path} from cache")
             return False
@@ -207,6 +210,7 @@ def restore_cached_files(
 # ---------------------------------------------------------------------------
 # Writing / updating the cache
 # ---------------------------------------------------------------------------
+
 
 def _commit_rootless_tree(
     repo: pygit2.Repository,
@@ -273,7 +277,7 @@ def update_cache_after_render(
                     for path, oid, mode in _iter_tree_blobs(repo, obj, te.name):
                         affected_blobs[path] = (oid, mode)
             else:
-                unaffected_entries.append((te.name, te.id, te.filemode))
+                unaffected_entries.append((te.name, te.id, te.filemode))  # type: ignore[arg-type]
 
     # Load existing manifest
     manifest = load_cache_manifest()
@@ -361,15 +365,11 @@ def update_cache_after_render(
 
     for branch_key in affected_keys:
         prefix = f"{branch_key}/"
-        graft_entries = {
-            path[len(prefix):]: v
-            for path, v in affected_blobs.items()
-            if path.startswith(prefix)
-        }
+        graft_entries = {path[len(prefix) :]: v for path, v in affected_blobs.items() if path.startswith(prefix)}
         if graft_entries:
             idx = pygit2.Index()
             for path, (oid, mode) in sorted(graft_entries.items()):
-                idx.add(pygit2.IndexEntry(path, oid, mode))
+                idx.add(pygit2.IndexEntry(path, oid, mode))  # type: ignore[arg-type]
             root_builder.insert(branch_key, idx.write_tree(repo), pygit2.GIT_FILEMODE_TREE)
 
     root_builder.insert(CACHE_MANIFEST_NAME, manifest_blob_id, pygit2.GIT_FILEMODE_BLOB)
@@ -382,6 +382,7 @@ def update_cache_after_render(
 # ---------------------------------------------------------------------------
 # Cache clearing
 # ---------------------------------------------------------------------------
+
 
 def clear_cache(graft_name: str | None = None, delete_remote: bool = True) -> None:
     """Delete the _cache branch (local and optionally remote) and recreate empty.
@@ -419,6 +420,7 @@ def clear_cache(graft_name: str | None = None, delete_remote: bool = True) -> No
 def _clear_graft_from_cache(repo: pygit2.Repository, graft_name: str) -> None:
     """Remove all cache entries for a specific graft."""
     from .branches import branch_to_key
+
     branch_key = branch_to_key(graft_name)
 
     result = _get_cache_tree()
@@ -446,7 +448,7 @@ def _clear_graft_from_cache(repo: pygit2.Repository, graft_name: str) -> None:
             continue  # drop this graft's subtree
         if te.name == CACHE_MANIFEST_NAME:
             continue  # replaced below
-        root_builder.insert(te.name, te.id, te.filemode)
+        root_builder.insert(te.name, te.id, te.filemode)  # type: ignore[arg-type]
 
     root_builder.insert(CACHE_MANIFEST_NAME, manifest_blob_id, pygit2.GIT_FILEMODE_BLOB)
     _commit_rootless_tree(repo, root_builder.write(), message=f"remove {branch_key} from cache")
@@ -460,7 +462,7 @@ def _create_empty_cache_branch(repo: pygit2.Repository) -> None:
     blob_id = repo.create_blob(manifest_json)
 
     index = pygit2.Index()
-    entry = pygit2.IndexEntry(CACHE_MANIFEST_NAME, blob_id, pygit2.GIT_FILEMODE_BLOB)
+    entry = pygit2.IndexEntry(CACHE_MANIFEST_NAME, blob_id, pygit2.GIT_FILEMODE_BLOB)  # type: ignore[arg-type]
     index.add(entry)
     _write_rootless_commit(repo, index, message="initialize cache")
 
@@ -468,6 +470,7 @@ def _create_empty_cache_branch(repo: pygit2.Repository) -> None:
 def _get_auth_callbacks() -> pygit2.RemoteCallbacks:
     """Reuse auth callbacks from git_utils."""
     from .git_utils import _get_auth_callbacks as _auth
+
     return _auth()
 
 
@@ -497,7 +500,7 @@ def _extract_sidebar(html: str) -> str | None:
 def _replace_sidebar(html: str, fresh_sidebar: str, page_href: str) -> str:
     """Replace the sidebar in *html* with *fresh_sidebar* and set the active link."""
     # 1. Strip "active" only from class attributes (not from page titles or text).
-    sidebar = _CLASS_ACTIVE_RE.sub(r'\1', fresh_sidebar)
+    sidebar = _CLASS_ACTIVE_RE.sub(r"\1", fresh_sidebar)
     # Clean up any trailing whitespace left inside the class value.
     sidebar = re.sub(r'\s+"', '"', sidebar)
 
@@ -509,7 +512,7 @@ def _replace_sidebar(html: str, fresh_sidebar: str, page_href: str) -> str:
     # Try href-before-class attribute order (Quarto's default)
     sidebar, n = re.subn(
         rf'(<a\s[^>]*?href=["\'](?:\./)?{escaped_href}["\'][^>]*?class=")([^"]*")',
-        r'\1active \2',
+        r"\1active \2",
         sidebar,
         count=1,
     )
@@ -517,7 +520,7 @@ def _replace_sidebar(html: str, fresh_sidebar: str, page_href: str) -> str:
         # Try class-before-href attribute order
         sidebar = re.sub(
             rf'(<a\s[^>]*?class=")([^"]*"[^>]*?href=["\'](?:\./)?{escaped_href}["\'])',
-            r'\1active \2',
+            r"\1active \2",
             sidebar,
             count=1,
         )
@@ -591,6 +594,7 @@ def fix_navigation(
 # ---------------------------------------------------------------------------
 # Search index post-processing
 # ---------------------------------------------------------------------------
+
 
 class _SearchContentParser(HTMLParser):
     """Extract title, section headings, and body text from a Quarto HTML page."""
@@ -757,7 +761,8 @@ def fix_search_index(
 
     if added:
         search_json_path.write_text(
-            json.dumps(search_data, ensure_ascii=False), encoding="utf-8",
+            json.dumps(search_data, ensure_ascii=False),
+            encoding="utf-8",
         )
         logger.info("[cache] Added %d search entries for cached pages", added)
 
@@ -768,6 +773,7 @@ def fix_search_index(
 # Cache status
 # ---------------------------------------------------------------------------
 
+
 def cache_status() -> list[dict[str, Any]]:
     """Return a list of cache status entries for display.
 
@@ -776,10 +782,12 @@ def cache_status() -> list[dict[str, Any]]:
     manifest = load_cache_manifest()
     entries = []
     for page_key, info in sorted(manifest.get("pages", {}).items()):
-        entries.append({
-            "page_key": page_key,
-            "content_hash": info.get("content_hash", "?")[:12],
-            "cached_at": info.get("cached_at", "?"),
-            "output_files": len(info.get("output_files", [])),
-        })
+        entries.append(
+            {
+                "page_key": page_key,
+                "content_hash": info.get("content_hash", "?")[:12],
+                "cached_at": info.get("cached_at", "?"),
+                "output_files": len(info.get("output_files", [])),
+            }
+        )
     return entries

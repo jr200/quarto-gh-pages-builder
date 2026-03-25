@@ -76,10 +76,12 @@ def _make_zip(files: dict[str, str]) -> bytes:
 
 class TestExtractZip:
     def test_strips_single_root_dir(self, tmp_path):
-        content = _make_zip({
-            "root/a.txt": "aaa",
-            "root/sub/b.txt": "bbb",
-        })
+        content = _make_zip(
+            {
+                "root/a.txt": "aaa",
+                "root/sub/b.txt": "bbb",
+            }
+        )
         dest = tmp_path / "out"
         src = TemplateSource({"path": "."})
         src._extract_zip(content, dest)
@@ -90,10 +92,12 @@ class TestExtractZip:
         assert not (dest / "root").exists()
 
     def test_multiple_roots_extracts_directly(self, tmp_path):
-        content = _make_zip({
-            "dir1/a.txt": "aaa",
-            "dir2/b.txt": "bbb",
-        })
+        content = _make_zip(
+            {
+                "dir1/a.txt": "aaa",
+                "dir2/b.txt": "bbb",
+            }
+        )
         dest = tmp_path / "out"
         src = TemplateSource({"path": "."})
         src._extract_zip(content, dest)
@@ -154,10 +158,12 @@ def _make_tar(files: dict[str, str], *, symlinks: dict[str, str] | None = None) 
 
 class TestExtractTar:
     def test_strips_single_root_dir(self, tmp_path):
-        content = _make_tar({
-            "root/a.txt": "aaa",
-            "root/sub/b.txt": "bbb",
-        })
+        content = _make_tar(
+            {
+                "root/a.txt": "aaa",
+                "root/sub/b.txt": "bbb",
+            }
+        )
         dest = tmp_path / "out"
         src = TemplateSource({"path": "."})
         src._extract_tar(content, dest)
@@ -166,10 +172,12 @@ class TestExtractTar:
         assert (dest / "sub" / "b.txt").read_text() == "bbb"
 
     def test_multiple_roots_no_strip(self, tmp_path):
-        content = _make_tar({
-            "dir1/a.txt": "aaa",
-            "dir2/b.txt": "bbb",
-        })
+        content = _make_tar(
+            {
+                "dir1/a.txt": "aaa",
+                "dir2/b.txt": "bbb",
+            }
+        )
         dest = tmp_path / "out"
         src = TemplateSource({"path": "."})
         src._extract_tar(content, dest)
@@ -417,14 +425,14 @@ class TestGetTemplatePath:
 
 class TestLoadTemplateSourcesFromConfig:
     def test_returns_empty_when_no_config_file(self, tmp_path):
-        with patch("quarto_graft.constants.GRAFTS_CONFIG_FILE",tmp_path / "grafts.yaml"):
+        with patch("quarto_graft.constants.GRAFTS_CONFIG_FILE", tmp_path / "grafts.yaml"):
             result = load_template_sources_from_config()
         assert result == []
 
     def test_returns_empty_when_no_templates_key(self, tmp_path):
         config = tmp_path / "grafts.yaml"
         config.write_text("grafts:\n  - name: demo\n", encoding="utf-8")
-        with patch("quarto_graft.constants.GRAFTS_CONFIG_FILE",config):
+        with patch("quarto_graft.constants.GRAFTS_CONFIG_FILE", config):
             result = load_template_sources_from_config()
         assert result == []
 
@@ -434,7 +442,7 @@ class TestLoadTemplateSourcesFromConfig:
             "templates:\n  - path: ./my-templates\n",
             encoding="utf-8",
         )
-        with patch("quarto_graft.constants.GRAFTS_CONFIG_FILE",config):
+        with patch("quarto_graft.constants.GRAFTS_CONFIG_FILE", config):
             result = load_template_sources_from_config()
         assert len(result) == 1
         assert result[0].spec == {"path": "./my-templates"}
@@ -446,7 +454,7 @@ class TestLoadTemplateSourcesFromConfig:
             "templates:\n  - github: user/repo\n    ref: v1.0\n",
             encoding="utf-8",
         )
-        with patch("quarto_graft.constants.GRAFTS_CONFIG_FILE",config):
+        with patch("quarto_graft.constants.GRAFTS_CONFIG_FILE", config):
             result = load_template_sources_from_config()
         assert len(result) == 1
         assert "github:" in result[0].source_name
@@ -458,13 +466,13 @@ class TestLoadTemplateSourcesFromConfig:
             "templates:\n  - just-a-string\n  - path: ./valid\n",
             encoding="utf-8",
         )
-        with patch("quarto_graft.constants.GRAFTS_CONFIG_FILE",config):
+        with patch("quarto_graft.constants.GRAFTS_CONFIG_FILE", config):
             result = load_template_sources_from_config()
         assert len(result) == 1
 
     def test_warns_on_non_list_templates(self, tmp_path):
         config = tmp_path / "grafts.yaml"
         config.write_text("templates: not-a-list\n", encoding="utf-8")
-        with patch("quarto_graft.constants.GRAFTS_CONFIG_FILE",config):
+        with patch("quarto_graft.constants.GRAFTS_CONFIG_FILE", config):
             result = load_template_sources_from_config()
         assert result == []

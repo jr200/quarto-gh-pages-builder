@@ -64,6 +64,7 @@ GRAFTS_BUILD_RELPATH = "dist"
 # ``_root_override`` always takes effect.
 # ---------------------------------------------------------------------------
 
+
 def __getattr__(name: str):  # noqa: N807 – module-level __getattr__ (PEP 562)
     _derived = {
         "ROOT": lambda: get_root(),

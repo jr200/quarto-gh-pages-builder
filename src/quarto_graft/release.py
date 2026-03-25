@@ -30,9 +30,7 @@ def _get_gh_api():
 
     token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
     if not token:
-        raise RuntimeError(
-            "GITHUB_TOKEN or GH_TOKEN environment variable required for releases"
-        )
+        raise RuntimeError("GITHUB_TOKEN or GH_TOKEN environment variable required for releases")
 
     repo = _get_repo()
     origin = repo.remotes["origin"]
@@ -113,7 +111,7 @@ def generate_graft_notes() -> str:
 
         # Collect commits
         commits: list[str] = []
-        for commit in repo.walk(graft_head.peel(pygit2.Commit).id, pygit2.GIT_SORT_TOPOLOGICAL):
+        for commit in repo.walk(graft_head.peel(pygit2.Commit).id, pygit2.GIT_SORT_TOPOLOGICAL):  # type: ignore[arg-type]
             if anchor_oid and commit.id == anchor_oid:
                 break
             short_sha = str(commit.id)[:7]

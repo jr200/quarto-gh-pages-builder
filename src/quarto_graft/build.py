@@ -185,18 +185,16 @@ def _export_from_worktree(
                     shutil.rmtree(dest_dir)
                 # Copy pre-rendered content (exclude the manifest JSON)
                 shutil.copytree(
-                    prerender_dir, dest_dir,
+                    prerender_dir,
+                    dest_dir,
                     ignore=shutil.ignore_patterns(PRERENDER_MANIFEST_NAME),
                 )
 
                 # Collect all exported files
-                exported_relpaths = [
-                    p.relative_to(dest_dir).as_posix()
-                    for p in dest_dir.rglob("*") if p.is_file()
-                ]
-                exported_dest_paths = [dest_dir / r for r in exported_relpaths]
+                exported_relpaths = [p.relative_to(dest_dir).as_posix() for p in dest_dir.rglob("*") if p.is_file()]
+                prerendered_dest_paths = [dest_dir / r for r in exported_relpaths]
 
-                return sha, section_title, exported_relpaths, exported_dest_paths, nav_structure, True, None, None
+                return sha, section_title, exported_relpaths, prerendered_dest_paths, nav_structure, True, None, None
 
             # Normal source file export
             src_relpaths = collect_exported_relpaths(project_dir, cfg)
@@ -275,7 +273,16 @@ def _export_from_worktree(
             if cache_manifest is not None:
                 logger.info(f"[{branch}] cache: {cache_hits} hits, {cache_misses} misses")
 
-            return sha, section_title, exported_relpaths_for_main, exported_dest_paths, nav_structure, False, page_hashes, cached_pages_list
+            return (
+                sha,
+                section_title,
+                exported_relpaths_for_main,
+                exported_dest_paths,
+                nav_structure,
+                False,
+                page_hashes,
+                cached_pages_list,
+            )
     except Exception as e:
         logger.error(f"[{branch}] Export from worktree failed: {e}", exc_info=True)
         raise
@@ -338,7 +345,9 @@ def _branch_exists(ref: str) -> bool:
     return ref_exists(ref)
 
 
-def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bool = True, use_cache: bool = True) -> BuildResult:
+def build_branch(
+    spec: BranchSpec | str, update_manifest: bool = True, fetch: bool = True, use_cache: bool = True
+) -> BuildResult:
     """
     Build a single branch into grafts__/<branch_key>/... with fallback logic.
     """
@@ -387,7 +396,16 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
             last_good_short = prev_last_good[:7] if len(prev_last_good) >= 7 else prev_last_good
             logger.info(f"Using last_good commit {last_good_short} for branch {branch}")
             try:
-                sha, title, exported_relpaths, exported_dest_paths, nav_structure, prerendered, page_hashes, cached_pages = _export_from_worktree(
+                (
+                    sha,
+                    title,
+                    exported_relpaths,
+                    exported_dest_paths,
+                    nav_structure,
+                    prerendered,
+                    page_hashes,
+                    cached_pages,
+                ) = _export_from_worktree(
                     branch=branch,
                     branch_key=branch_key,
                     ref=prev_last_good,
@@ -401,9 +419,15 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
                 result_last_good = prev_last_good
                 if update_manifest:
                     _update_manifest_entry(
-                        manifest, branch, branch_key, title,
-                        nav_structure=nav_structure, last_good=prev_last_good, now=now,
-                        prerendered=prerendered, cached_pages=cached_pages,
+                        manifest,
+                        branch,
+                        branch_key,
+                        title,
+                        nav_structure=nav_structure,
+                        last_good=prev_last_good,
+                        now=now,
+                        prerendered=prerendered,
+                        cached_pages=cached_pages,
                     )
                     save_manifest(manifest)
             except Exception as e:
@@ -426,7 +450,16 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
     else:
         try:
             head_sha = rev_parse(head_ref)
-            sha, title, exported_relpaths, exported_dest_paths, nav_structure, prerendered, page_hashes, cached_pages = _export_from_worktree(
+            (
+                sha,
+                title,
+                exported_relpaths,
+                exported_dest_paths,
+                nav_structure,
+                prerendered,
+                page_hashes,
+                cached_pages,
+            ) = _export_from_worktree(
                 branch=branch,
                 branch_key=branch_key,
                 ref=head_ref,
@@ -437,9 +470,15 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
             result_last_good = sha
             if update_manifest:
                 _update_manifest_entry(
-                    manifest, branch, branch_key, title,
-                    nav_structure=nav_structure, last_good=sha, now=now,
-                    prerendered=prerendered, cached_pages=cached_pages,
+                    manifest,
+                    branch,
+                    branch_key,
+                    title,
+                    nav_structure=nav_structure,
+                    last_good=sha,
+                    now=now,
+                    prerendered=prerendered,
+                    cached_pages=cached_pages,
                 )
                 save_manifest(manifest)
         except Exception as e:
@@ -447,7 +486,16 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
             error_message = str(e)
             if prev_last_good and _branch_exists(prev_last_good):
                 try:
-                    sha, title, exported_relpaths, exported_dest_paths, nav_structure, prerendered, page_hashes, cached_pages = _export_from_worktree(
+                    (
+                        sha,
+                        title,
+                        exported_relpaths,
+                        exported_dest_paths,
+                        nav_structure,
+                        prerendered,
+                        page_hashes,
+                        cached_pages,
+                    ) = _export_from_worktree(
                         branch=branch,
                         branch_key=branch_key,
                         ref=prev_last_good,
@@ -461,9 +509,15 @@ def build_branch(spec: BranchSpec | str, update_manifest: bool = True, fetch: bo
                     result_last_good = prev_last_good
                     if update_manifest:
                         _update_manifest_entry(
-                            manifest, branch, branch_key, title,
-                            nav_structure=nav_structure, last_good=prev_last_good, now=now,
-                            prerendered=prerendered, cached_pages=cached_pages,
+                            manifest,
+                            branch,
+                            branch_key,
+                            title,
+                            nav_structure=nav_structure,
+                            last_good=prev_last_good,
+                            now=now,
+                            prerendered=prerendered,
+                            cached_pages=cached_pages,
                         )
                         save_manifest(manifest)
                 except Exception as fallback_err:
@@ -560,11 +614,13 @@ def update_manifests(
     if use_cache:
         ensure_local_cache_branch()
     if branches is None:
-        branches = read_branches_list()
+        branches_list: list[BranchSpec | str] = list(read_branches_list())
+    else:
+        branches_list = branches
 
     # Prune manifest entries for grafts no longer listed
     manifest = load_manifest()
-    branch_set = {b if isinstance(b, str) else b["branch"] for b in branches}
+    branch_set = {b if isinstance(b, str) else b["branch"] for b in branches_list}
     removed = [b for b in manifest.keys() if b not in branch_set]
     if removed:
         for b in removed:
@@ -573,7 +629,7 @@ def update_manifests(
 
     # Apply --only / --skip filters
     filtered: list[BranchSpec | str] = []
-    for spec in branches:
+    for spec in branches_list:
         graft_name = spec if isinstance(spec, str) else spec["name"]
         if only and graft_name not in only:
             continue

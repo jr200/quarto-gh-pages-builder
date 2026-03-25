@@ -27,6 +27,7 @@ SUPPORTED_SOURCE_EXTS = {
     ".ipynb",
 }
 
+
 def load_quarto_config(docs_dir: Path) -> dict[str, Any]:
     """Load Quarto configuration from docs directory."""
     qfile_yaml = docs_dir / QUARTO_CONFIG_YAML
@@ -145,6 +146,7 @@ def _glob_matches(pattern: str, path: str) -> bool:
         prefix = pattern.split("**")[0]
         return path.startswith(prefix)
     import fnmatch
+
     return fnmatch.fnmatch(path, pattern)
 
 
@@ -157,17 +159,14 @@ def _build_auto_nav(relpaths: list[str]) -> list[Any]:
     """
     _index_stems = {"index"}
 
-    filtered = sorted(
-        rp for rp in relpaths
-        if Path(rp).stem.lower() not in _index_stems
-    )
+    filtered = sorted(rp for rp in relpaths if Path(rp).stem.lower() not in _index_stems)
 
     def _build_level(paths: list[str], prefix: str) -> list[Any]:
         local_files: list[str] = []
         subdirs: dict[str, list[str]] = {}
 
         for p in paths:
-            rel = p[len(prefix):] if prefix else p
+            rel = p[len(prefix) :] if prefix else p
             parts = Path(rel).parts
             if len(parts) == 1:
                 local_files.append(p)
@@ -214,9 +213,7 @@ def expand_nav_globs(nav_structure: Any, src_relpaths: list[str]) -> Any:
             if node.lower() == "auto":
                 return _build_auto_nav(src_relpaths)
             if "*" in node:
-                matches = sorted(
-                    rp for rp in src_relpaths if _glob_matches(node, rp)
-                )
+                matches = sorted(rp for rp in src_relpaths if _glob_matches(node, rp))
                 if matches:
                     return matches  # list replaces the glob string
             return node
@@ -249,6 +246,7 @@ def collect_exported_relpaths(docs_dir: Path, cfg: dict[str, Any]) -> list[str]:
     Determine which *source documents* to export from this branch's docs/,
     preserving the branch author's intended order as far as possible.
     """
+
     def _resolve_entry(entry: str) -> list[Path]:
         """
         Resolve an entry from sidebar/chapters contents.
@@ -416,6 +414,7 @@ def derive_section_title(cfg: dict[str, Any], branch: str) -> str:
     title = website.get("title") or book.get("title") or branch
     return str(title)
 
+
 def is_collar_marker(item: Any) -> bool:
     """Check if item is a collar marker (_GRAFT_COLLAR)."""
     return isinstance(item, Mapping) and GRAFT_COLLAR_MARKER in item
@@ -529,7 +528,9 @@ def apply_manifest() -> None:
                             # Convert file refs to href with .html extension
                             p = Path(value)
                             if p.suffix.lower() in _source_exts:
-                                result["href"] = f"{GRAFTS_BUILD_RELPATH}/{branch_key}/{p.with_suffix('.html').as_posix()}"
+                                result["href"] = (
+                                    f"{GRAFTS_BUILD_RELPATH}/{branch_key}/{p.with_suffix('.html').as_posix()}"
+                                )
                             else:
                                 result["href"] = f"{GRAFTS_BUILD_RELPATH}/{branch_key}/{value}"
                             # Ensure a text field so quarto can display the sidebar entry
@@ -568,7 +569,9 @@ def apply_manifest() -> None:
                 continue
 
             # Rewrite all paths in the structure
-            rewritten_structure = rewrite_paths(structure, branch_key, prerendered=is_prerendered, cached_set=cached_set)
+            rewritten_structure = rewrite_paths(
+                structure, branch_key, prerendered=is_prerendered, cached_set=cached_set
+            )
 
             # Wrap in a section/part with the graft title
             item = {
@@ -627,8 +630,7 @@ def apply_manifest() -> None:
 
     else:
         raise RuntimeError(
-            "Neither book.chapters nor website.sidebar.contents found; "
-            "cannot apply auto-generated chapter updates."
+            "Neither book.chapters nor website.sidebar.contents found; cannot apply auto-generated chapter updates."
         )
 
     # Add project resources for pre-rendered and cached grafts so Quarto copies HTML as-is
@@ -657,10 +659,7 @@ def apply_manifest() -> None:
     existing_resources = data.get("project", {}).get("resources", [])
     if existing_resources:
         active_set = set(html_resources)
-        cleaned = [
-            r for r in existing_resources
-            if not r.startswith(f"{GRAFTS_BUILD_RELPATH}/") or r in active_set
-        ]
+        cleaned = [r for r in existing_resources if not r.startswith(f"{GRAFTS_BUILD_RELPATH}/") or r in active_set]
         if cleaned != existing_resources:
             data.setdefault("project", {})["resources"] = cleaned
             if not cleaned:
@@ -675,6 +674,4 @@ def apply_manifest() -> None:
         entry = manifest.get(branch)
         if not entry or not entry.get("last_good"):
             continue
-        logger.info(
-            f"  - {branch}: title '{entry.get('title', branch)}'"
-        )
+        logger.info(f"  - {branch}: title '{entry.get('title', branch)}'")

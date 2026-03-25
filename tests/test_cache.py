@@ -165,7 +165,7 @@ SAMPLE_SIDEBAR = (
     '<li class="sidebar-item"><div class="sidebar-item-container">'
     f'<a href="{_DEMO_PAGE1_HREF}" class="sidebar-item-text sidebar-link">'
     '<span class="menu-text">Page 1</span></a></div></li>'
-    '</ul></nav>'
+    "</ul></nav>"
 )
 
 SAMPLE_HTML_WITH_SIDEBAR = f"""<!DOCTYPE html>
@@ -207,9 +207,7 @@ class TestReplaceSidebar:
 
     def test_sets_active_on_existing_class_attr(self):
         """Bug C regression: active must be added to the existing class, not as a duplicate attr."""
-        result = _replace_sidebar(
-            SAMPLE_HTML_WITH_SIDEBAR, SAMPLE_SIDEBAR, _DEMO_PAGE1_HREF
-        )
+        result = _replace_sidebar(SAMPLE_HTML_WITH_SIDEBAR, SAMPLE_SIDEBAR, _DEMO_PAGE1_HREF)
         # "active" should appear in the class for page1
         assert 'class="active sidebar-item-text sidebar-link"' in result
         # Must NOT produce a duplicate class attribute
@@ -223,7 +221,7 @@ class TestReplaceSidebar:
             '<span class="menu-text">My active Projects</span></a>'
             '<a href="b.html" class="sidebar-item-text sidebar-link">'
             '<span class="menu-text">Other</span></a>'
-            '</nav>'
+            "</nav>"
         )
         result = _replace_sidebar(SAMPLE_HTML_WITH_SIDEBAR, sidebar_with_active_title, "b.html")
         # Title text must be preserved
@@ -239,12 +237,11 @@ class TestReplaceSidebar:
         assert result == SAMPLE_HTML_NO_SIDEBAR
 
     def test_removes_active_from_previously_active_link(self):
-        result = _replace_sidebar(
-            SAMPLE_HTML_WITH_SIDEBAR, SAMPLE_SIDEBAR, _DEMO_PAGE1_HREF
-        )
+        result = _replace_sidebar(SAMPLE_HTML_WITH_SIDEBAR, SAMPLE_SIDEBAR, _DEMO_PAGE1_HREF)
         # index.html was "active" in the fresh sidebar — should be stripped
         # Find the <a> for index.html and confirm "active" is NOT in its class
         import re
+
         index_link = re.search(r'<a\s[^>]*href="index\.html"[^>]*>', result)
         assert index_link is not None
         assert "active" not in index_link.group(0)
@@ -255,7 +252,7 @@ class TestReplaceSidebar:
             r'<nav id="quarto-sidebar">'
             r'<a href="math.html" class="sidebar-item-text sidebar-link">'
             r'<span class="menu-text">Section \(1\) — Intro</span></a>'
-            r'</nav>'
+            r"</nav>"
         )
         result = _replace_sidebar(SAMPLE_HTML_WITH_SIDEBAR, sidebar_with_backslash, "math.html")
         # Backslash content must survive intact
@@ -263,10 +260,9 @@ class TestReplaceSidebar:
 
     def test_preserves_other_classes(self):
         """Active injection must not drop existing classes like sidebar-item-text."""
-        result = _replace_sidebar(
-            SAMPLE_HTML_WITH_SIDEBAR, SAMPLE_SIDEBAR, _DEMO_PAGE1_HREF
-        )
+        result = _replace_sidebar(SAMPLE_HTML_WITH_SIDEBAR, SAMPLE_SIDEBAR, _DEMO_PAGE1_HREF)
         import re
+
         link = re.search(rf'<a\s[^>]*href="{re.escape(_DEMO_PAGE1_HREF)}"[^>]*>', result)
         assert link is not None
         class_match = re.search(r'class="([^"]*)"', link.group(0))
@@ -289,24 +285,24 @@ class TestFixNavigation:
         site_dir.mkdir()
 
         fresh_html = (
-            '<!DOCTYPE html><html><body>'
+            "<!DOCTYPE html><html><body>"
             '<nav id="quarto-sidebar" class="sidebar">'
             '<ul><li><a href="index.html" class="sidebar-item-text sidebar-link active">'
             '<span class="menu-text">Home</span></a></li>'
             f'<li><a href="{GRAFTS_BUILD_RELPATH}/demo/page.html" class="sidebar-item-text sidebar-link">'
             '<span class="menu-text">Demo Page</span></a></li></ul>'
-            '</nav><div>Fresh</div></body></html>'
+            "</nav><div>Fresh</div></body></html>"
         )
         (site_dir / "index.html").write_text(fresh_html)
 
         graft_dir = site_dir / GRAFTS_BUILD_RELPATH / "demo"
         graft_dir.mkdir(parents=True)
         cached_html = (
-            '<!DOCTYPE html><html><body>'
+            "<!DOCTYPE html><html><body>"
             '<nav id="quarto-sidebar" class="sidebar">'
             '<ul><li><a href="index.html" class="sidebar-item-text sidebar-link">'
             '<span class="menu-text">Old nav</span></a></li></ul>'
-            '</nav><div>Cached</div></body></html>'
+            "</nav><div>Cached</div></body></html>"
         )
         (graft_dir / "page.html").write_text(cached_html)
         return site_dir
@@ -372,7 +368,9 @@ class TestEnsureLocalCacheBranch:
 
         # Create a fake remote ref pointing at the same commit
         git_repo.references.create(
-            f"refs/remotes/origin/{CACHE_BRANCH}", cache_commit_oid, force=True,
+            f"refs/remotes/origin/{CACHE_BRANCH}",
+            cache_commit_oid,
+            force=True,
         )
         # Delete the local branch
         git_repo.branches.delete(CACHE_BRANCH)
@@ -440,9 +438,7 @@ class TestLoadCacheManifest:
             assert load_cache_manifest() == {"version": 1, "pages": {}}
 
     def test_loads_populated_manifest(self, repo_with_cache):
-        _populate_cache(repo_with_cache, "demo", {
-            "page.qmd": ("abc123", {"page.html": b"<html>cached</html>"})
-        })
+        _populate_cache(repo_with_cache, "demo", {"page.qmd": ("abc123", {"page.html": b"<html>cached</html>"})})
         with patch("quarto_graft.cache._get_repo", return_value=repo_with_cache):
             manifest = load_cache_manifest()
         assert "demo/page.qmd" in manifest["pages"]
@@ -456,9 +452,7 @@ class TestLoadCacheManifest:
 
 class TestLookupCachedPage:
     def test_returns_entry_on_hash_match(self, repo_with_cache):
-        _populate_cache(repo_with_cache, "demo", {
-            "page.qmd": ("hash123", {"page.html": b"<html>hi</html>"})
-        })
+        _populate_cache(repo_with_cache, "demo", {"page.qmd": ("hash123", {"page.html": b"<html>hi</html>"})})
         with patch("quarto_graft.cache._get_repo", return_value=repo_with_cache):
             entry = lookup_cached_page("demo", "page.qmd", "hash123")
         assert entry is not None
@@ -466,9 +460,7 @@ class TestLookupCachedPage:
         assert entry["output_files"] == ["page.html"]
 
     def test_returns_none_on_hash_mismatch(self, repo_with_cache):
-        _populate_cache(repo_with_cache, "demo", {
-            "page.qmd": ("hash123", {"page.html": b"<html>hi</html>"})
-        })
+        _populate_cache(repo_with_cache, "demo", {"page.qmd": ("hash123", {"page.html": b"<html>hi</html>"})})
         with patch("quarto_graft.cache._get_repo", return_value=repo_with_cache):
             assert lookup_cached_page("demo", "page.qmd", "wrong") is None
 
@@ -489,9 +481,7 @@ class TestLookupCachedPage:
 class TestRestoreCachedFiles:
     def test_restores_single_file(self, repo_with_cache, tmp_path):
         html = b"<html><body>Restored</body></html>"
-        _populate_cache(repo_with_cache, "demo", {
-            "page.qmd": ("h1", {"page.html": html})
-        })
+        _populate_cache(repo_with_cache, "demo", {"page.qmd": ("h1", {"page.html": html})})
         dest = tmp_path / "output"
         dest.mkdir()
         with patch("quarto_graft.cache._get_repo", return_value=repo_with_cache):
@@ -499,12 +489,19 @@ class TestRestoreCachedFiles:
         assert (dest / "page.html").read_bytes() == html
 
     def test_restores_nested_files(self, repo_with_cache, tmp_path):
-        _populate_cache(repo_with_cache, "demo", {
-            "ch/page.qmd": ("h2", {
-                "ch/page.html": b"<html>nested</html>",
-                "ch/page_files/fig.png": b"\x89PNG",
-            })
-        })
+        _populate_cache(
+            repo_with_cache,
+            "demo",
+            {
+                "ch/page.qmd": (
+                    "h2",
+                    {
+                        "ch/page.html": b"<html>nested</html>",
+                        "ch/page_files/fig.png": b"\x89PNG",
+                    },
+                )
+            },
+        )
         dest = tmp_path / "output"
         dest.mkdir()
         with patch("quarto_graft.cache._get_repo", return_value=repo_with_cache):
@@ -544,9 +541,7 @@ class TestUpdateCacheAfterRender:
         return site_dir
 
     def test_caches_new_render(self, repo_with_cache, tmp_path):
-        site_dir = self._make_site(tmp_path, "demo", {
-            "page.html": b"<html>rendered</html>"
-        })
+        site_dir = self._make_site(tmp_path, "demo", {"page.html": b"<html>rendered</html>"})
         states = {"demo": {"page_hashes": {"page.qmd": "h-abc"}, "cached_pages": []}}
         with patch("quarto_graft.cache._get_repo", return_value=repo_with_cache):
             assert update_cache_after_render(site_dir, states) == 1
@@ -556,18 +551,20 @@ class TestUpdateCacheAfterRender:
         assert "page.html" in entry["output_files"]
 
     def test_skips_already_cached(self, repo_with_cache, tmp_path):
-        site_dir = self._make_site(tmp_path, "demo", {
-            "page.html": b"<html>rendered</html>"
-        })
+        site_dir = self._make_site(tmp_path, "demo", {"page.html": b"<html>rendered</html>"})
         states = {"demo": {"page_hashes": {"page.qmd": "h"}, "cached_pages": ["page.qmd"]}}
         with patch("quarto_graft.cache._get_repo", return_value=repo_with_cache):
             assert update_cache_after_render(site_dir, states) == 0
 
     def test_prunes_deleted_pages(self, repo_with_cache, tmp_path):
-        _populate_cache(repo_with_cache, "demo", {
-            "p1.qmd": ("h1", {"p1.html": b"<html>p1</html>"}),
-            "p2.qmd": ("h2", {"p2.html": b"<html>p2</html>"}),
-        })
+        _populate_cache(
+            repo_with_cache,
+            "demo",
+            {
+                "p1.qmd": ("h1", {"p1.html": b"<html>p1</html>"}),
+                "p2.qmd": ("h2", {"p2.html": b"<html>p2</html>"}),
+            },
+        )
         # Build now only has p1 — p2 was deleted from graft
         site_dir = self._make_site(tmp_path, "demo", {})
         states = {"demo": {"page_hashes": {"p1.qmd": "h1"}, "cached_pages": ["p1.qmd"]}}
@@ -580,13 +577,20 @@ class TestUpdateCacheAfterRender:
     def test_prunes_deleted_page_removes_blobs(self, repo_with_cache, tmp_path):
         """When a cached page is deleted from the graft, its output blobs
         must be removed from the ``_cache`` tree — not just the manifest entry."""
-        _populate_cache(repo_with_cache, "demo", {
-            "keep.qmd": ("h1", {"keep.html": b"<html>keep</html>"}),
-            "gone.qmd": ("h2", {
-                "gone.html": b"<html>gone</html>",
-                "gone_files/fig.png": b"\x89PNG",
-            }),
-        })
+        _populate_cache(
+            repo_with_cache,
+            "demo",
+            {
+                "keep.qmd": ("h1", {"keep.html": b"<html>keep</html>"}),
+                "gone.qmd": (
+                    "h2",
+                    {
+                        "gone.html": b"<html>gone</html>",
+                        "gone_files/fig.png": b"\x89PNG",
+                    },
+                ),
+            },
+        )
         # Only "keep" survives
         site_dir = self._make_site(tmp_path, "demo", {})
         states = {"demo": {"page_hashes": {"keep.qmd": "h1"}, "cached_pages": ["keep.qmd"]}}
@@ -603,12 +607,20 @@ class TestUpdateCacheAfterRender:
     def test_prunes_all_pages_when_graft_emptied(self, repo_with_cache, tmp_path):
         """If every page in a graft is removed, all cache entries for that
         graft are pruned while other grafts remain untouched."""
-        _populate_cache(repo_with_cache, "alpha", {
-            "a.qmd": ("ha", {"a.html": b"<html>A</html>"}),
-        })
-        _populate_cache(repo_with_cache, "beta", {
-            "b.qmd": ("hb", {"b.html": b"<html>B</html>"}),
-        })
+        _populate_cache(
+            repo_with_cache,
+            "alpha",
+            {
+                "a.qmd": ("ha", {"a.html": b"<html>A</html>"}),
+            },
+        )
+        _populate_cache(
+            repo_with_cache,
+            "beta",
+            {
+                "b.qmd": ("hb", {"b.html": b"<html>B</html>"}),
+            },
+        )
         # alpha has no pages left; beta still has its page
         site_dir = self._make_site(tmp_path, "beta", {})
         states = {
@@ -679,9 +691,7 @@ class TestUpdateCacheAfterRender:
 
 class TestClearCache:
     def test_full_clear_recreates_empty(self, repo_with_cache):
-        _populate_cache(repo_with_cache, "demo", {
-            "page.qmd": ("h", {"page.html": b"<html>x</html>"})
-        })
+        _populate_cache(repo_with_cache, "demo", {"page.qmd": ("h", {"page.html": b"<html>x</html>"})})
         with patch("quarto_graft.cache._get_repo", return_value=repo_with_cache):
             clear_cache(delete_remote=False)
             manifest = load_cache_manifest()
@@ -693,12 +703,8 @@ class TestClearCache:
         assert CACHE_BRANCH in repo_with_cache.branches.local
 
     def test_clear_specific_graft(self, repo_with_cache):
-        _populate_cache(repo_with_cache, "keep-me", {
-            "k.qmd": ("hk", {"k.html": b"<html>keep</html>"})
-        })
-        _populate_cache(repo_with_cache, "remove-me", {
-            "r.qmd": ("hr", {"r.html": b"<html>remove</html>"})
-        })
+        _populate_cache(repo_with_cache, "keep-me", {"k.qmd": ("hk", {"k.html": b"<html>keep</html>"})})
+        _populate_cache(repo_with_cache, "remove-me", {"r.qmd": ("hr", {"r.html": b"<html>remove</html>"})})
         with patch("quarto_graft.cache._get_repo", return_value=repo_with_cache):
             clear_cache(graft_name="remove-me", delete_remote=False)
             manifest = load_cache_manifest()
@@ -706,9 +712,7 @@ class TestClearCache:
         assert "remove-me/r.qmd" not in manifest["pages"]
 
     def test_clear_specific_graft_removes_blobs(self, repo_with_cache):
-        _populate_cache(repo_with_cache, "demo", {
-            "page.qmd": ("h", {"page.html": b"<html>demo</html>"})
-        })
+        _populate_cache(repo_with_cache, "demo", {"page.qmd": ("h", {"page.html": b"<html>demo</html>"})})
         with patch("quarto_graft.cache._get_repo", return_value=repo_with_cache):
             clear_cache(graft_name="demo", delete_remote=False)
         # Verify the blob file is also gone from the tree
@@ -736,9 +740,9 @@ class TestCacheStatus:
             assert cache_status() == []
 
     def test_returns_entries(self, repo_with_cache):
-        _populate_cache(repo_with_cache, "demo", {
-            "page.qmd": ("abcdef1234567890abcdef", {"page.html": b"<html>x</html>"})
-        })
+        _populate_cache(
+            repo_with_cache, "demo", {"page.qmd": ("abcdef1234567890abcdef", {"page.html": b"<html>x</html>"})}
+        )
         with patch("quarto_graft.cache._get_repo", return_value=repo_with_cache):
             entries = cache_status()
         assert len(entries) == 1
@@ -747,12 +751,8 @@ class TestCacheStatus:
         assert entries[0]["output_files"] == 1
 
     def test_sorted_by_page_key(self, repo_with_cache):
-        _populate_cache(repo_with_cache, "beta", {
-            "b.qmd": ("hb", {"b.html": b"B"})
-        })
-        _populate_cache(repo_with_cache, "alpha", {
-            "a.qmd": ("ha", {"a.html": b"A"})
-        })
+        _populate_cache(repo_with_cache, "beta", {"b.qmd": ("hb", {"b.html": b"B"})})
+        _populate_cache(repo_with_cache, "alpha", {"a.qmd": ("ha", {"a.html": b"A"})})
         with patch("quarto_graft.cache._get_repo", return_value=repo_with_cache):
             entries = cache_status()
         keys = [e["page_key"] for e in entries]
@@ -770,8 +770,12 @@ class TestUpdateManifestEntry:
 
         manifest = {}
         _update_manifest_entry(
-            manifest, "branch1", "branch1", "Title",
-            ["page.qmd"], now="2026-01-01T00:00:00Z",
+            manifest,
+            "branch1",
+            "branch1",
+            "Title",
+            ["page.qmd"],
+            now="2026-01-01T00:00:00Z",
             cached_pages=["page.qmd"],
         )
         entry = manifest["branch1"]
@@ -784,8 +788,12 @@ class TestUpdateManifestEntry:
 
         manifest = {}
         _update_manifest_entry(
-            manifest, "branch1", "branch1", "Title",
-            ["page.qmd"], now="2026-01-01T00:00:00Z",
+            manifest,
+            "branch1",
+            "branch1",
+            "Title",
+            ["page.qmd"],
+            now="2026-01-01T00:00:00Z",
         )
         entry = manifest["branch1"]
         assert "page_hashes" not in entry
@@ -796,8 +804,12 @@ class TestUpdateManifestEntry:
 
         manifest = {}
         _update_manifest_entry(
-            manifest, "branch1", "branch1", "Title",
-            ["page.qmd"], now="2026-01-01T00:00:00Z",
+            manifest,
+            "branch1",
+            "branch1",
+            "Title",
+            ["page.qmd"],
+            now="2026-01-01T00:00:00Z",
             cached_pages=[],
         )
         entry = manifest["branch1"]
@@ -809,10 +821,17 @@ class TestManifestEntryFromResult:
         from quarto_graft.build import BuildResult, _manifest_entry_from_result
 
         result = BuildResult(
-            branch="b", branch_key="b", title="T", status="ok",
-            head_sha="abc", last_good_sha="abc", built_at="now",
-            exported_relpaths=["p.qmd"], exported_dest_paths=[],
-            page_hashes={"p.qmd": "h1"}, cached_pages=["p.qmd"],
+            branch="b",
+            branch_key="b",
+            title="T",
+            status="ok",
+            head_sha="abc",
+            last_good_sha="abc",
+            built_at="now",
+            exported_relpaths=["p.qmd"],
+            exported_dest_paths=[],
+            page_hashes={"p.qmd": "h1"},
+            cached_pages=["p.qmd"],
         )
         entry = _manifest_entry_from_result(result)
         # page_hashes stays on BuildResult but is NOT persisted to manifest
@@ -823,9 +842,15 @@ class TestManifestEntryFromResult:
         from quarto_graft.build import BuildResult, _manifest_entry_from_result
 
         result = BuildResult(
-            branch="b", branch_key="b", title="T", status="ok",
-            head_sha="abc", last_good_sha="abc", built_at="now",
-            exported_relpaths=["p.qmd"], exported_dest_paths=[],
+            branch="b",
+            branch_key="b",
+            title="T",
+            status="ok",
+            head_sha="abc",
+            last_good_sha="abc",
+            built_at="now",
+            exported_relpaths=["p.qmd"],
+            exported_dest_paths=[],
         )
         entry = _manifest_entry_from_result(result)
         assert "page_hashes" not in entry
@@ -835,6 +860,7 @@ class TestManifestEntryFromResult:
 # ---------------------------------------------------------------------------
 # Search index post-processing
 # ---------------------------------------------------------------------------
+
 
 def _make_cached_page_html(title="Demo Page", sections=None):
     """Build a minimal Quarto-style HTML page for search index tests."""
@@ -848,7 +874,7 @@ def _make_cached_page_html(title="Demo Page", sections=None):
     return (
         f"<!DOCTYPE html><html><head><title>{title}</title></head><body>"
         '<nav id="quarto-sidebar" class="sidebar"><ul></ul></nav>'
-        f'<main>{"".join(body_parts)}</main>'
+        f"<main>{''.join(body_parts)}</main>"
         "</body></html>"
     )
 
@@ -860,10 +886,12 @@ class TestParseSearchContent:
         assert title == "My Title"
 
     def test_extracts_sections(self):
-        html = _make_cached_page_html(sections=[
-            ("Intro", "First section text."),
-            ("Details", "Second section text."),
-        ])
+        html = _make_cached_page_html(
+            sections=[
+                ("Intro", "First section text."),
+                ("Details", "Second section text."),
+            ]
+        )
         _, sections = _parse_search_content(html)
         assert len(sections) == 2
         assert sections[0] == ("Intro", "First section text.")
@@ -871,9 +899,7 @@ class TestParseSearchContent:
 
     def test_content_before_first_heading(self):
         html = (
-            "<html><head><title>T</title></head><body>"
-            "<main><p>Preamble</p><h2>Sec</h2><p>Body</p></main>"
-            "</body></html>"
+            "<html><head><title>T</title></head><body><main><p>Preamble</p><h2>Sec</h2><p>Body</p></main></body></html>"
         )
         _, sections = _parse_search_content(html)
         assert sections[0] == ("", "Preamble")
@@ -889,11 +915,7 @@ class TestParseSearchContent:
         assert sections[0] == ("", "Visible")
 
     def test_ignores_nav_content(self):
-        html = (
-            "<html><head><title>T</title></head><body>"
-            "<main><nav><a>Link</a></nav><p>Body</p></main>"
-            "</body></html>"
-        )
+        html = "<html><head><title>T</title></head><body><main><nav><a>Link</a></nav><p>Body</p></main></body></html>"
         _, sections = _parse_search_content(html)
         assert sections[0] == ("", "Body")
 
@@ -912,8 +934,7 @@ class TestFixSearchIndex:
 
         if search_data is None:
             search_data = [
-                {"objectID": "index.html", "href": "index.html",
-                 "title": "Home", "section": "", "text": "Welcome"},
+                {"objectID": "index.html", "href": "index.html", "title": "Home", "section": "", "text": "Welcome"},
             ]
         (site_dir / "search.json").write_text(json.dumps(search_data))
 
@@ -988,8 +1009,7 @@ class TestFixSearchIndex:
 
     def test_preserves_existing_search_entries(self, tmp_path):
         existing = [
-            {"objectID": "index.html", "href": "index.html",
-             "title": "Home", "section": "", "text": "Welcome"},
+            {"objectID": "index.html", "href": "index.html", "title": "Home", "section": "", "text": "Welcome"},
         ]
         site_dir = self._setup_site(tmp_path, search_data=existing)
         fix_search_index(site_dir, ["demo"])

@@ -44,6 +44,7 @@ def _escape_quarto_shortcodes(text: str) -> str:
     Convert Quarto shortcodes ({{< ... >}} / {{% ... %}}) and GitHub Actions expressions (${{ ... }})
     into literal strings so Jinja will not attempt to parse them as template expressions.
     """
+
     def _repl(match: re.Match[str]) -> str:
         literal = match.group(0).replace("\\", "\\\\").replace("'", "\\'")
         return f"{{{{ '{literal}' }}}}"
@@ -130,15 +131,16 @@ class ManifestEntry(TypedDict, total=False):
     title: str
     branch_key: str
     structure: Any  # Original sidebar/chapter structure from graft's _quarto.yaml
-    prerendered: bool    # True if graft has pre-rendered HTML content
-    cached_pages: list[str]      # source relpaths served from cache
+    prerendered: bool  # True if graft has pre-rendered HTML content
+    cached_pages: list[str]  # source relpaths served from cache
+
 
 class BranchSpec(TypedDict):
     """Configuration for a single graft branch."""
 
-    name: str          # logical graft name
-    branch: str        # git branch name
-    collar: str        # attachment point in trunk _quarto.yaml
+    name: str  # logical graft name
+    branch: str  # git branch name
+    collar: str  # attachment point in trunk _quarto.yaml
 
 
 def branch_to_key(branch: str) -> str:
@@ -271,11 +273,9 @@ def load_manifest() -> dict[str, ManifestEntry]:
         corrupted_path = constants.GRAFTS_MANIFEST_FILE.with_suffix(".lock.corrupted")
         try:
             import shutil
+
             shutil.copy2(constants.GRAFTS_MANIFEST_FILE, corrupted_path)
-            logger.error(
-                f"Saved corrupted manifest to {corrupted_path} for debugging. "
-                "Starting with empty manifest."
-            )
+            logger.error(f"Saved corrupted manifest to {corrupted_path} for debugging. Starting with empty manifest.")
         except Exception:
             pass
 
@@ -293,6 +293,7 @@ def save_manifest(manifest: dict[str, ManifestEntry]) -> None:
     if constants.GRAFTS_MANIFEST_FILE.exists():
         try:
             import shutil
+
             shutil.copy2(constants.GRAFTS_MANIFEST_FILE, backup_file)
         except Exception as e:
             logger.warning(f"Failed to create manifest backup: {e}")
@@ -319,9 +320,7 @@ def _validate_label(label: str, value: str) -> None:
     if any(ch.isspace() for ch in value):
         raise ValueError(f"{label} must not contain whitespace: '{value}'")
     if not re.fullmatch(r"[A-Za-z0-9._/-]+", value):
-        raise ValueError(
-            f"Invalid {label} '{value}': only letters, digits, ., _, /, and - are allowed"
-        )
+        raise ValueError(f"Invalid {label} '{value}': only letters, digits, ., _, /, and - are allowed")
 
 
 def read_branches_list(path: Path | None = None) -> list[BranchSpec]:
@@ -342,8 +341,7 @@ def read_branches_list(path: Path | None = None) -> list[BranchSpec]:
     for idx, item in enumerate(raw_list):
         if not isinstance(item, dict):
             raise ValueError(
-                f"grafts.yaml entry {idx} must be a dict with keys: name, branch, collar. "
-                f"Got: {type(item).__name__}"
+                f"grafts.yaml entry {idx} must be a dict with keys: name, branch, collar. Got: {type(item).__name__}"
             )
 
         if "name" not in item or "branch" not in item:
@@ -372,9 +370,7 @@ def read_branches_list(path: Path | None = None) -> list[BranchSpec]:
             logger.warning("Duplicate branch '%s' found in grafts.yaml; ignoring subsequent entries", spec["branch"])
             continue
         if spec["name"] in seen_names:
-            logger.warning(
-                "Duplicate name '%s' found in grafts.yaml; ignoring subsequent entries", spec["name"]
-            )
+            logger.warning("Duplicate name '%s' found in grafts.yaml; ignoring subsequent entries", spec["name"])
             continue
         seen_branches.add(spec["branch"])
         seen_names.add(spec["name"])
@@ -437,12 +433,10 @@ def new_graft_branch(
         if already_remote:
             where.append("remote")
         where_str = "/".join(where)
-        raise RuntimeError(
-            f"Branch '{branch}' already exists ({where_str}); won't create a new graft with this name."
-        )
+        raise RuntimeError(f"Branch '{branch}' already exists ({where_str}); won't create a new graft with this name.")
 
-    template_dir = template
-    template_name = template.name
+    template_dir = Path(template)
+    template_name = template_dir.name
 
     if not template_dir.exists() or not template_dir.is_dir():
         raise RuntimeError(f"Graft template directory not found: {template_dir}")
@@ -451,9 +445,7 @@ def new_graft_branch(
     branch_key = branch_to_key(name)
     wt_dir = constants.WORKTREES_CACHE / branch_key
     if wt_dir.exists():
-        raise RuntimeError(
-            f"Worktree directory {wt_dir} already exists; refusing to overwrite for new graft."
-        )
+        raise RuntimeError(f"Worktree directory {wt_dir} already exists; refusing to overwrite for new graft.")
 
     constants.WORKTREES_CACHE.mkdir(parents=True, exist_ok=True)
     logger.info(f"[new-graft] Creating worktree for new branch '{branch}' at {wt_dir}...")
@@ -478,7 +470,7 @@ def new_graft_branch(
         temp_branch.delete()
 
     # Reset worktree to clean state
-    wt_repo.reset(wt_repo.head.target, pygit2.GIT_RESET_HARD)
+    wt_repo.reset(wt_repo.head.target, pygit2.GIT_RESET_HARD)  # type: ignore[arg-type]
     wt_repo.checkout_head(strategy=pygit2.GIT_CHECKOUT_FORCE)
 
     # Remove all files except .git metadata
@@ -550,14 +542,13 @@ def new_graft_branch(
 
     branches_list = data.get("branches", [])
     exists = any(
-        (isinstance(item, dict) and item.get("branch") == branch)
-        or (isinstance(item, str) and item == branch)
+        (isinstance(item, dict) and item.get("branch") == branch) or (isinstance(item, str) and item == branch)
         for item in branches_list
     )
 
     if not exists:
-        entry: dict[str, str] = {"name": name, "branch": branch, "collar": collar}
-        branches_list.append(entry)
+        graft_entry: dict[str, str] = {"name": name, "branch": branch, "collar": collar}
+        branches_list.append(graft_entry)
         data["branches"] = branches_list
         atomic_write_yaml(constants.GRAFTS_CONFIG_FILE, data)
         logger.info(f"[new-graft] Added '{branch}' to grafts.yaml")
@@ -645,10 +636,7 @@ def destroy_graft(branch: str, delete_remote: bool = True) -> dict[str, list[str
 
 
 def init_trunk(
-    name: str,
-    template: str | Path,
-    overwrite: bool = False,
-    with_addons: list[str] | None = None
+    name: str, template: str | Path, overwrite: bool = False, with_addons: list[str] | None = None
 ) -> tuple[Path, list[tuple[str, str]]]:
     """
     Initialize the trunk (docs/) from a template.
@@ -662,8 +650,8 @@ def init_trunk(
     Returns:
         Tuple of (Path to the initialized docs directory, List of (addon_name, instructions_content) tuples)
     """
-    template_dir = template
-    template_name = template.name
+    template_dir = Path(template)
+    template_name = template_dir.name
 
     if not template_dir.exists() or not template_dir.is_dir():
         raise RuntimeError(f"Trunk template directory not found: {template_dir}")
@@ -674,8 +662,7 @@ def init_trunk(
     if conflicts and not overwrite:
         conflict_names = ", ".join(p.name for p in conflicts)
         raise RuntimeError(
-            f"Trunk files already exist in this directory: {conflict_names}. "
-            "Use --overwrite to replace them."
+            f"Trunk files already exist in this directory: {conflict_names}. Use --overwrite to replace them."
         )
 
     if conflicts and overwrite:
@@ -704,6 +691,7 @@ def init_trunk(
     # Apply additional "with" templates
     if with_addons:
         from .constants import TRUNK_ADDONS_DIR
+
         with_dir = TRUNK_TEMPLATES_DIR / TRUNK_ADDONS_DIR
         for with_name in with_addons:
             with_template_dir = with_dir / with_name

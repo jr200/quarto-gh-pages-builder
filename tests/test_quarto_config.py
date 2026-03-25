@@ -66,10 +66,7 @@ class TestListAvailableCollars:
     def test_finds_collars_in_book_chapters(self, tmp_path):
         cfg = tmp_path / "_quarto.yaml"
         cfg.write_text(
-            "book:\n"
-            "  chapters:\n"
-            "    - index.qmd\n"
-            "    - _GRAFT_COLLAR: main\n",
+            "book:\n  chapters:\n    - index.qmd\n    - _GRAFT_COLLAR: main\n",
             encoding="utf-8",
         )
         result = list_available_collars(config_path=cfg)
@@ -78,10 +75,7 @@ class TestListAvailableCollars:
     def test_no_collars(self, tmp_path):
         cfg = tmp_path / "_quarto.yaml"
         cfg.write_text(
-            "website:\n"
-            "  sidebar:\n"
-            "    contents:\n"
-            "      - index.qmd\n",
+            "website:\n  sidebar:\n    contents:\n      - index.qmd\n",
             encoding="utf-8",
         )
         result = list_available_collars(config_path=cfg)
@@ -108,11 +102,7 @@ class TestListAvailableCollars:
     def test_deduplicates_collars(self, tmp_path):
         cfg = tmp_path / "_quarto.yaml"
         cfg.write_text(
-            "website:\n"
-            "  sidebar:\n"
-            "    contents:\n"
-            "      - _GRAFT_COLLAR: main\n"
-            "      - _GRAFT_COLLAR: main\n",
+            "website:\n  sidebar:\n    contents:\n      - _GRAFT_COLLAR: main\n      - _GRAFT_COLLAR: main\n",
             encoding="utf-8",
         )
         result = list_available_collars(config_path=cfg)
@@ -328,6 +318,7 @@ class TestExpandNavGlobs:
         result = expand_nav_globs("auto", src)
         # Flatten all file entries to check index is excluded
         from quarto_graft.quarto_config import flatten_quarto_contents
+
         files = flatten_quarto_contents(result)
         assert "index.qmd" not in files
         assert "sub/index.qmd" not in files
@@ -547,11 +538,14 @@ class TestCollectExportedRelpaths:
         assert "f.py" not in result
 
     def test_excludes_quarto_internals(self, tmp_path):
-        docs = self._make_docs(tmp_path, [
-            "page.qmd",
-            ".quarto/something.qmd",
-            "_site/output.qmd",
-        ])
+        docs = self._make_docs(
+            tmp_path,
+            [
+                "page.qmd",
+                ".quarto/something.qmd",
+                "_site/output.qmd",
+            ],
+        )
         cfg = {}
         result = collect_exported_relpaths(docs, cfg)
         assert "page.qmd" in result
@@ -594,6 +588,7 @@ class TestApplyManifest:
     def _setup_project(self, tmp_path, project_type="website"):
         """Set up a minimal project for apply_manifest testing."""
         import quarto_graft.constants as constants
+
         constants._root_override = tmp_path
 
         if project_type == "website":
@@ -620,6 +615,7 @@ class TestApplyManifest:
             }
 
         from quarto_graft.yaml_utils import get_yaml_loader
+
         yaml_loader = get_yaml_loader()
         qf = tmp_path / "_quarto.yaml"
         with open(qf, "w") as f:
@@ -630,6 +626,7 @@ class TestApplyManifest:
     def _setup_grafts_config(self, tmp_path, branches):
         """Write a grafts.yaml with given branch specs."""
         from quarto_graft.yaml_utils import get_yaml_loader
+
         yaml_loader = get_yaml_loader()
         data = {"branches": branches}
         gf = tmp_path / "grafts.yaml"
@@ -643,26 +640,35 @@ class TestApplyManifest:
 
     def test_website_mode_injects_graft(self, tmp_path):
         import quarto_graft.constants as constants
+
         try:
             self._setup_project(tmp_path, "website")
-            self._setup_grafts_config(tmp_path, [
-                {"name": "demo", "branch": "graft/demo", "collar": "main"},
-            ])
-            self._setup_manifest(tmp_path, {
-                "graft/demo": {
-                    "title": "Demo",
-                    "branch_key": "demo",
-                    "exported": ["page.qmd"],
-                    "last_checked": "2026-01-01T00:00:00Z",
-                    "structure": ["page.qmd"],
+            self._setup_grafts_config(
+                tmp_path,
+                [
+                    {"name": "demo", "branch": "graft/demo", "collar": "main"},
+                ],
+            )
+            self._setup_manifest(
+                tmp_path,
+                {
+                    "graft/demo": {
+                        "title": "Demo",
+                        "branch_key": "demo",
+                        "exported": ["page.qmd"],
+                        "last_checked": "2026-01-01T00:00:00Z",
+                        "structure": ["page.qmd"],
+                    },
                 },
-            })
+            )
 
             from quarto_graft.quarto_config import apply_manifest
+
             apply_manifest()
 
             # Read back and verify graft was injected
             from quarto_graft.yaml_utils import get_yaml_loader
+
             yaml_loader = get_yaml_loader()
             result = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
             contents = result["website"]["sidebar"]["contents"]
@@ -677,25 +683,34 @@ class TestApplyManifest:
 
     def test_book_mode_injects_graft(self, tmp_path):
         import quarto_graft.constants as constants
+
         try:
             self._setup_project(tmp_path, "book")
-            self._setup_grafts_config(tmp_path, [
-                {"name": "demo", "branch": "graft/demo", "collar": "main"},
-            ])
-            self._setup_manifest(tmp_path, {
-                "graft/demo": {
-                    "title": "Demo",
-                    "branch_key": "demo",
-                    "exported": ["ch.qmd"],
-                    "last_checked": "2026-01-01T00:00:00Z",
-                    "structure": ["ch.qmd"],
+            self._setup_grafts_config(
+                tmp_path,
+                [
+                    {"name": "demo", "branch": "graft/demo", "collar": "main"},
+                ],
+            )
+            self._setup_manifest(
+                tmp_path,
+                {
+                    "graft/demo": {
+                        "title": "Demo",
+                        "branch_key": "demo",
+                        "exported": ["ch.qmd"],
+                        "last_checked": "2026-01-01T00:00:00Z",
+                        "structure": ["ch.qmd"],
+                    },
                 },
-            })
+            )
 
             from quarto_graft.quarto_config import apply_manifest
+
             apply_manifest()
 
             from quarto_graft.yaml_utils import get_yaml_loader
+
             yaml_loader = get_yaml_loader()
             result = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
             chapters = result["book"]["chapters"]
@@ -709,23 +724,29 @@ class TestApplyManifest:
 
     def test_prunes_removed_branches(self, tmp_path):
         import quarto_graft.constants as constants
+
         try:
             self._setup_project(tmp_path, "website")
             self._setup_grafts_config(tmp_path, [])  # no branches
-            self._setup_manifest(tmp_path, {
-                "old/branch": {
-                    "title": "Old",
-                    "branch_key": "old",
-                    "exported": ["x.qmd"],
-                    "last_checked": "2026-01-01T00:00:00Z",
+            self._setup_manifest(
+                tmp_path,
+                {
+                    "old/branch": {
+                        "title": "Old",
+                        "branch_key": "old",
+                        "exported": ["x.qmd"],
+                        "last_checked": "2026-01-01T00:00:00Z",
+                    },
                 },
-            })
+            )
 
             from quarto_graft.quarto_config import apply_manifest
+
             apply_manifest()
 
             # Manifest should be empty now
             from quarto_graft.branches import load_manifest
+
             m = load_manifest()
             assert "old/branch" not in m
         finally:
@@ -733,26 +754,35 @@ class TestApplyManifest:
 
     def test_prerendered_graft_adds_resources(self, tmp_path):
         import quarto_graft.constants as constants
+
         try:
             self._setup_project(tmp_path, "website")
-            self._setup_grafts_config(tmp_path, [
-                {"name": "pre", "branch": "graft/pre", "collar": "main"},
-            ])
-            self._setup_manifest(tmp_path, {
-                "graft/pre": {
-                    "title": "Pre",
-                    "branch_key": "pre",
-                    "exported": ["index.html"],
-                    "last_checked": "2026-01-01T00:00:00Z",
-                    "structure": ["index.qmd"],
-                    "prerendered": True,
+            self._setup_grafts_config(
+                tmp_path,
+                [
+                    {"name": "pre", "branch": "graft/pre", "collar": "main"},
+                ],
+            )
+            self._setup_manifest(
+                tmp_path,
+                {
+                    "graft/pre": {
+                        "title": "Pre",
+                        "branch_key": "pre",
+                        "exported": ["index.html"],
+                        "last_checked": "2026-01-01T00:00:00Z",
+                        "structure": ["index.qmd"],
+                        "prerendered": True,
+                    },
                 },
-            })
+            )
 
             from quarto_graft.quarto_config import apply_manifest
+
             apply_manifest()
 
             from quarto_graft.yaml_utils import get_yaml_loader
+
             yaml_loader = get_yaml_loader()
             result = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
             resources = result.get("project", {}).get("resources", [])
@@ -764,29 +794,38 @@ class TestApplyManifest:
         """Cached pages using href: dict format must get a text field added,
         otherwise quarto drops them from the sidebar."""
         import quarto_graft.constants as constants
+
         try:
             self._setup_project(tmp_path, "website")
-            self._setup_grafts_config(tmp_path, [
-                {"name": "demo", "branch": "graft/demo", "collar": "main"},
-            ])
-            self._setup_manifest(tmp_path, {
-                "graft/demo": {
-                    "title": "Demo",
-                    "branch_key": "demo",
-                    "exported": ["page.qmd", "notebook.ipynb"],
-                    "last_checked": "2026-01-01T00:00:00Z",
-                    "structure": [
-                        {"href": "page.qmd"},
-                        {"href": "notebook.ipynb"},
-                    ],
-                    "cached_pages": ["page.qmd", "notebook.ipynb"],
+            self._setup_grafts_config(
+                tmp_path,
+                [
+                    {"name": "demo", "branch": "graft/demo", "collar": "main"},
+                ],
+            )
+            self._setup_manifest(
+                tmp_path,
+                {
+                    "graft/demo": {
+                        "title": "Demo",
+                        "branch_key": "demo",
+                        "exported": ["page.qmd", "notebook.ipynb"],
+                        "last_checked": "2026-01-01T00:00:00Z",
+                        "structure": [
+                            {"href": "page.qmd"},
+                            {"href": "notebook.ipynb"},
+                        ],
+                        "cached_pages": ["page.qmd", "notebook.ipynb"],
+                    },
                 },
-            })
+            )
 
             from quarto_graft.quarto_config import apply_manifest
+
             apply_manifest()
 
             from quarto_graft.yaml_utils import get_yaml_loader
+
             yaml_loader = get_yaml_loader()
             result = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
             contents = result["website"]["sidebar"]["contents"]
@@ -807,28 +846,37 @@ class TestApplyManifest:
     def test_cached_href_preserves_existing_text(self, tmp_path):
         """Cached pages that already have a text field should keep it."""
         import quarto_graft.constants as constants
+
         try:
             self._setup_project(tmp_path, "website")
-            self._setup_grafts_config(tmp_path, [
-                {"name": "demo", "branch": "graft/demo", "collar": "main"},
-            ])
-            self._setup_manifest(tmp_path, {
-                "graft/demo": {
-                    "title": "Demo",
-                    "branch_key": "demo",
-                    "exported": ["page.qmd"],
-                    "last_checked": "2026-01-01T00:00:00Z",
-                    "structure": [
-                        {"text": "Custom Title", "href": "page.qmd"},
-                    ],
-                    "cached_pages": ["page.qmd"],
+            self._setup_grafts_config(
+                tmp_path,
+                [
+                    {"name": "demo", "branch": "graft/demo", "collar": "main"},
+                ],
+            )
+            self._setup_manifest(
+                tmp_path,
+                {
+                    "graft/demo": {
+                        "title": "Demo",
+                        "branch_key": "demo",
+                        "exported": ["page.qmd"],
+                        "last_checked": "2026-01-01T00:00:00Z",
+                        "structure": [
+                            {"text": "Custom Title", "href": "page.qmd"},
+                        ],
+                        "cached_pages": ["page.qmd"],
+                    },
                 },
-            })
+            )
 
             from quarto_graft.quarto_config import apply_manifest
+
             apply_manifest()
 
             from quarto_graft.yaml_utils import get_yaml_loader
+
             yaml_loader = get_yaml_loader()
             result = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
             contents = result["website"]["sidebar"]["contents"]
@@ -842,6 +890,7 @@ class TestApplyManifest:
 
     def test_raises_when_no_structure(self, tmp_path):
         import quarto_graft.constants as constants
+
         try:
             self._setup_project(tmp_path, "website")
 
@@ -852,6 +901,7 @@ class TestApplyManifest:
             self._setup_manifest(tmp_path, {})
 
             from quarto_graft.quarto_config import apply_manifest
+
             with pytest.raises(RuntimeError, match="Neither book.chapters nor website.sidebar"):
                 apply_manifest()
         finally:
@@ -864,28 +914,37 @@ class TestApplyManifest:
         Simulates: page.qmd and extra.qmd both cached → extra.qmd removed →
         apply_manifest should only produce a sidebar entry for page.qmd."""
         import quarto_graft.constants as constants
+
         try:
             self._setup_project(tmp_path, "website")
-            self._setup_grafts_config(tmp_path, [
-                {"name": "demo", "branch": "graft/demo", "collar": "main"},
-            ])
+            self._setup_grafts_config(
+                tmp_path,
+                [
+                    {"name": "demo", "branch": "graft/demo", "collar": "main"},
+                ],
+            )
             # Manifest as it would look AFTER the deleted page's rebuild:
             # structure no longer lists extra.qmd, cached_pages only has page.qmd
-            self._setup_manifest(tmp_path, {
-                "graft/demo": {
-                    "title": "Demo",
-                    "branch_key": "demo",
-                    "exported": ["page.qmd"],
-                    "last_checked": "2026-01-01T00:00:00Z",
-                    "structure": ["page.qmd"],
-                    "cached_pages": ["page.qmd"],
+            self._setup_manifest(
+                tmp_path,
+                {
+                    "graft/demo": {
+                        "title": "Demo",
+                        "branch_key": "demo",
+                        "exported": ["page.qmd"],
+                        "last_checked": "2026-01-01T00:00:00Z",
+                        "structure": ["page.qmd"],
+                        "cached_pages": ["page.qmd"],
+                    },
                 },
-            })
+            )
 
             from quarto_graft.quarto_config import apply_manifest
+
             apply_manifest()
 
             from quarto_graft.yaml_utils import get_yaml_loader
+
             yaml_loader = get_yaml_loader()
             result = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
             contents = result["website"]["sidebar"]["contents"]
@@ -905,27 +964,36 @@ class TestApplyManifest:
         appear as a file reference (not href) since it's not in cached_pages,
         pointing to a path that won't exist — exposing the inconsistency."""
         import quarto_graft.constants as constants
+
         try:
             self._setup_project(tmp_path, "website")
-            self._setup_grafts_config(tmp_path, [
-                {"name": "demo", "branch": "graft/demo", "collar": "main"},
-            ])
+            self._setup_grafts_config(
+                tmp_path,
+                [
+                    {"name": "demo", "branch": "graft/demo", "collar": "main"},
+                ],
+            )
             # Structure still mentions extra.qmd but it's NOT in cached_pages
-            self._setup_manifest(tmp_path, {
-                "graft/demo": {
-                    "title": "Demo",
-                    "branch_key": "demo",
-                    "exported": ["page.qmd"],
-                    "last_checked": "2026-01-01T00:00:00Z",
-                    "structure": ["page.qmd", "extra.qmd"],
-                    "cached_pages": ["page.qmd"],
+            self._setup_manifest(
+                tmp_path,
+                {
+                    "graft/demo": {
+                        "title": "Demo",
+                        "branch_key": "demo",
+                        "exported": ["page.qmd"],
+                        "last_checked": "2026-01-01T00:00:00Z",
+                        "structure": ["page.qmd", "extra.qmd"],
+                        "cached_pages": ["page.qmd"],
+                    },
                 },
-            })
+            )
 
             from quarto_graft.quarto_config import apply_manifest
+
             apply_manifest()
 
             from quarto_graft.yaml_utils import get_yaml_loader
+
             yaml_loader = get_yaml_loader()
             result = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
             contents = result["website"]["sidebar"]["contents"]
@@ -944,9 +1012,11 @@ class TestApplyManifest:
         """5 levels of nesting in the graft, collar at level 2 in trunk.
         All nesting levels must be preserved after apply_manifest."""
         import quarto_graft.constants as constants
+
         try:
             # Trunk with collar at level 2
             from quarto_graft.yaml_utils import get_yaml_loader
+
             yaml_loader = get_yaml_loader()
             constants._root_override = tmp_path
 
@@ -956,11 +1026,17 @@ class TestApplyManifest:
                     "sidebar": {
                         "contents": [
                             "index.qmd",
-                            {"section": "Trunk L1", "contents": [
-                                {"section": "Trunk L2", "contents": [
-                                    {"_GRAFT_COLLAR": "main"},
-                                ]},
-                            ]},
+                            {
+                                "section": "Trunk L1",
+                                "contents": [
+                                    {
+                                        "section": "Trunk L2",
+                                        "contents": [
+                                            {"_GRAFT_COLLAR": "main"},
+                                        ],
+                                    },
+                                ],
+                            },
                         ]
                     }
                 },
@@ -969,35 +1045,57 @@ class TestApplyManifest:
             with open(qf, "w") as f:
                 yaml_loader.dump(quarto_yaml, f)
 
-            self._setup_grafts_config(tmp_path, [
-                {"name": "deep", "branch": "graft/deep", "collar": "main"},
-            ])
+            self._setup_grafts_config(
+                tmp_path,
+                [
+                    {"name": "deep", "branch": "graft/deep", "collar": "main"},
+                ],
+            )
 
             # Graft structure with 5 levels of section nesting
             graft_structure = [
-                {"section": "G-L1", "contents": [
-                    {"section": "G-L2", "contents": [
-                        {"section": "G-L3", "contents": [
-                            {"section": "G-L4", "contents": [
-                                {"section": "G-L5", "contents": [
-                                    "deep-page.qmd",
-                                ]},
-                            ]},
-                        ]},
-                    ]},
-                ]},
+                {
+                    "section": "G-L1",
+                    "contents": [
+                        {
+                            "section": "G-L2",
+                            "contents": [
+                                {
+                                    "section": "G-L3",
+                                    "contents": [
+                                        {
+                                            "section": "G-L4",
+                                            "contents": [
+                                                {
+                                                    "section": "G-L5",
+                                                    "contents": [
+                                                        "deep-page.qmd",
+                                                    ],
+                                                },
+                                            ],
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                },
             ]
 
-            self._setup_manifest(tmp_path, {
-                "graft/deep": {
-                    "title": "Deep Graft",
-                    "branch_key": "deep",
-                    "last_checked": "2026-01-01T00:00:00Z",
-                    "structure": graft_structure,
+            self._setup_manifest(
+                tmp_path,
+                {
+                    "graft/deep": {
+                        "title": "Deep Graft",
+                        "branch_key": "deep",
+                        "last_checked": "2026-01-01T00:00:00Z",
+                        "structure": graft_structure,
+                    },
                 },
-            })
+            )
 
             from quarto_graft.quarto_config import apply_manifest
+
             apply_manifest()
 
             result = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
@@ -1033,8 +1131,10 @@ class TestApplyManifest:
         """5 levels of nesting in the graft with cached pages.
         Caching must not flatten the nested structure."""
         import quarto_graft.constants as constants
+
         try:
             from quarto_graft.yaml_utils import get_yaml_loader
+
             yaml_loader = get_yaml_loader()
             constants._root_override = tmp_path
 
@@ -1044,11 +1144,17 @@ class TestApplyManifest:
                     "sidebar": {
                         "contents": [
                             "index.qmd",
-                            {"section": "Trunk L1", "contents": [
-                                {"section": "Trunk L2", "contents": [
-                                    {"_GRAFT_COLLAR": "main"},
-                                ]},
-                            ]},
+                            {
+                                "section": "Trunk L1",
+                                "contents": [
+                                    {
+                                        "section": "Trunk L2",
+                                        "contents": [
+                                            {"_GRAFT_COLLAR": "main"},
+                                        ],
+                                    },
+                                ],
+                            },
                         ]
                     }
                 },
@@ -1057,40 +1163,62 @@ class TestApplyManifest:
             with open(qf, "w") as f:
                 yaml_loader.dump(quarto_yaml, f)
 
-            self._setup_grafts_config(tmp_path, [
-                {"name": "deep", "branch": "graft/deep", "collar": "main"},
-            ])
+            self._setup_grafts_config(
+                tmp_path,
+                [
+                    {"name": "deep", "branch": "graft/deep", "collar": "main"},
+                ],
+            )
 
             # Graft structure with 5 levels, pages at multiple levels
             graft_structure = [
-                {"section": "G-L1", "contents": [
-                    "l1-page.qmd",
-                    {"section": "G-L2", "contents": [
-                        "l2-page.qmd",
-                        {"section": "G-L3", "contents": [
-                            "l3-page.qmd",
-                            {"section": "G-L4", "contents": [
-                                "l4-page.qmd",
-                                {"section": "G-L5", "contents": [
-                                    "l5-page.qmd",
-                                ]},
-                            ]},
-                        ]},
-                    ]},
-                ]},
+                {
+                    "section": "G-L1",
+                    "contents": [
+                        "l1-page.qmd",
+                        {
+                            "section": "G-L2",
+                            "contents": [
+                                "l2-page.qmd",
+                                {
+                                    "section": "G-L3",
+                                    "contents": [
+                                        "l3-page.qmd",
+                                        {
+                                            "section": "G-L4",
+                                            "contents": [
+                                                "l4-page.qmd",
+                                                {
+                                                    "section": "G-L5",
+                                                    "contents": [
+                                                        "l5-page.qmd",
+                                                    ],
+                                                },
+                                            ],
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                },
             ]
 
-            self._setup_manifest(tmp_path, {
-                "graft/deep": {
-                    "title": "Deep Graft",
-                    "branch_key": "deep",
-                    "last_checked": "2026-01-01T00:00:00Z",
-                    "structure": graft_structure,
-                    "cached_pages": ["l1-page.qmd", "l3-page.qmd", "l5-page.qmd"],
+            self._setup_manifest(
+                tmp_path,
+                {
+                    "graft/deep": {
+                        "title": "Deep Graft",
+                        "branch_key": "deep",
+                        "last_checked": "2026-01-01T00:00:00Z",
+                        "structure": graft_structure,
+                        "cached_pages": ["l1-page.qmd", "l3-page.qmd", "l5-page.qmd"],
+                    },
                 },
-            })
+            )
 
             from quarto_graft.quarto_config import apply_manifest
+
             apply_manifest()
 
             result = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
@@ -1145,8 +1273,10 @@ class TestApplyManifest:
     def test_deep_nesting_idempotent_with_caching(self, tmp_path):
         """Running apply_manifest twice must not flatten the nesting."""
         import quarto_graft.constants as constants
+
         try:
             from quarto_graft.yaml_utils import get_yaml_loader
+
             yaml_loader = get_yaml_loader()
             constants._root_override = tmp_path
 
@@ -1156,11 +1286,17 @@ class TestApplyManifest:
                     "sidebar": {
                         "contents": [
                             "index.qmd",
-                            {"section": "Trunk L1", "contents": [
-                                {"section": "Trunk L2", "contents": [
-                                    {"_GRAFT_COLLAR": "main"},
-                                ]},
-                            ]},
+                            {
+                                "section": "Trunk L1",
+                                "contents": [
+                                    {
+                                        "section": "Trunk L2",
+                                        "contents": [
+                                            {"_GRAFT_COLLAR": "main"},
+                                        ],
+                                    },
+                                ],
+                            },
                         ]
                     }
                 },
@@ -1169,33 +1305,54 @@ class TestApplyManifest:
             with open(qf, "w") as f:
                 yaml_loader.dump(quarto_yaml, f)
 
-            self._setup_grafts_config(tmp_path, [
-                {"name": "deep", "branch": "graft/deep", "collar": "main"},
-            ])
+            self._setup_grafts_config(
+                tmp_path,
+                [
+                    {"name": "deep", "branch": "graft/deep", "collar": "main"},
+                ],
+            )
 
             graft_structure = [
-                {"section": "G-L1", "contents": [
-                    {"section": "G-L2", "contents": [
-                        {"section": "G-L3", "contents": [
-                            {"section": "G-L4", "contents": [
-                                {"section": "G-L5", "contents": [
-                                    "deep-page.qmd",
-                                ]},
-                            ]},
-                        ]},
-                    ]},
-                ]},
+                {
+                    "section": "G-L1",
+                    "contents": [
+                        {
+                            "section": "G-L2",
+                            "contents": [
+                                {
+                                    "section": "G-L3",
+                                    "contents": [
+                                        {
+                                            "section": "G-L4",
+                                            "contents": [
+                                                {
+                                                    "section": "G-L5",
+                                                    "contents": [
+                                                        "deep-page.qmd",
+                                                    ],
+                                                },
+                                            ],
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                },
             ]
 
-            self._setup_manifest(tmp_path, {
-                "graft/deep": {
-                    "title": "Deep Graft",
-                    "branch_key": "deep",
-                    "last_checked": "2026-01-01T00:00:00Z",
-                    "structure": graft_structure,
-                    "cached_pages": ["deep-page.qmd"],
+            self._setup_manifest(
+                tmp_path,
+                {
+                    "graft/deep": {
+                        "title": "Deep Graft",
+                        "branch_key": "deep",
+                        "last_checked": "2026-01-01T00:00:00Z",
+                        "structure": graft_structure,
+                        "cached_pages": ["deep-page.qmd"],
+                    },
                 },
-            })
+            )
 
             from quarto_graft.quarto_config import apply_manifest
 
@@ -1231,8 +1388,10 @@ class TestApplyManifest:
     def test_book_deep_nesting_preserved(self, tmp_path):
         """5 levels of nesting in a book-mode graft must be preserved."""
         import quarto_graft.constants as constants
+
         try:
             from quarto_graft.yaml_utils import get_yaml_loader
+
             yaml_loader = get_yaml_loader()
             constants._root_override = tmp_path
 
@@ -1241,9 +1400,12 @@ class TestApplyManifest:
                 "book": {
                     "chapters": [
                         "index.qmd",
-                        {"part": "Trunk P1", "chapters": [
-                            {"_GRAFT_COLLAR": "main"},
-                        ]},
+                        {
+                            "part": "Trunk P1",
+                            "chapters": [
+                                {"_GRAFT_COLLAR": "main"},
+                            ],
+                        },
                     ]
                 },
             }
@@ -1251,34 +1413,56 @@ class TestApplyManifest:
             with open(qf, "w") as f:
                 yaml_loader.dump(quarto_yaml, f)
 
-            self._setup_grafts_config(tmp_path, [
-                {"name": "deep", "branch": "graft/deep", "collar": "main"},
-            ])
+            self._setup_grafts_config(
+                tmp_path,
+                [
+                    {"name": "deep", "branch": "graft/deep", "collar": "main"},
+                ],
+            )
 
             graft_structure = [
-                {"part": "G-P1", "chapters": [
-                    {"part": "G-P2", "chapters": [
-                        {"part": "G-P3", "chapters": [
-                            {"part": "G-P4", "chapters": [
-                                {"part": "G-P5", "chapters": [
-                                    "deep-ch.qmd",
-                                ]},
-                            ]},
-                        ]},
-                    ]},
-                ]},
+                {
+                    "part": "G-P1",
+                    "chapters": [
+                        {
+                            "part": "G-P2",
+                            "chapters": [
+                                {
+                                    "part": "G-P3",
+                                    "chapters": [
+                                        {
+                                            "part": "G-P4",
+                                            "chapters": [
+                                                {
+                                                    "part": "G-P5",
+                                                    "chapters": [
+                                                        "deep-ch.qmd",
+                                                    ],
+                                                },
+                                            ],
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                },
             ]
 
-            self._setup_manifest(tmp_path, {
-                "graft/deep": {
-                    "title": "Deep Graft",
-                    "branch_key": "deep",
-                    "last_checked": "2026-01-01T00:00:00Z",
-                    "structure": graft_structure,
+            self._setup_manifest(
+                tmp_path,
+                {
+                    "graft/deep": {
+                        "title": "Deep Graft",
+                        "branch_key": "deep",
+                        "last_checked": "2026-01-01T00:00:00Z",
+                        "structure": graft_structure,
+                    },
                 },
-            })
+            )
 
             from quarto_graft.quarto_config import apply_manifest
+
             apply_manifest()
 
             result = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
@@ -1308,8 +1492,10 @@ class TestApplyManifest:
         """Graft using 'auto' with 5-level deep files, collar at level 2,
         all pages cached. The directory hierarchy must be preserved as sections."""
         import quarto_graft.constants as constants
+
         try:
             from quarto_graft.yaml_utils import get_yaml_loader
+
             yaml_loader = get_yaml_loader()
             constants._root_override = tmp_path
 
@@ -1319,11 +1505,17 @@ class TestApplyManifest:
                     "sidebar": {
                         "contents": [
                             "index.qmd",
-                            {"section": "Trunk L1", "contents": [
-                                {"section": "Trunk L2", "contents": [
-                                    {"_GRAFT_COLLAR": "main"},
-                                ]},
-                            ]},
+                            {
+                                "section": "Trunk L1",
+                                "contents": [
+                                    {
+                                        "section": "Trunk L2",
+                                        "contents": [
+                                            {"_GRAFT_COLLAR": "main"},
+                                        ],
+                                    },
+                                ],
+                            },
                         ]
                     }
                 },
@@ -1332,33 +1524,44 @@ class TestApplyManifest:
             with open(qf, "w") as f:
                 yaml_loader.dump(quarto_yaml, f)
 
-            self._setup_grafts_config(tmp_path, [
-                {"name": "deep", "branch": "graft/deep", "collar": "main"},
-            ])
+            self._setup_grafts_config(
+                tmp_path,
+                [
+                    {"name": "deep", "branch": "graft/deep", "collar": "main"},
+                ],
+            )
 
             # The graft used 'auto' — expand_nav_globs should have already
             # expanded it into a hierarchy before storing in the manifest.
             # Simulate what _export_from_worktree would produce after expansion:
             from quarto_graft.quarto_config import expand_nav_globs
-            auto_expanded = expand_nav_globs("auto", [
-                "a/x.qmd",
-                "a/b/c/1.qmd",
-                "a/b/c/2.qmd",
-                "a/b/c/3.qmd",
-            ])
+
+            auto_expanded = expand_nav_globs(
+                "auto",
+                [
+                    "a/x.qmd",
+                    "a/b/c/1.qmd",
+                    "a/b/c/2.qmd",
+                    "a/b/c/3.qmd",
+                ],
+            )
 
             all_pages = ["a/x.qmd", "a/b/c/1.qmd", "a/b/c/2.qmd", "a/b/c/3.qmd"]
-            self._setup_manifest(tmp_path, {
-                "graft/deep": {
-                    "title": "Deep Graft",
-                    "branch_key": "deep",
-                    "last_checked": "2026-01-01T00:00:00Z",
-                    "structure": auto_expanded,
-                    "cached_pages": all_pages,
+            self._setup_manifest(
+                tmp_path,
+                {
+                    "graft/deep": {
+                        "title": "Deep Graft",
+                        "branch_key": "deep",
+                        "last_checked": "2026-01-01T00:00:00Z",
+                        "structure": auto_expanded,
+                        "cached_pages": all_pages,
+                    },
                 },
-            })
+            )
 
             from quarto_graft.quarto_config import apply_manifest
+
             apply_manifest()
 
             result = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
@@ -1400,26 +1603,35 @@ class TestApplyManifest:
         """When all cached pages are removed from a graft, the project.resources
         entry for that graft should be cleaned up."""
         import quarto_graft.constants as constants
+
         try:
             self._setup_project(tmp_path, "website")
-            self._setup_grafts_config(tmp_path, [
-                {"name": "demo", "branch": "graft/demo", "collar": "main"},
-            ])
+            self._setup_grafts_config(
+                tmp_path,
+                [
+                    {"name": "demo", "branch": "graft/demo", "collar": "main"},
+                ],
+            )
             # No cached pages — all were removed
-            self._setup_manifest(tmp_path, {
-                "graft/demo": {
-                    "title": "Demo",
-                    "branch_key": "demo",
-                    "exported": ["page.qmd"],
-                    "last_checked": "2026-01-01T00:00:00Z",
-                    "structure": ["page.qmd"],
+            self._setup_manifest(
+                tmp_path,
+                {
+                    "graft/demo": {
+                        "title": "Demo",
+                        "branch_key": "demo",
+                        "exported": ["page.qmd"],
+                        "last_checked": "2026-01-01T00:00:00Z",
+                        "structure": ["page.qmd"],
+                    },
                 },
-            })
+            )
 
             from quarto_graft.quarto_config import apply_manifest
+
             apply_manifest()
 
             from quarto_graft.yaml_utils import get_yaml_loader
+
             yaml_loader = get_yaml_loader()
             result = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
             resources = result.get("project", {}).get("resources", [])

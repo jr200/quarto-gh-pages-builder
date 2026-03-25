@@ -210,6 +210,7 @@ class TestDeleteBranch:
 class TestPruneWorktrees:
     def test_delegates_to_cleanup(self, git_repo):
         import quarto_graft.constants as constants
+
         try:
             constants._root_override = Path(git_repo.workdir)
             with patch("quarto_graft.git_utils._get_repo", return_value=git_repo):
@@ -265,6 +266,7 @@ class TestCreateAndRemoveWorktree:
     def test_create_worktree(self, git_repo_with_branch):
         """Use 'feature' branch since 'main' is the HEAD of the main repo."""
         import quarto_graft.constants as constants
+
         try:
             constants._root_override = Path(git_repo_with_branch.workdir)
             with patch("quarto_graft.git_utils._get_repo", return_value=git_repo_with_branch):
@@ -276,6 +278,7 @@ class TestCreateAndRemoveWorktree:
 
     def test_remove_worktree(self, git_repo_with_branch):
         import quarto_graft.constants as constants
+
         try:
             constants._root_override = Path(git_repo_with_branch.workdir)
             with patch("quarto_graft.git_utils._get_repo", return_value=git_repo_with_branch):
@@ -288,6 +291,7 @@ class TestCreateAndRemoveWorktree:
 
     def test_managed_worktree_context_manager(self, git_repo_with_branch):
         import quarto_graft.constants as constants
+
         try:
             constants._root_override = Path(git_repo_with_branch.workdir)
             with patch("quarto_graft.git_utils._get_repo", return_value=git_repo_with_branch):
@@ -301,6 +305,7 @@ class TestCreateAndRemoveWorktree:
 
     def test_managed_worktree_cleanup_on_error(self, git_repo_with_branch):
         import quarto_graft.constants as constants
+
         try:
             constants._root_override = Path(git_repo_with_branch.workdir)
             with patch("quarto_graft.git_utils._get_repo", return_value=git_repo_with_branch):
@@ -314,6 +319,7 @@ class TestCreateAndRemoveWorktree:
 
     def test_remove_nonexistent_worktree_noop(self, git_repo):
         import quarto_graft.constants as constants
+
         try:
             constants._root_override = Path(git_repo.workdir)
             with patch("quarto_graft.git_utils._get_repo", return_value=git_repo):
@@ -349,6 +355,7 @@ class TestWorktreeQueries:
 class TestCleanupOrphanWorktrees:
     def test_removes_orphan_directories(self, git_repo, tmp_path):
         import quarto_graft.constants as constants
+
         try:
             constants._root_override = Path(git_repo.workdir)
             cache_dir = constants.WORKTREES_CACHE
@@ -369,6 +376,7 @@ class TestCleanupOrphanWorktrees:
 
     def test_keeps_registered_worktrees(self, git_repo_with_branch):
         import quarto_graft.constants as constants
+
         try:
             constants._root_override = Path(git_repo_with_branch.workdir)
             cache_dir = constants.WORKTREES_CACHE
@@ -391,6 +399,7 @@ class TestCleanupOrphanWorktrees:
 
     def test_empty_cache_dir(self, git_repo):
         import quarto_graft.constants as constants
+
         try:
             constants._root_override = Path(git_repo.workdir)
             with patch("quarto_graft.git_utils._get_repo", return_value=git_repo):

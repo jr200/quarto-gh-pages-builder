@@ -10,12 +10,19 @@ env:
 	@echo "Syncing uv environment..."
 	uv venv --clear && uv sync
 
-## Linting
-.PHONY: lint
-lint:
-	@echo "Running ruff..."
+## Formatting & Linting
+.PHONY: fmt lint
+fmt:
+	@echo "Running ruff format..."
+	uv run ruff format .
+	@echo "Running ruff check --fix..."
 	uv run ruff check . --fix
+
+lint: fmt
+	@echo "Running ruff check..."
 	uv run ruff check --output-format=github .
+	@echo "Running mypy..."
+	uv run mypy .
 
 ## Render the main Quarto document
 render:

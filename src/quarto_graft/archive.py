@@ -33,10 +33,7 @@ def _find_project_root(project_dir: Path | None = None) -> Path:
     root = project_dir or Path.cwd()
     if (root / QUARTO_CONFIG_YAML).exists():
         return root
-    raise RuntimeError(
-        f"No {QUARTO_CONFIG_YAML} found in {root}. "
-        "Run this command from a graft project directory."
-    )
+    raise RuntimeError(f"No {QUARTO_CONFIG_YAML} found in {root}. Run this command from a graft project directory.")
 
 
 def _get_output_dir(project_root: Path) -> Path:
@@ -99,9 +96,7 @@ def archive_graft(project_dir: Path | None = None) -> Path:
 
     # Verify output exists
     if not output_dir.exists() or not any(output_dir.iterdir()):
-        raise RuntimeError(
-            f"quarto render completed but output directory is empty: {output_dir}"
-        )
+        raise RuntimeError(f"quarto render completed but output directory is empty: {output_dir}")
 
     # Remove stale pre-rendered content
     if prerender_dir.exists():
@@ -113,11 +108,7 @@ def archive_graft(project_dir: Path | None = None) -> Path:
     logger.info(f"[archive] Copied {output_dir} -> {prerender_dir}")
 
     # Collect file list
-    files = [
-        p.relative_to(prerender_dir).as_posix()
-        for p in prerender_dir.rglob("*")
-        if p.is_file()
-    ]
+    files = [p.relative_to(prerender_dir).as_posix() for p in prerender_dir.rglob("*") if p.is_file()]
 
     # Create manifest
     manifest = {

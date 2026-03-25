@@ -126,7 +126,10 @@ class TestUpdateManifestEntry:
     def test_basic_entry(self):
         manifest: dict = {}
         _update_manifest_entry(
-            manifest, "branch1", "branch1", "Title",
+            manifest,
+            "branch1",
+            "branch1",
+            "Title",
             now="2026-01-01T00:00:00Z",
         )
         entry = manifest["branch1"]
@@ -138,55 +141,83 @@ class TestUpdateManifestEntry:
         manifest: dict = {}
         nav = [{"section": "Ch1", "contents": ["a.qmd"]}]
         _update_manifest_entry(
-            manifest, "b", "b", "T",
-            nav_structure=nav, now="2026-01-01T00:00:00Z",
+            manifest,
+            "b",
+            "b",
+            "T",
+            nav_structure=nav,
+            now="2026-01-01T00:00:00Z",
         )
         assert manifest["b"]["structure"] == nav
 
     def test_with_last_good(self):
         manifest: dict = {}
         _update_manifest_entry(
-            manifest, "b", "b", "T",
-            last_good="abc123", now="2026-01-01T00:00:00Z",
+            manifest,
+            "b",
+            "b",
+            "T",
+            last_good="abc123",
+            now="2026-01-01T00:00:00Z",
         )
         assert manifest["b"]["last_good"] == "abc123"
 
     def test_with_prerendered(self):
         manifest: dict = {}
         _update_manifest_entry(
-            manifest, "b", "b", "T",
-            prerendered=True, now="2026-01-01T00:00:00Z",
+            manifest,
+            "b",
+            "b",
+            "T",
+            prerendered=True,
+            now="2026-01-01T00:00:00Z",
         )
         assert manifest["b"]["prerendered"] is True
 
     def test_prerendered_false_omitted(self):
         manifest: dict = {}
         _update_manifest_entry(
-            manifest, "b", "b", "T",
-            prerendered=False, now="2026-01-01T00:00:00Z",
+            manifest,
+            "b",
+            "b",
+            "T",
+            prerendered=False,
+            now="2026-01-01T00:00:00Z",
         )
         assert "prerendered" not in manifest["b"]
 
     def test_with_cached_pages(self):
         manifest: dict = {}
         _update_manifest_entry(
-            manifest, "b", "b", "T",
-            cached_pages=["p.qmd"], now="2026-01-01T00:00:00Z",
+            manifest,
+            "b",
+            "b",
+            "T",
+            cached_pages=["p.qmd"],
+            now="2026-01-01T00:00:00Z",
         )
         assert manifest["b"]["cached_pages"] == ["p.qmd"]
 
     def test_empty_cached_pages_omitted(self):
         manifest: dict = {}
         _update_manifest_entry(
-            manifest, "b", "b", "T",
-            cached_pages=[], now="2026-01-01T00:00:00Z",
+            manifest,
+            "b",
+            "b",
+            "T",
+            cached_pages=[],
+            now="2026-01-01T00:00:00Z",
         )
         assert "cached_pages" not in manifest["b"]
 
     def test_none_optional_fields_omitted(self):
         manifest: dict = {}
         _update_manifest_entry(
-            manifest, "b", "b", "T", now="2026-01-01T00:00:00Z",
+            manifest,
+            "b",
+            "b",
+            "T",
+            now="2026-01-01T00:00:00Z",
         )
         for key in ("structure", "last_good", "prerendered", "cached_pages"):
             assert key not in manifest["b"]
@@ -204,14 +235,20 @@ class TestUpdateManifestEntry:
 
 
 class TestManifestEntryFromResult:
-    def _make_result(self, **overrides) -> BuildResult:
-        defaults = {
-            "branch": "b", "branch_key": "b", "title": "T", "status": "ok",
-            "head_sha": "abc", "last_good_sha": "abc", "built_at": "2026-01-01T00:00:00Z",
-            "exported_relpaths": ["p.qmd"], "exported_dest_paths": [],
+    def _make_result(self, **overrides: object) -> BuildResult:
+        defaults: dict[str, object] = {
+            "branch": "b",
+            "branch_key": "b",
+            "title": "T",
+            "status": "ok",
+            "head_sha": "abc",
+            "last_good_sha": "abc",
+            "built_at": "2026-01-01T00:00:00Z",
+            "exported_relpaths": ["p.qmd"],
+            "exported_dest_paths": [],
         }
         defaults.update(overrides)
-        return BuildResult(**defaults)
+        return BuildResult(**defaults)  # type: ignore[arg-type]
 
     def test_basic_fields(self):
         result = self._make_result()
@@ -252,9 +289,7 @@ class TestManifestEntryFromResult:
 
     def test_page_hashes_not_in_entry(self):
         """page_hashes lives in build-state.json, not in manifest."""
-        entry = _manifest_entry_from_result(
-            self._make_result(page_hashes={"p.qmd": "h1"})
-        )
+        entry = _manifest_entry_from_result(self._make_result(page_hashes={"p.qmd": "h1"}))
         assert "page_hashes" not in entry
 
 
@@ -299,9 +334,15 @@ class TestResolveHeadSha:
 class TestBuildResult:
     def test_defaults(self):
         r = BuildResult(
-            branch="b", branch_key="bk", title="T", status="ok",
-            head_sha="abc", last_good_sha="abc", built_at="now",
-            exported_relpaths=[], exported_dest_paths=[],
+            branch="b",
+            branch_key="bk",
+            title="T",
+            status="ok",
+            head_sha="abc",
+            last_good_sha="abc",
+            built_at="now",
+            exported_relpaths=[],
+            exported_dest_paths=[],
         )
         assert r.nav_structure is None
         assert r.prerendered is False
@@ -312,11 +353,18 @@ class TestBuildResult:
 
     def test_all_fields(self):
         r = BuildResult(
-            branch="b", branch_key="bk", title="T", status="fallback",
-            head_sha="abc", last_good_sha="def", built_at="now",
-            exported_relpaths=["p.qmd"], exported_dest_paths=[Path("p.qmd")],
+            branch="b",
+            branch_key="bk",
+            title="T",
+            status="fallback",
+            head_sha="abc",
+            last_good_sha="def",
+            built_at="now",
+            exported_relpaths=["p.qmd"],
+            exported_dest_paths=[Path("p.qmd")],
             nav_structure=[{"section": "A"}],
-            prerendered=True, duration_secs=1.5,
+            prerendered=True,
+            duration_secs=1.5,
             error_message="oops",
             page_hashes={"p.qmd": "h"},
             cached_pages=["p.qmd"],

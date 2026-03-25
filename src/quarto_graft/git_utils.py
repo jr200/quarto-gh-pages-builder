@@ -168,7 +168,6 @@ def _force_remove_worktree_ref(path: Path) -> None:
         pass
 
 
-
 def list_worktree_paths() -> list[Path]:
     """Return a list of worktree paths registered with git."""
     repo = _get_repo()
@@ -206,7 +205,7 @@ def fetch_origin() -> None:
     except KeyError:
         logger.info("[fetch] No origin remote found; skipping fetch")
         return
-    origin.fetch(prune=True, callbacks=_get_auth_callbacks())
+    origin.fetch(prune=True, callbacks=_get_auth_callbacks())  # type: ignore[arg-type]
 
 
 def _resolve_ref(repo: pygit2.Repository, ref: str) -> pygit2.Object:
@@ -214,16 +213,16 @@ def _resolve_ref(repo: pygit2.Repository, ref: str) -> pygit2.Object:
     # Local branch
     if ref in repo.branches.local:
         br = repo.branches[ref]
-        return repo.get(br.target)
+        return repo.get(br.target)  # type: ignore[return-value]
 
     # Remote branch (e.g., origin/feature)
     if ref in getattr(repo.branches, "remote", []):
         br = repo.branches.remote[ref]
-        return repo.get(br.target)
+        return repo.get(br.target)  # type: ignore[return-value]
 
     # Full ref name
     if ref in repo.references:
-        return repo.get(repo.references[ref].target)
+        return repo.get(repo.references[ref].target)  # type: ignore[return-value]
 
     # Try revparse on any other ref/oid
     try:
@@ -251,7 +250,7 @@ def create_worktree(ref: str, name: str) -> Path:
 
     # Open the worktree repo and reset to target
     wt_repo = pygit2.Repository(str(wt_dir))
-    wt_repo.reset(target.id, pygit2.GIT_RESET_HARD)
+    wt_repo.reset(target.id, pygit2.GIT_RESET_HARD)  # type: ignore[arg-type]
 
     # Try to set HEAD to branch if ref is a local branch
     branch_ref = None

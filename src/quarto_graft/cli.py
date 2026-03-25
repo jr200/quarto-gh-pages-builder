@@ -92,7 +92,7 @@ def show_main_menu() -> str | None:
     """Show inline command selector."""
     return questionary.select(
         "Select a command:",
-        choices=MAIN_MENU_COMMANDS,
+        choices=MAIN_MENU_COMMANDS,  # type: ignore[arg-type]
         use_shortcuts=True,
         use_arrow_keys=True,
     ).ask()
@@ -348,6 +348,7 @@ def _yaml_branches() -> set[str]:
 # TRUNK COMMANDS
 # ============================================================================
 
+
 @trunk_app.command("list")
 def trunk_list() -> None:
     """List available trunk templates."""
@@ -395,8 +396,7 @@ def trunk_init(
     if conflicts:
         if overwrite is None:
             overwrite = questionary.confirm(
-                f"The following already exist here: {', '.join(p.name for p in conflicts)}. Overwrite?",
-                default=False
+                f"The following already exist here: {', '.join(p.name for p in conflicts)}. Overwrite?", default=False
             ).ask()
 
         if not overwrite:
@@ -407,21 +407,14 @@ def trunk_init(
     if with_addons is None:
         with_dir = TRUNK_TEMPLATES_DIR / TRUNK_ADDONS_DIR
         if with_dir.exists():
-            available_addons = sorted([
-                entry.name for entry in with_dir.iterdir()
-                if entry.is_dir() and not entry.name.startswith(".")
-            ])
+            available_addons = sorted(
+                [entry.name for entry in with_dir.iterdir() if entry.is_dir() and not entry.name.startswith(".")]
+            )
             if available_addons:
-                add_addons = questionary.confirm(
-                    "Would you like to add any addons?",
-                    default=False
-                ).ask()
+                add_addons = questionary.confirm("Would you like to add any addons?", default=False).ask()
 
                 if add_addons:
-                    selected_addons = questionary.checkbox(
-                        "Select addons to include:",
-                        choices=available_addons
-                    ).ask()
+                    selected_addons = questionary.checkbox("Select addons to include:", choices=available_addons).ask()
                     with_addons = selected_addons if selected_addons else []
                 else:
                     with_addons = []
@@ -433,7 +426,7 @@ def trunk_init(
     docs_dir, addon_instructions = init_trunk(
         name=name,
         template=template_path,
-        overwrite=overwrite,
+        overwrite=bool(overwrite),
         with_addons=with_addons or [],
     )
     console.print(f"[green]✓[/green] Trunk initialized from template '{template_name}' at: {docs_dir}")
@@ -509,7 +502,8 @@ def _write_build_state(
             }
     constants.BUILD_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     constants.BUILD_STATE_FILE.write_text(
-        json.dumps(state, indent=2, sort_keys=True), encoding="utf-8",
+        json.dumps(state, indent=2, sort_keys=True),
+        encoding="utf-8",
     )
 
 
@@ -566,9 +560,9 @@ def trunk_build(
 
     # Count grafts that will be processed (after --only/--skip filtering)
     filtered_count = sum(
-        1 for spec in branch_specs
-        if (not only_set or spec["name"] in only_set)
-        and (not skip_set or spec["name"] not in skip_set)
+        1
+        for spec in branch_specs
+        if (not only_set or spec["name"] in only_set) and (not skip_set or spec["name"] not in skip_set)
     )
 
     if filtered_count == 0:
@@ -834,7 +828,9 @@ def trunk_cache_status() -> None:
 
     entries = cache_status()
     if not entries:
-        console.print("[dim]Cache is empty. Run 'trunk build' then 'quarto render' then 'trunk cache update' to populate.[/dim]")
+        console.print(
+            "[dim]Cache is empty. Run 'trunk build' then 'quarto render' then 'trunk cache update' to populate.[/dim]"
+        )
         return
 
     table = Table(title="Render Cache")
@@ -865,6 +861,7 @@ def trunk_cache_status() -> None:
 # ============================================================================
 # GRAFT COMMANDS
 # ============================================================================
+
 
 @graft_app.command("create")
 def graft_create(
@@ -917,6 +914,7 @@ def graft_create(
     # Prompt for collar if not provided
     if collar is None:
         from .quarto_config import list_available_collars
+
         try:
             available_collars = list_available_collars()
             if not available_collars:
@@ -926,10 +924,7 @@ def graft_create(
                 collar = available_collars[0]
                 console.print(f"[dim]Using collar:[/dim] {collar}")
             else:
-                collar = questionary.select(
-                    "Select attachment point (collar):",
-                    choices=available_collars
-                ).ask()
+                collar = questionary.select("Select attachment point (collar):", choices=available_collars).ask()
                 if not collar:
                     console.print("[red]Error:[/red] Collar selection is required")
                     raise typer.Exit(code=1)
@@ -942,16 +937,10 @@ def graft_create(
     # Prompt for custom branch name if not provided
     if branch_name is None:
         default_branch = f"graft/{name}"
-        use_custom = questionary.confirm(
-            f"Use default branch name '{default_branch}'?",
-            default=True
-        ).ask()
+        use_custom = questionary.confirm(f"Use default branch name '{default_branch}'?", default=True).ask()
 
         if not use_custom:
-            branch_name = questionary.text(
-                "Enter custom branch name:",
-                default=default_branch
-            ).ask()
+            branch_name = questionary.text("Enter custom branch name:", default=default_branch).ask()
             if not branch_name:
                 branch_name = default_branch
         else:
@@ -978,7 +967,9 @@ def graft_create(
     except Exception as e:
         logger.debug(f"Failed to clean up worktree: {e}")
 
-    console.print(f"[green]✓[/green] New orphan graft branch '{git_branch_name}' created from template '{template_name}'")
+    console.print(
+        f"[green]✓[/green] New orphan graft branch '{git_branch_name}' created from template '{template_name}'"
+    )
     console.print(f"[bold]Collar:[/bold] {collar}")
 
     # Display trunk instructions if present
@@ -1116,8 +1107,7 @@ def graft_destroy(
     all_branches = sorted(destroyable.get("all", []))
     if branch not in all_branches:
         continue_anyway = questionary.confirm(
-            f"Branch '{branch}' not found in tracked branches. Continue anyway?",
-            default=False
+            f"Branch '{branch}' not found in tracked branches. Continue anyway?", default=False
         ).ask()
         if not continue_anyway:
             raise typer.Exit(code=1)
@@ -1146,7 +1136,9 @@ def graft_destroy(
     if not keep_remote:
         console.print("  [green]✓[/green] Attempted remote delete on origin")
 
-    console.print("\n[yellow]Note:[/yellow] Please regenerate the main docs/navigation with: [bold]quarto-graft trunk build[/bold]")
+    console.print(
+        "\n[yellow]Note:[/yellow] Please regenerate the main docs/navigation with: [bold]quarto-graft trunk build[/bold]"
+    )
 
 
 @graft_app.command("archive")
@@ -1221,6 +1213,7 @@ def graft_restore_cmd(
 # ============================================================================
 # STATUS COMMAND
 # ============================================================================
+
 
 @app.command("status")
 def status_cmd(
@@ -1315,6 +1308,7 @@ def status_cmd(
 # ============================================================================
 # MAIN ENTRY POINT
 # ============================================================================
+
 
 @app.callback(invoke_without_command=True)
 def main_callback(

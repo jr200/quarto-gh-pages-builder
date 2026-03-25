@@ -91,9 +91,7 @@ class TestArchiveGraft:
         from quarto_graft.archive import archive_graft
 
         with patch("quarto_graft.archive.subprocess.run") as mock_run:
-            mock_run.return_value = type("Result", (), {
-                "returncode": 1, "stderr": "render error", "stdout": ""
-            })()
+            mock_run.return_value = type("Result", (), {"returncode": 1, "stderr": "render error", "stdout": ""})()
             with pytest.raises(RuntimeError, match="quarto render failed"):
                 archive_graft(project_dir=mock_graft_project)
 
@@ -130,9 +128,7 @@ class TestArchiveGraft:
         from quarto_graft.archive import archive_graft
 
         # Create _quarto.yaml with custom output-dir
-        (tmp_path / "_quarto.yaml").write_text(
-            "project:\n  type: website\n  output-dir: _output\n"
-        )
+        (tmp_path / "_quarto.yaml").write_text("project:\n  type: website\n  output-dir: _output\n")
 
         # Create output in custom location
         output_dir = tmp_path / "_output"

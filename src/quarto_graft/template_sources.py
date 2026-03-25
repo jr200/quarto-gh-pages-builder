@@ -125,7 +125,7 @@ class TemplateSource:
         try:
             with urlopen(url, timeout=DOWNLOAD_TIMEOUT) as response:
                 # Check content length header
-                content_length = response.headers.get('Content-Length')
+                content_length = response.headers.get("Content-Length")
                 if content_length:
                     size = int(content_length)
                     if size > MAX_DOWNLOAD_SIZE:
@@ -137,9 +137,7 @@ class TemplateSource:
                 # Read with size limit enforcement
                 content = response.read(MAX_DOWNLOAD_SIZE + 1)
                 if len(content) > MAX_DOWNLOAD_SIZE:
-                    raise RuntimeError(
-                        f"Template download exceeded size limit of {MAX_DOWNLOAD_SIZE / 1024 / 1024}MB"
-                    )
+                    raise RuntimeError(f"Template download exceeded size limit of {MAX_DOWNLOAD_SIZE / 1024 / 1024}MB")
         except Exception as e:
             raise RuntimeError(f"Failed to download template source from {url}: {e}") from e
 
@@ -347,7 +345,7 @@ class TemplateSource:
         if len(parts) >= 4 and parts[2] == "tree":
             ref = parts[3]
 
-        return {"repo": f"{user}/{repo}", "ref": ref}
+        return {"repo": f"{user}/{repo}", "ref": ref}  # type: ignore[dict-item]
 
     def _resolve_github(self, repo: str, ref: str | None = None) -> Path:
         """
