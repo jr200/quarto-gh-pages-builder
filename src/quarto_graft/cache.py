@@ -591,6 +591,83 @@ def fix_navigation(
     return updated
 
 
+def propagate_nav_to_cache(
+    site_dir: Path,
+    cached_graft_keys: list[str],
+) -> int:
+    """Write nav-fixed HTML from *site_dir* back to the ``_cache`` branch.
+
+    After :func:`fix_navigation` patches cached pages in ``_site/``, this
+    function propagates those changes to the ``_cache`` branch so that
+    subsequent builds restore pages with up-to-date sidebars.
+
+    Returns the number of files updated in the cache.
+    """
+    result = _get_cache_tree()
+    if result is None:
+        return 0
+
+    repo, tree = result
+
+    # Collect all existing blobs from the tree, keyed by path
+    all_blobs: dict[str, tuple[pygit2.Oid, int]] = {}
+    top_level: list[tuple[str, pygit2.Oid, int]] = []  # entries not in affected keys
+
+    affected_set = set(cached_graft_keys)
+    for te in tree:
+        if te.name == CACHE_MANIFEST_NAME:
+            top_level.append((te.name, te.id, te.filemode))  # type: ignore[arg-type]
+            continue
+        if te.name in affected_set:
+            obj = repo.get(te.id)
+            if isinstance(obj, pygit2.Tree):
+                for path, oid, mode in _iter_tree_blobs(repo, obj, te.name):
+                    all_blobs[path] = (oid, mode)
+        else:
+            top_level.append((te.name, te.id, te.filemode))  # type: ignore[arg-type]
+
+    updated = 0
+    for branch_key in cached_graft_keys:
+        graft_dir = site_dir / GRAFTS_BUILD_RELPATH / branch_key
+        if not graft_dir.exists():
+            continue
+        for html_file in graft_dir.rglob("*.html"):
+            rel = html_file.relative_to(site_dir / GRAFTS_BUILD_RELPATH).as_posix()
+            if rel not in all_blobs:
+                continue  # Only update files already in the cache
+            new_data = html_file.read_bytes()
+            old_oid, mode = all_blobs[rel]
+            # Skip if content hasn't changed
+            old_blob = repo.get(old_oid)
+            if old_blob is not None and old_blob.data == new_data:  # type: ignore[attr-defined]
+                continue
+            new_oid = repo.create_blob(new_data)
+            all_blobs[rel] = (new_oid, mode)
+            updated += 1
+
+    if updated == 0:
+        return 0
+
+    # Rebuild the tree with updated blobs
+    root_builder = repo.TreeBuilder()
+
+    for name, oid, filemode in top_level:
+        root_builder.insert(name, oid, filemode)
+
+    for branch_key in affected_set:
+        prefix = f"{branch_key}/"
+        graft_entries = {path[len(prefix) :]: v for path, v in all_blobs.items() if path.startswith(prefix)}
+        if graft_entries:
+            idx = pygit2.Index()
+            for path, (oid, mode) in sorted(graft_entries.items()):
+                idx.add(pygit2.IndexEntry(path, oid, mode))  # type: ignore[arg-type]
+            root_builder.insert(branch_key, idx.write_tree(repo), pygit2.GIT_FILEMODE_TREE)
+
+    _commit_rootless_tree(repo, root_builder.write(), message="propagate nav fixes to cache")
+    logger.info(f"[cache] Propagated navigation fixes to _cache branch ({updated} files)")
+    return updated
+
+
 # ---------------------------------------------------------------------------
 # Search index post-processing
 # ---------------------------------------------------------------------------

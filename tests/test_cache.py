@@ -28,6 +28,7 @@ from quarto_graft.cache import (
     fix_search_index,
     load_cache_manifest,
     lookup_cached_page,
+    propagate_nav_to_cache,
     restore_cached_files,
     update_cache_after_render,
 )
@@ -337,6 +338,146 @@ class TestFixNavigation:
         site_dir = self._setup_site(tmp_path)
         # "missing" graft dir doesn't exist → should not error
         assert fix_navigation(site_dir, ["missing"]) == 0
+
+
+# ---------------------------------------------------------------------------
+# propagate_nav_to_cache
+# ---------------------------------------------------------------------------
+
+
+class TestPropagateNavToCache:
+    """Verify that nav-fixed HTML is written back to the _cache branch."""
+
+    def _make_cached_html(self, sidebar_text):
+        return (
+            "<!DOCTYPE html><html><body>"
+            '<nav id="quarto-sidebar" class="sidebar">'
+            f"<ul><li>{sidebar_text}</li></ul>"
+            "</nav><div>Content</div></body></html>"
+        ).encode()
+
+    def test_propagates_fixed_html_to_cache(self, repo_with_cache, tmp_path):
+        """After fix_navigation patches _site/, propagate_nav_to_cache updates _cache."""
+        old_html = self._make_cached_html("Old sidebar")
+        _populate_cache(
+            repo_with_cache,
+            "demo",
+            {
+                "page.qmd": ("h1", {"page.html": old_html}),
+            },
+        )
+
+        # Simulate _site/ with nav-fixed HTML
+        site_dir = tmp_path / "_site"
+        graft_dir = site_dir / GRAFTS_BUILD_RELPATH / "demo"
+        graft_dir.mkdir(parents=True)
+        fixed_html = self._make_cached_html("New sidebar with graft B")
+        (graft_dir / "page.html").write_bytes(fixed_html)
+
+        with patch("quarto_graft.cache._get_repo", return_value=repo_with_cache):
+            assert propagate_nav_to_cache(site_dir, ["demo"]) == 1
+
+        # Verify the _cache branch now has the fixed HTML
+        commit = repo_with_cache.revparse_single(CACHE_BRANCH)
+        tree = commit.peel(pygit2.Tree)
+        blob = repo_with_cache.get(tree["demo/page.html"].id)
+        assert b"New sidebar with graft B" in blob.data
+
+    def test_skips_unchanged_files(self, repo_with_cache, tmp_path):
+        """If _site/ HTML matches what's in cache, no update needed."""
+        html = self._make_cached_html("Same sidebar")
+        _populate_cache(
+            repo_with_cache,
+            "demo",
+            {
+                "page.qmd": ("h1", {"page.html": html}),
+            },
+        )
+
+        site_dir = tmp_path / "_site"
+        graft_dir = site_dir / GRAFTS_BUILD_RELPATH / "demo"
+        graft_dir.mkdir(parents=True)
+        (graft_dir / "page.html").write_bytes(html)
+
+        with patch("quarto_graft.cache._get_repo", return_value=repo_with_cache):
+            assert propagate_nav_to_cache(site_dir, ["demo"]) == 0
+
+    def test_skips_files_not_in_cache(self, repo_with_cache, tmp_path):
+        """Files in _site/ that aren't in the cache should not be added."""
+        _populate_cache(
+            repo_with_cache,
+            "demo",
+            {
+                "page.qmd": ("h1", {"page.html": b"<html>cached</html>"}),
+            },
+        )
+
+        site_dir = tmp_path / "_site"
+        graft_dir = site_dir / GRAFTS_BUILD_RELPATH / "demo"
+        graft_dir.mkdir(parents=True)
+        (graft_dir / "page.html").write_bytes(b"<html>cached</html>")
+        (graft_dir / "new_page.html").write_bytes(b"<html>not in cache</html>")
+
+        with patch("quarto_graft.cache._get_repo", return_value=repo_with_cache):
+            assert propagate_nav_to_cache(site_dir, ["demo"]) == 0
+
+    def test_returns_zero_when_no_cache(self, git_repo, tmp_path):
+        """No _cache branch → returns 0."""
+        site_dir = tmp_path / "_site"
+        site_dir.mkdir()
+        with patch("quarto_graft.cache._get_repo", return_value=git_repo):
+            assert propagate_nav_to_cache(site_dir, ["demo"]) == 0
+
+    def test_preserves_unaffected_grafts(self, repo_with_cache, tmp_path):
+        """Updating one graft's nav should not disturb another graft's cache."""
+        _populate_cache(
+            repo_with_cache,
+            "alpha",
+            {
+                "a.qmd": ("ha", {"a.html": b"<html>alpha content</html>"}),
+            },
+        )
+        old_html = self._make_cached_html("Old nav")
+        _populate_cache(
+            repo_with_cache,
+            "beta",
+            {
+                "b.qmd": ("hb", {"b.html": old_html}),
+            },
+        )
+
+        site_dir = tmp_path / "_site"
+        beta_dir = site_dir / GRAFTS_BUILD_RELPATH / "beta"
+        beta_dir.mkdir(parents=True)
+        fixed_html = self._make_cached_html("Fixed nav")
+        (beta_dir / "b.html").write_bytes(fixed_html)
+
+        with patch("quarto_graft.cache._get_repo", return_value=repo_with_cache):
+            assert propagate_nav_to_cache(site_dir, ["beta"]) == 1
+
+        # Alpha should be untouched
+        commit = repo_with_cache.revparse_single(CACHE_BRANCH)
+        tree = commit.peel(pygit2.Tree)
+        alpha_blob = repo_with_cache.get(tree["alpha/a.html"].id)
+        assert alpha_blob.data == b"<html>alpha content</html>"
+        # Beta should be updated
+        beta_blob = repo_with_cache.get(tree["beta/b.html"].id)
+        assert b"Fixed nav" in beta_blob.data
+
+    def test_handles_missing_graft_dir(self, repo_with_cache, tmp_path):
+        """Missing graft dir in _site/ → gracefully returns 0."""
+        _populate_cache(
+            repo_with_cache,
+            "demo",
+            {
+                "page.qmd": ("h1", {"page.html": b"<html>x</html>"}),
+            },
+        )
+        site_dir = tmp_path / "_site"
+        site_dir.mkdir()
+
+        with patch("quarto_graft.cache._get_repo", return_value=repo_with_cache):
+            assert propagate_nav_to_cache(site_dir, ["demo"]) == 0
 
 
 # ---------------------------------------------------------------------------
