@@ -9,9 +9,43 @@ import re
 import pygit2
 
 from .branches import branch_to_key, read_branches_list
+from .constants import TRUNK_BRANCHES
 from .git_utils import push_to_origin
 
 logger = logging.getLogger(__name__)
+
+
+def _get_trunk_branch(repo: pygit2.Repository | None = None) -> str:
+    """Detect the trunk branch name from the repo's origin/HEAD or by probing known trunk branches."""
+    if repo is None:
+        repo = _get_repo()
+
+    # Try origin/HEAD (set by 'git clone' or 'git remote set-head')
+    try:
+        origin_head = repo.references.get("refs/remotes/origin/HEAD")
+        if origin_head is not None:
+            target = origin_head.target
+            if isinstance(target, str) and target.startswith("refs/remotes/origin/"):
+                return target.removeprefix("refs/remotes/origin/")
+    except Exception:
+        pass
+
+    # Fall back: check which trunk branches exist on the remote
+    for name in ("master", "main"):
+        if name in TRUNK_BRANCHES:
+            ref = f"refs/remotes/origin/{name}"
+            if ref in repo.references:
+                return name
+
+    # Last resort: check local branches
+    for name in ("master", "main"):
+        if name in TRUNK_BRANCHES:
+            ref = f"refs/heads/{name}"
+            if ref in repo.references:
+                return name
+
+    return "main"
+
 
 RELEASED_TAG_PREFIX = "released/"
 RELEASING_TAG_PREFIX = "releasing/"
@@ -76,7 +110,7 @@ def generate_main_notes(current: str | None, next_tag: str) -> str:
     try:
         result = api.repos.generate_release_notes(
             tag_name=next_tag,
-            target_commitish="main",
+            target_commitish=_get_trunk_branch(),
             previous_tag_name=current,
         )
         return result.body
@@ -188,7 +222,7 @@ def create_release(next_tag: str, notes: str) -> str:
         tag_name=next_tag,
         name=next_tag,
         body=notes,
-        target_commitish="main",
+        target_commitish=_get_trunk_branch(),
     )
     return release.html_url
 
@@ -225,5 +259,5 @@ def trigger_workflow(workflow_file: str = "quarto-graft-build-publish.yaml") -> 
     api = _get_gh_api()
     api.actions.create_workflow_dispatch(
         workflow_id=workflow_file,
-        ref="main",
+        ref=_get_trunk_branch(),
     )

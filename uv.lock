@@ -1750,7 +1750,7 @@ dependencies = [
 
 [[package]]
 name = "quarto-graft"
-version = "0.1.15"
+version = "0.1.16"
 source = { editable = "." }
 dependencies = [
     { name = "ghapi" },
