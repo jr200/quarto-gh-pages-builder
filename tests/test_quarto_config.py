@@ -272,6 +272,89 @@ class TestExpandNavGlobs:
         result = expand_nav_globs(nav, src)
         assert result == ["missing/**"]
 
+    def test_auto_string_expands_to_hierarchy(self):
+        """Top-level 'auto' should build a hierarchical nav from file paths."""
+        src = [
+            "a/x.qmd",
+            "a/b/c/1.qmd",
+            "a/b/c/2.qmd",
+            "a/b/c/3.qmd",
+        ]
+        result = expand_nav_globs("auto", src)
+        assert isinstance(result, list)
+        # Should have one top-level section "A"
+        assert len(result) == 1
+        a_section = result[0]
+        assert a_section["section"] == "A"
+        a_contents = a_section["contents"]
+        # a/x.qmd (local file) then section "B"
+        assert a_contents[0] == "a/x.qmd"
+        b_section = a_contents[1]
+        assert b_section["section"] == "B"
+        c_section = b_section["contents"][0]
+        assert c_section["section"] == "C"
+        assert sorted(c_section["contents"]) == [
+            "a/b/c/1.qmd",
+            "a/b/c/2.qmd",
+            "a/b/c/3.qmd",
+        ]
+
+    def test_auto_in_list_expands_and_flattens(self):
+        """'auto' as a list item should expand into the parent list."""
+        nav = ["intro.qmd", "auto"]
+        src = ["guide/page.qmd", "guide/other.qmd"]
+        result = expand_nav_globs(nav, src)
+        assert result[0] == "intro.qmd"
+        # auto expanded and flattened: guide section
+        guide = result[1]
+        assert guide["section"] == "Guide"
+        assert sorted(guide["contents"]) == ["guide/other.qmd", "guide/page.qmd"]
+
+    def test_auto_as_section_contents(self):
+        """'auto' as a section's contents should be expanded."""
+        nav = [{"section": "My Stuff", "contents": "auto"}]
+        src = ["a/x.qmd", "a/b/c/1.qmd"]
+        result = expand_nav_globs(nav, src)
+        section = result[0]
+        assert section["section"] == "My Stuff"
+        # contents should now be the expanded hierarchy
+        assert isinstance(section["contents"], list)
+        a_section = section["contents"][0]
+        assert a_section["section"] == "A"
+
+    def test_auto_excludes_index_files(self):
+        """'auto' should exclude index files like Quarto does."""
+        src = ["index.qmd", "page.qmd", "sub/index.qmd", "sub/other.qmd"]
+        result = expand_nav_globs("auto", src)
+        # Flatten all file entries to check index is excluded
+        from quarto_graft.quarto_config import flatten_quarto_contents
+        files = flatten_quarto_contents(result)
+        assert "index.qmd" not in files
+        assert "sub/index.qmd" not in files
+        assert "page.qmd" in files
+        assert "sub/other.qmd" in files
+
+    def test_auto_preserves_intermediate_empty_dirs(self):
+        """Directories with no direct files but with subdirs must be preserved."""
+        src = [
+            "a/b/c/1.qmd",
+            "a/b/c/2.qmd",
+            "a/x.qmd",
+        ]
+        result = expand_nav_globs("auto", src)
+        # a > b > c should all exist even though b has no direct files
+        a = result[0]
+        assert a["section"] == "A"
+        # a has x.qmd and section B
+        assert a["contents"][0] == "a/x.qmd"
+        b = a["contents"][1]
+        assert b["section"] == "B"
+        # b has no direct files, only section C
+        c = b["contents"][0]
+        assert c["section"] == "C"
+        assert "a/b/c/1.qmd" in c["contents"]
+        assert "a/b/c/2.qmd" in c["contents"]
+
     def test_multiple_sections_with_globs(self):
         """Mimics the jayshan graft structure from the bug report."""
         nav = [
@@ -854,6 +937,462 @@ class TestApplyManifest:
             assert items[0]["href"] == f"{GRAFTS_BUILD_RELPATH}/demo/page.html"
             # extra.qmd is NOT cached → regular file reference (broken link)
             assert items[1] == f"{GRAFTS_BUILD_RELPATH}/demo/extra.qmd"
+        finally:
+            constants._root_override = None
+
+    def test_deep_nesting_preserved_with_collar_at_level2(self, tmp_path):
+        """5 levels of nesting in the graft, collar at level 2 in trunk.
+        All nesting levels must be preserved after apply_manifest."""
+        import quarto_graft.constants as constants
+        try:
+            # Trunk with collar at level 2
+            from quarto_graft.yaml_utils import get_yaml_loader
+            yaml_loader = get_yaml_loader()
+            constants._root_override = tmp_path
+
+            quarto_yaml = {
+                "project": {"type": "website"},
+                "website": {
+                    "sidebar": {
+                        "contents": [
+                            "index.qmd",
+                            {"section": "Trunk L1", "contents": [
+                                {"section": "Trunk L2", "contents": [
+                                    {"_GRAFT_COLLAR": "main"},
+                                ]},
+                            ]},
+                        ]
+                    }
+                },
+            }
+            qf = tmp_path / "_quarto.yaml"
+            with open(qf, "w") as f:
+                yaml_loader.dump(quarto_yaml, f)
+
+            self._setup_grafts_config(tmp_path, [
+                {"name": "deep", "branch": "graft/deep", "collar": "main"},
+            ])
+
+            # Graft structure with 5 levels of section nesting
+            graft_structure = [
+                {"section": "G-L1", "contents": [
+                    {"section": "G-L2", "contents": [
+                        {"section": "G-L3", "contents": [
+                            {"section": "G-L4", "contents": [
+                                {"section": "G-L5", "contents": [
+                                    "deep-page.qmd",
+                                ]},
+                            ]},
+                        ]},
+                    ]},
+                ]},
+            ]
+
+            self._setup_manifest(tmp_path, {
+                "graft/deep": {
+                    "title": "Deep Graft",
+                    "branch_key": "deep",
+                    "last_checked": "2026-01-01T00:00:00Z",
+                    "structure": graft_structure,
+                },
+            })
+
+            from quarto_graft.quarto_config import apply_manifest
+            apply_manifest()
+
+            result = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
+            contents = result["website"]["sidebar"]["contents"]
+
+            # Navigate: index.qmd, Trunk L1 > Trunk L2 > collar > autogen
+            trunk_l1 = contents[1]
+            assert trunk_l1["section"] == "Trunk L1"
+            trunk_l2 = trunk_l1["contents"][0]
+            assert trunk_l2["section"] == "Trunk L2"
+
+            # After the collar marker, the graft should be injected
+            autogen = trunk_l2["contents"][1]
+            assert autogen["_autogen_branch"] == "graft/deep"
+            assert autogen["section"] == "Deep Graft"
+
+            # Now verify all 5 levels of graft nesting are preserved
+            g1 = autogen["contents"][0]
+            assert g1["section"] == "G-L1"
+            g2 = g1["contents"][0]
+            assert g2["section"] == "G-L2"
+            g3 = g2["contents"][0]
+            assert g3["section"] == "G-L3"
+            g4 = g3["contents"][0]
+            assert g4["section"] == "G-L4"
+            g5 = g4["contents"][0]
+            assert g5["section"] == "G-L5"
+            assert g5["contents"] == [f"{GRAFTS_BUILD_RELPATH}/deep/deep-page.qmd"]
+        finally:
+            constants._root_override = None
+
+    def test_deep_nesting_preserved_with_cached_pages(self, tmp_path):
+        """5 levels of nesting in the graft with cached pages.
+        Caching must not flatten the nested structure."""
+        import quarto_graft.constants as constants
+        try:
+            from quarto_graft.yaml_utils import get_yaml_loader
+            yaml_loader = get_yaml_loader()
+            constants._root_override = tmp_path
+
+            quarto_yaml = {
+                "project": {"type": "website"},
+                "website": {
+                    "sidebar": {
+                        "contents": [
+                            "index.qmd",
+                            {"section": "Trunk L1", "contents": [
+                                {"section": "Trunk L2", "contents": [
+                                    {"_GRAFT_COLLAR": "main"},
+                                ]},
+                            ]},
+                        ]
+                    }
+                },
+            }
+            qf = tmp_path / "_quarto.yaml"
+            with open(qf, "w") as f:
+                yaml_loader.dump(quarto_yaml, f)
+
+            self._setup_grafts_config(tmp_path, [
+                {"name": "deep", "branch": "graft/deep", "collar": "main"},
+            ])
+
+            # Graft structure with 5 levels, pages at multiple levels
+            graft_structure = [
+                {"section": "G-L1", "contents": [
+                    "l1-page.qmd",
+                    {"section": "G-L2", "contents": [
+                        "l2-page.qmd",
+                        {"section": "G-L3", "contents": [
+                            "l3-page.qmd",
+                            {"section": "G-L4", "contents": [
+                                "l4-page.qmd",
+                                {"section": "G-L5", "contents": [
+                                    "l5-page.qmd",
+                                ]},
+                            ]},
+                        ]},
+                    ]},
+                ]},
+            ]
+
+            self._setup_manifest(tmp_path, {
+                "graft/deep": {
+                    "title": "Deep Graft",
+                    "branch_key": "deep",
+                    "last_checked": "2026-01-01T00:00:00Z",
+                    "structure": graft_structure,
+                    "cached_pages": ["l1-page.qmd", "l3-page.qmd", "l5-page.qmd"],
+                },
+            })
+
+            from quarto_graft.quarto_config import apply_manifest
+            apply_manifest()
+
+            result = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
+            contents = result["website"]["sidebar"]["contents"]
+
+            trunk_l1 = contents[1]
+            trunk_l2 = trunk_l1["contents"][0]
+            autogen = trunk_l2["contents"][1]
+            assert autogen["_autogen_branch"] == "graft/deep"
+
+            # Verify all 5 levels preserved
+            g1 = autogen["contents"][0]
+            assert g1["section"] == "G-L1"
+
+            # l1-page.qmd is cached → should be href dict
+            g1_items = g1["contents"]
+            assert isinstance(g1_items[0], dict)
+            assert "href" in g1_items[0]
+            assert g1_items[0]["href"] == f"{GRAFTS_BUILD_RELPATH}/deep/l1-page.html"
+
+            g2 = g1_items[1]
+            assert g2["section"] == "G-L2"
+
+            # l2-page.qmd is NOT cached → should be a string path
+            g2_items = g2["contents"]
+            assert g2_items[0] == f"{GRAFTS_BUILD_RELPATH}/deep/l2-page.qmd"
+
+            g3 = g2_items[1]
+            assert g3["section"] == "G-L3"
+
+            # l3-page.qmd is cached
+            g3_items = g3["contents"]
+            assert isinstance(g3_items[0], dict)
+            assert g3_items[0]["href"] == f"{GRAFTS_BUILD_RELPATH}/deep/l3-page.html"
+
+            g4 = g3_items[1]
+            assert g4["section"] == "G-L4"
+
+            g4_items = g4["contents"]
+            assert g4_items[0] == f"{GRAFTS_BUILD_RELPATH}/deep/l4-page.qmd"
+
+            g5 = g4_items[1]
+            assert g5["section"] == "G-L5"
+
+            # l5-page.qmd is cached
+            g5_items = g5["contents"]
+            assert isinstance(g5_items[0], dict)
+            assert g5_items[0]["href"] == f"{GRAFTS_BUILD_RELPATH}/deep/l5-page.html"
+        finally:
+            constants._root_override = None
+
+    def test_deep_nesting_idempotent_with_caching(self, tmp_path):
+        """Running apply_manifest twice must not flatten the nesting."""
+        import quarto_graft.constants as constants
+        try:
+            from quarto_graft.yaml_utils import get_yaml_loader
+            yaml_loader = get_yaml_loader()
+            constants._root_override = tmp_path
+
+            quarto_yaml = {
+                "project": {"type": "website"},
+                "website": {
+                    "sidebar": {
+                        "contents": [
+                            "index.qmd",
+                            {"section": "Trunk L1", "contents": [
+                                {"section": "Trunk L2", "contents": [
+                                    {"_GRAFT_COLLAR": "main"},
+                                ]},
+                            ]},
+                        ]
+                    }
+                },
+            }
+            qf = tmp_path / "_quarto.yaml"
+            with open(qf, "w") as f:
+                yaml_loader.dump(quarto_yaml, f)
+
+            self._setup_grafts_config(tmp_path, [
+                {"name": "deep", "branch": "graft/deep", "collar": "main"},
+            ])
+
+            graft_structure = [
+                {"section": "G-L1", "contents": [
+                    {"section": "G-L2", "contents": [
+                        {"section": "G-L3", "contents": [
+                            {"section": "G-L4", "contents": [
+                                {"section": "G-L5", "contents": [
+                                    "deep-page.qmd",
+                                ]},
+                            ]},
+                        ]},
+                    ]},
+                ]},
+            ]
+
+            self._setup_manifest(tmp_path, {
+                "graft/deep": {
+                    "title": "Deep Graft",
+                    "branch_key": "deep",
+                    "last_checked": "2026-01-01T00:00:00Z",
+                    "structure": graft_structure,
+                    "cached_pages": ["deep-page.qmd"],
+                },
+            })
+
+            from quarto_graft.quarto_config import apply_manifest
+
+            # First apply
+            apply_manifest()
+            result1 = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
+
+            # Second apply (re-processes the already-modified YAML)
+            apply_manifest()
+            result2 = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
+
+            # Verify nesting preserved after both applies
+            for result in [result1, result2]:
+                contents = result["website"]["sidebar"]["contents"]
+                trunk_l1 = contents[1]
+                trunk_l2 = trunk_l1["contents"][0]
+                autogen = trunk_l2["contents"][1]
+                assert autogen["_autogen_branch"] == "graft/deep"
+
+                g1 = autogen["contents"][0]
+                assert g1["section"] == "G-L1"
+                g2 = g1["contents"][0]
+                assert g2["section"] == "G-L2"
+                g3 = g2["contents"][0]
+                assert g3["section"] == "G-L3"
+                g4 = g3["contents"][0]
+                assert g4["section"] == "G-L4"
+                g5 = g4["contents"][0]
+                assert g5["section"] == "G-L5"
+        finally:
+            constants._root_override = None
+
+    def test_book_deep_nesting_preserved(self, tmp_path):
+        """5 levels of nesting in a book-mode graft must be preserved."""
+        import quarto_graft.constants as constants
+        try:
+            from quarto_graft.yaml_utils import get_yaml_loader
+            yaml_loader = get_yaml_loader()
+            constants._root_override = tmp_path
+
+            quarto_yaml = {
+                "project": {"type": "book"},
+                "book": {
+                    "chapters": [
+                        "index.qmd",
+                        {"part": "Trunk P1", "chapters": [
+                            {"_GRAFT_COLLAR": "main"},
+                        ]},
+                    ]
+                },
+            }
+            qf = tmp_path / "_quarto.yaml"
+            with open(qf, "w") as f:
+                yaml_loader.dump(quarto_yaml, f)
+
+            self._setup_grafts_config(tmp_path, [
+                {"name": "deep", "branch": "graft/deep", "collar": "main"},
+            ])
+
+            graft_structure = [
+                {"part": "G-P1", "chapters": [
+                    {"part": "G-P2", "chapters": [
+                        {"part": "G-P3", "chapters": [
+                            {"part": "G-P4", "chapters": [
+                                {"part": "G-P5", "chapters": [
+                                    "deep-ch.qmd",
+                                ]},
+                            ]},
+                        ]},
+                    ]},
+                ]},
+            ]
+
+            self._setup_manifest(tmp_path, {
+                "graft/deep": {
+                    "title": "Deep Graft",
+                    "branch_key": "deep",
+                    "last_checked": "2026-01-01T00:00:00Z",
+                    "structure": graft_structure,
+                },
+            })
+
+            from quarto_graft.quarto_config import apply_manifest
+            apply_manifest()
+
+            result = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
+            chapters = result["book"]["chapters"]
+
+            trunk_p1 = chapters[1]
+            assert trunk_p1["part"] == "Trunk P1"
+            autogen = trunk_p1["chapters"][1]
+            assert autogen["_autogen_branch"] == "graft/deep"
+            assert autogen["part"] == "Deep Graft"
+
+            g1 = autogen["chapters"][0]
+            assert g1["part"] == "G-P1"
+            g2 = g1["chapters"][0]
+            assert g2["part"] == "G-P2"
+            g3 = g2["chapters"][0]
+            assert g3["part"] == "G-P3"
+            g4 = g3["chapters"][0]
+            assert g4["part"] == "G-P4"
+            g5 = g4["chapters"][0]
+            assert g5["part"] == "G-P5"
+            assert g5["chapters"] == [f"{GRAFTS_BUILD_RELPATH}/deep/deep-ch.qmd"]
+        finally:
+            constants._root_override = None
+
+    def test_auto_structure_with_deep_nesting_and_cache(self, tmp_path):
+        """Graft using 'auto' with 5-level deep files, collar at level 2,
+        all pages cached. The directory hierarchy must be preserved as sections."""
+        import quarto_graft.constants as constants
+        try:
+            from quarto_graft.yaml_utils import get_yaml_loader
+            yaml_loader = get_yaml_loader()
+            constants._root_override = tmp_path
+
+            quarto_yaml = {
+                "project": {"type": "website"},
+                "website": {
+                    "sidebar": {
+                        "contents": [
+                            "index.qmd",
+                            {"section": "Trunk L1", "contents": [
+                                {"section": "Trunk L2", "contents": [
+                                    {"_GRAFT_COLLAR": "main"},
+                                ]},
+                            ]},
+                        ]
+                    }
+                },
+            }
+            qf = tmp_path / "_quarto.yaml"
+            with open(qf, "w") as f:
+                yaml_loader.dump(quarto_yaml, f)
+
+            self._setup_grafts_config(tmp_path, [
+                {"name": "deep", "branch": "graft/deep", "collar": "main"},
+            ])
+
+            # The graft used 'auto' — expand_nav_globs should have already
+            # expanded it into a hierarchy before storing in the manifest.
+            # Simulate what _export_from_worktree would produce after expansion:
+            from quarto_graft.quarto_config import expand_nav_globs
+            auto_expanded = expand_nav_globs("auto", [
+                "a/x.qmd",
+                "a/b/c/1.qmd",
+                "a/b/c/2.qmd",
+                "a/b/c/3.qmd",
+            ])
+
+            all_pages = ["a/x.qmd", "a/b/c/1.qmd", "a/b/c/2.qmd", "a/b/c/3.qmd"]
+            self._setup_manifest(tmp_path, {
+                "graft/deep": {
+                    "title": "Deep Graft",
+                    "branch_key": "deep",
+                    "last_checked": "2026-01-01T00:00:00Z",
+                    "structure": auto_expanded,
+                    "cached_pages": all_pages,
+                },
+            })
+
+            from quarto_graft.quarto_config import apply_manifest
+            apply_manifest()
+
+            result = yaml_loader.load((tmp_path / "_quarto.yaml").read_text(encoding="utf-8"))
+            contents = result["website"]["sidebar"]["contents"]
+
+            trunk_l1 = contents[1]
+            trunk_l2 = trunk_l1["contents"][0]
+            autogen = trunk_l2["contents"][1]
+            assert autogen["_autogen_branch"] == "graft/deep"
+
+            # Verify hierarchy: Graft > A > x.qmd + B > C > 1,2,3.qmd
+            a_section = autogen["contents"][0]
+            assert a_section["section"] == "A"
+
+            # a/x.qmd is cached → href dict
+            a_items = a_section["contents"]
+            assert isinstance(a_items[0], dict)
+            assert a_items[0]["href"] == f"{GRAFTS_BUILD_RELPATH}/deep/a/x.html"
+
+            b_section = a_items[1]
+            assert b_section["section"] == "B"
+
+            c_section = b_section["contents"][0]
+            assert c_section["section"] == "C"
+
+            # All c-level files are cached → href dicts
+            c_items = c_section["contents"]
+            assert len(c_items) == 3
+            hrefs = sorted(item["href"] for item in c_items)
+            assert hrefs == [
+                f"{GRAFTS_BUILD_RELPATH}/deep/a/b/c/1.html",
+                f"{GRAFTS_BUILD_RELPATH}/deep/a/b/c/2.html",
+                f"{GRAFTS_BUILD_RELPATH}/deep/a/b/c/3.html",
+            ]
         finally:
             constants._root_override = None
 

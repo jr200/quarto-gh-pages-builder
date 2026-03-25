@@ -148,24 +148,71 @@ def _glob_matches(pattern: str, path: str) -> bool:
     return fnmatch.fnmatch(path, pattern)
 
 
+def _build_auto_nav(relpaths: list[str]) -> list[Any]:
+    """Build a hierarchical nav structure from a flat list of file paths.
+
+    Mimics Quarto's ``auto`` behaviour: creates ``section`` entries for
+    directories, excludes index files, and preserves the full relative
+    paths so that :func:`rewrite_paths` can process them later.
+    """
+    _index_stems = {"index"}
+
+    filtered = sorted(
+        rp for rp in relpaths
+        if Path(rp).stem.lower() not in _index_stems
+    )
+
+    def _build_level(paths: list[str], prefix: str) -> list[Any]:
+        local_files: list[str] = []
+        subdirs: dict[str, list[str]] = {}
+
+        for p in paths:
+            rel = p[len(prefix):] if prefix else p
+            parts = Path(rel).parts
+            if len(parts) == 1:
+                local_files.append(p)
+            else:
+                subdir = parts[0]
+                if subdir not in subdirs:
+                    subdirs[subdir] = []
+                subdirs[subdir].append(p)
+
+        items: list[Any] = []
+        items.extend(local_files)
+        for dirname in sorted(subdirs):
+            section_name = dirname.replace("-", " ").replace("_", " ").title()
+            contents = _build_level(subdirs[dirname], f"{prefix}{dirname}/")
+            if contents:
+                items.append({"section": section_name, "contents": contents})
+        return items
+
+    return _build_level(filtered, "")
+
+
 def expand_nav_globs(nav_structure: Any, src_relpaths: list[str]) -> Any:
-    """Expand glob patterns in a nav structure into explicit file entries.
+    """Expand glob patterns and ``auto`` in a nav structure into explicit entries.
 
     Quarto sidebar entries like ``contents: investigations/**`` are glob
-    patterns that Quarto expands at render time.  When cached pages are served
-    as pre-rendered ``.html`` files (no source files on disk), Quarto's
-    auto-expansion fails because it cannot find source files.
+    patterns that Quarto expands at render time.  The ``auto`` keyword tells
+    Quarto to auto-generate the sidebar from the file system.  When cached
+    pages are served as pre-rendered ``.html`` files (no source files on disk),
+    Quarto's auto-expansion fails because it cannot find source files.
 
-    By expanding globs into explicit file lists *before* saving the manifest,
-    :func:`rewrite_paths` in :func:`apply_manifest` can convert each entry
-    individually to an ``href`` for cached pages or a ``file`` path for
-    non-cached pages.
+    By expanding globs and ``auto`` into explicit file lists *before* saving
+    the manifest, :func:`rewrite_paths` in :func:`apply_manifest` can convert
+    each entry individually to an ``href`` for cached pages or a ``file`` path
+    for non-cached pages.
     """
     if nav_structure is None:
         return None
 
+    def _is_auto(value: Any) -> bool:
+        return isinstance(value, str) and value.lower() == "auto"
+
     def _expand(node: Any) -> Any:
         if isinstance(node, str):
+            if node.lower() == "auto":
+                return _build_auto_nav(src_relpaths)
             if "*" in node:
                 matches = sorted(
                     rp for rp in src_relpaths if _glob_matches(node, rp)
@@ -187,7 +234,7 @@ def expand_nav_globs(nav_structure: Any, src_relpaths: list[str]) -> Any:
             for item in node:
                 expanded = _expand(item)
                 if isinstance(expanded, list) and not isinstance(item, list):
-                    # A glob was expanded — flatten into the parent list
+                    # A glob or auto was expanded — flatten into the parent list
                     expanded_list.extend(expanded)
                 else:
                     expanded_list.append(expanded)
